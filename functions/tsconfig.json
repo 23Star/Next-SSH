@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "noImplicitReturns": true,
+    "noUnusedLocals": true,
+    "outDir": "lib",
+    "rootDir": "src",
+    "strict": true,
+    "target": "ES2022"
+  },
+  "compileOnSave": true,
+  "include": ["src"]
+}

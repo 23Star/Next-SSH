@@ -1,0 +1,5 @@
+{
+  "ChatContextTotalMax": 20000,
+  "ServeroutputContentRecordMax": 40000,
+  "ServeroutputContentTotalMax": 100000
+}

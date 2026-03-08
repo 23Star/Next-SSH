@@ -1,0 +1,42 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+release/
+functions/lib/
+
+# Environment variables
+.env
+.env.local
+.firebaserc
+
+# Local config (API keys etc.) - do not commit
+config/openai.local.json
+config/local.json
+config/firebase.local.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+log/
+logs/
+
+# Database
+*.db
+*.db-shm
+*.db-wal
+
+# Temporary files
+tmp/
+temp/

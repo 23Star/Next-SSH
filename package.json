@@ -1,0 +1,78 @@
+{
+    "name": "aissh",
+    "version": "0.1.0",
+    "description": "AI × SSH ハイブリッド管理ツール",
+    "private": false,
+    "license": "MIT",
+    "author": "PANDAAS <pandaas886@gmail.com>",
+    "main": "dist/main/index.js",
+    "scripts": {
+        "postinstall": "electron-rebuild",
+        "dev": "npm run dev:preload && npm run dev:main:once && concurrently -n main,vite,electron -c blue,green,yellow \"npm run dev:main:watch\" \"npm run dev:renderer\" \"npm run dev:electron\"",
+        "dev:preload": "tsc -p config/tsconfig.preload.json",
+        "dev:main:once": "tsc -p config/tsconfig.main.json",
+        "dev:main:watch": "tsc -p config/tsconfig.main.json --watch",
+        "dev:renderer": "vite --config config/vite.config.ts",
+        "dev:electron": "cross-env NODE_ENV=development electron dist/main/index.js",
+        "build": "npm run build:preload && npm run build:renderer && npm run build:main",
+        "build:preload": "tsc -p config/tsconfig.preload.json",
+        "build:main": "tsc -p config/tsconfig.main.json",
+        "build:renderer": "vite build --config config/vite.config.ts",
+        "package:win": "electron-builder --win",
+        "package:mac": "electron-builder --mac",
+        "package:linux": "electron-builder --linux"
+    },
+    "dependencies": {
+        "@xterm/addon-fit": "^0.11.0",
+        "better-sqlite3": "^9.2.2",
+        "firebase": "^11.0.0",
+        "monaco-editor": "^0.52.2",
+        "node-pty": "^1.1.0",
+        "openai": "^6.22.0",
+        "ssh2": "^1.15.0",
+        "xterm": "^5.3.0"
+    },
+    "devDependencies": {
+        "@types/better-sqlite3": "^7.6.6",
+        "@types/node": "^20.10.0",
+        "@types/react": "^18.2.45",
+        "@types/react-dom": "^18.2.18",
+        "@types/ssh2": "^1.15.5",
+        "@vitejs/plugin-react": "^4.2.1",
+        "concurrently": "^8.2.2",
+        "cross-env": "^10.1.0",
+        "electron": "^28.0.0",
+        "electron-builder": "^24.9.1",
+        "electron-rebuild": "^3.2.9",
+        "react": "^18.2.0",
+        "react-dom": "^18.2.0",
+        "typescript": "^5.3.3",
+        "vite": "^5.0.8"
+    },
+    "build": {
+        "appId": "com.aissh.app",
+        "productName": "AISSH",
+        "directories": {
+            "output": "release"
+        },
+        "files": [
+            "dist/**/*",
+            "resource/**/*",
+            "config/firebase.local.json",
+            "package.json"
+        ],
+        "win": {
+            "target": "nsis",
+            "icon": "resources/icons/icon.ico"
+        },
+        "mac": {
+            "target": "dmg",
+            "icon": "resources/icons/icon.icns"
+        },
+        "linux": {
+            "target": [
+                "deb"
+            ]
+        }
+    }
+}

@@ -1,0 +1,1412 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 14px;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.layout {
+  display: flex;
+  height: 100vh;
+}
+
+.sidebar {
+  width: 280px;
+  min-width: 200px;
+  max-width: 600px;
+  flex-shrink: 0;
+  background: #252526;
+  color: #ccc;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid #333;
+  min-height: 0;
+}
+
+.layoutResizer {
+  flex-shrink: 0;
+  background: #333;
+  z-index: 10;
+}
+
+.layoutResizer:hover {
+  background: #0e639c;
+}
+
+.layoutResizer--vertical {
+  width: 6px;
+  cursor: col-resize;
+}
+
+.layoutResizer--horizontal {
+  height: 6px;
+  cursor: row-resize;
+  flex-shrink: 0;
+}
+
+.sidebarSection {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.sidebarSection.servers {
+  flex: 1;
+  min-height: 120px;
+}
+
+.sidebarSection.explorer {
+  flex: 0 0 200px;
+  min-height: 80px;
+  border-top: 1px solid #333;
+}
+
+.panelHeader {
+  padding: 10px 12px;
+  font-weight: 600;
+  font-size: 12px;
+  border-bottom: 1px solid #333;
+  background: #2d2d30;
+}
+
+.explorerPanelHeader {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border-bottom: 1px solid #333;
+  background: #2d2d30;
+  flex-shrink: 0;
+}
+
+.explorerPanelHeader .panelHeader {
+  padding: 0;
+  border: none;
+  background: transparent;
+  flex-shrink: 0;
+}
+
+.explorerTabBar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.explorerTab {
+  flex-shrink: 0;
+  padding: 2px 6px;
+  font-size: 11px;
+  border: 1px solid #444;
+  border-radius: 3px;
+  background: #3c3c3c;
+  color: #ccc;
+  cursor: pointer;
+  max-width: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.explorerTab:hover {
+  background: #505050;
+}
+
+.explorerTab.active {
+  background: #0e639c;
+  border-color: #0e639c;
+  color: #fff;
+}
+
+.explorerUpBtn {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid #444;
+  border-radius: 3px;
+  background: #3c3c3c;
+  color: #ccc;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.explorerUpBtn:hover:not(:disabled) {
+  background: #505050;
+}
+
+.explorerUpBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.panelPlaceholder {
+  padding: 12px;
+  font-size: 12px;
+  color: #858585;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.explorerTreeContainer {
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px 0;
+  font-size: 12px;
+}
+
+.explorerItem {
+  cursor: default;
+}
+
+/* ドラッグ中にマウスが重なっているフォルダ（ドロップ先）を明示。アイコンで隠れても分かるように。 */
+.explorerItem.explorerItem--dropTarget .explorerItemLabel {
+  background: rgba(0, 122, 204, 0.35);
+  outline: 1px dashed rgba(0, 122, 204, 0.8);
+  outline-offset: -1px;
+}
+
+.explorerItemLabel {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.explorerItemLabel:hover {
+  background: #2a2d2e;
+}
+
+.explorerItem.explorerItem--selected .explorerItemLabel {
+  background: rgba(0, 122, 204, 0.25);
+}
+
+.explorerItemExpand {
+  width: 14px;
+  color: #858585;
+  font-size: 10px;
+}
+
+.explorerItemName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.explorerChildren {
+  border-left: 1px solid #333;
+  margin-left: 8px;
+}
+
+.contentArea {
+  flex: 1;
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+}
+
+.chatPanel {
+  width: 320px;
+  min-width: 200px;
+  max-width: 800px;
+  flex-shrink: 0;
+  background: #252526;
+  color: #ccc;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid #333;
+  min-height: 0;
+}
+
+.chatTabBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0;
+  padding: 4px 4px 0;
+  background: #2d2d30;
+  border-bottom: 1px solid #333;
+  min-height: 32px;
+}
+
+.chatTab {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  font-size: 12px;
+  border-radius: 4px 4px 0 0;
+  cursor: pointer;
+  max-width: 120px;
+  color: #ccc;
+}
+
+.chatTab:hover {
+  background: #3c3c3c;
+  color: #fff;
+}
+
+.chatTab.active {
+  background: #252526;
+  color: #fff;
+}
+
+.chatTabLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chatTabClose {
+  padding: 0 2px;
+  margin: 0 0 0 4px;
+  background: none;
+  border: none;
+  color: #858585;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.chatTabClose:hover {
+  color: #fff;
+  background: #555;
+}
+
+.chatTabNew {
+  padding: 4px 8px;
+  margin: 0;
+  background: none;
+  border: none;
+  color: #858585;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.chatTabNew:hover {
+  color: #fff;
+  background: #3c3c3c;
+}
+
+.chatMessages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.chatEmpty {
+  font-size: 12px;
+  color: #858585;
+  margin: 0;
+}
+
+.chatMessage {
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.chatMessage--user {
+  background: #094771;
+  margin-left: 24px;
+}
+
+.chatMessage--assistant {
+  background: #2d2d30;
+  margin-right: 24px;
+}
+
+.chatMessageRole {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  margin-bottom: 4px;
+  color: #858585;
+}
+
+.chatMessageContent {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.chatInputForm {
+  padding: 12px;
+  padding-top: 4px;
+  border-top: 1px solid #333;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.chatInputResizer {
+  height: 6px;
+  margin: 0 0 4px;
+  background: #333;
+  border-radius: 3px;
+  cursor: row-resize;
+  flex-shrink: 0;
+}
+
+.chatInputResizer:hover {
+  background: #0e639c;
+}
+
+.chatInputForm textarea {
+  width: 100%;
+  min-height: 48px;
+  max-height: 240px;
+  padding: 8px 10px;
+  background: #3c3c3c;
+  border: 1px solid #555;
+  color: #d4d4d4;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 13px;
+  resize: none;
+}
+
+.chatInputForm textarea::placeholder {
+  color: #858585;
+}
+
+.chatInputForm button[type="submit"] {
+  padding: 8px 12px;
+  cursor: pointer;
+  background: #0e639c;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.chatInputForm button[type="submit"]:hover:not(:disabled) {
+  background: #1177bb;
+}
+
+.chatInputForm button[type="submit"]:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.chatApplyBlocks {
+  margin-top: 10px;
+  padding: 8px 0;
+  border-top: 1px solid var(--border, #444);
+}
+
+.chatApplyBlock {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.chatApplyBlock:first-child {
+  margin-top: 0;
+}
+
+.chatApplyBlockLabel {
+  font-size: 12px;
+  color: var(--muted, #888);
+  min-width: 140px;
+}
+
+.chatApplyBlockActions {
+  display: flex;
+  gap: 6px;
+}
+
+.chatApplyBlockActions button {
+  padding: 4px 10px;
+  font-size: 12px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.chatApplyBlockActions button[data-chat-action="apply-replace"] {
+  background: #0e639c;
+  color: #fff;
+}
+
+.chatApplyBlockActions button[data-chat-action="apply-replace"]:hover {
+  background: #1177bb;
+}
+
+.chatApplyBlockActions button[data-chat-action="apply-insert"] {
+  background: #2d5a27;
+  color: #fff;
+}
+
+.chatApplyBlockActions button[data-chat-action="apply-insert"]:hover {
+  background: #3d7a37;
+}
+
+.passphraseDialog {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.passphraseDialogBackdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.passphraseDialogBox {
+  position: relative;
+  background: #252526;
+  border: 1px solid #555;
+  border-radius: 8px;
+  padding: 20px;
+  min-width: 280px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.passphraseDialogTitle {
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #d4d4d4;
+}
+
+.passphraseDialogHint {
+  margin: 0 0 12px;
+  font-size: 12px;
+  color: #858585;
+}
+
+.passphraseDialog input,
+.passphraseDialog .renameDialogInput {
+  width: 100%;
+  padding: 8px 10px;
+  margin-bottom: 12px;
+  background: #3c3c3c;
+  border: 1px solid #555;
+  color: #d4d4d4;
+  border-radius: 4px;
+  font-size: 13px;
+  box-sizing: border-box;
+}
+
+.passphraseDialogActions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.passphraseDialogActions button {
+  padding: 8px 16px;
+  font-size: 13px;
+  cursor: pointer;
+  border: none;
+  border-radius: 4px;
+}
+
+.passphraseDialogActions button:first-child {
+  background: #0e639c;
+  color: #fff;
+}
+
+.passphraseDialogActions button:first-child:hover {
+  background: #1177bb;
+}
+
+.passphraseDialogActions button:last-child {
+  background: #555;
+  color: #ccc;
+}
+
+.passphraseDialogActions button:last-child:hover {
+  background: #666;
+  color: #fff;
+}
+
+.settingsModal,
+.planModal,
+.connectModal,
+.addEditServerModal,
+.messageModal,
+.accountListModal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.accountListModal {
+  z-index: 1001;
+}
+
+.settingsModalBackdrop,
+.planModalBackdrop,
+.connectModalBackdrop,
+.addEditServerModalBackdrop,
+.messageModalBackdrop,
+.accountListModalBackdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  cursor: pointer;
+}
+
+.settingsModalBox,
+.planModalBox,
+.connectModalBox,
+.addEditServerModalBox,
+.messageModalBox,
+.accountListModalBox {
+  position: relative;
+  background: #252526;
+  border: 1px solid #555;
+  border-radius: 8px;
+  padding: 20px;
+  min-width: 320px;
+  max-width: 480px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.accountListModalTitle {
+  margin: 0 0 16px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #d4d4d4;
+}
+
+.accountListModalList {
+  margin: 0 0 16px;
+  max-height: 240px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.accountListModalList .accountItem {
+  padding: 10px 12px;
+  text-align: left;
+  cursor: pointer;
+  border: 1px solid #555;
+  border-radius: 4px;
+  background: #3c3c3c;
+  color: #d4d4d4;
+  font-size: 13px;
+}
+
+.accountListModalList .accountItem:hover {
+  background: #0e639c;
+  border-color: #0e639c;
+  color: #fff;
+}
+
+.accountListModalList .accountListEmpty {
+  padding: 12px 0;
+  color: #999;
+  font-size: 13px;
+}
+
+.accountListModalActions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.accountListModalActions button {
+  padding: 6px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  border: 1px solid #555;
+  border-radius: 4px;
+  background: #0e639c;
+  color: #fff;
+}
+
+.accountListModalActions button:hover {
+  background: #1177bb;
+}
+
+.accountListModalActions button[id="accountListModalClose"] {
+  background: #555;
+  color: #ccc;
+}
+
+.accountListModalActions button[id="accountListModalClose"]:hover {
+  background: #666;
+  color: #fff;
+}
+
+.connectModalTitle,
+.addEditServerModalTitle {
+  margin: 0 0 16px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #d4d4d4;
+}
+
+.connectModalList {
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 0;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.connectModalItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  cursor: pointer;
+  border-radius: 4px;
+  color: #d4d4d4;
+}
+
+.connectModalItem:hover {
+  background: #3c3c3c;
+}
+
+.connectModalItemActions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.connectModalBtn {
+  padding: 2px 8px;
+  font-size: 12px;
+  cursor: pointer;
+  border: 1px solid #555;
+  border-radius: 4px;
+  background: #3c3c3c;
+  color: #d4d4d4;
+}
+
+.connectModalBtn:hover {
+  background: #505050;
+}
+
+.connectModalBtnEdit:hover,
+.connectModalBtnDelete:hover {
+  color: #fff;
+}
+
+.connectModalDot {
+  color: #094771;
+  font-size: 0.6em;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.connectModalItemName {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.connectModalActions {
+  padding-top: 12px;
+  border-top: 1px solid #333;
+}
+
+.connectModalActions button {
+  padding: 4px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  border: none;
+  border-radius: 4px;
+  background: #555;
+  color: #ccc;
+}
+
+.connectModalActions button:hover {
+  background: #666;
+  color: #fff;
+}
+
+.messageModalTitle {
+  margin: 0 0 12px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #d4d4d4;
+}
+
+.messageModalBody {
+  max-height: 260px;
+  overflow-y: auto;
+  margin-bottom: 12px;
+}
+
+.messageModalBody p {
+  white-space: pre-wrap;
+  font-size: 13px;
+  color: #d4d4d4;
+}
+
+.messageModalActions {
+  padding-top: 12px;
+  border-top: 1px solid #333;
+  text-align: right;
+}
+
+.messageModalActions button {
+  padding: 4px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  border: none;
+  border-radius: 4px;
+  background: #0e639c;
+  color: #fff;
+}
+
+.messageModalActions button:hover {
+  background: #1177bb;
+}
+
+.addEditServerModalBox .formActions {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #333;
+  display: flex;
+  gap: 8px;
+}
+
+.addEditServerModalBox .formActions button {
+  padding: 4px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  border: 1px solid #555;
+  border-radius: 4px;
+  background: #3c3c3c;
+  color: #d4d4d4;
+}
+
+.addEditServerModalBox .formActions button[type="submit"] {
+  background: #0e639c;
+  border-color: #0e639c;
+  color: #fff;
+}
+
+.addEditServerModalBox .formActions button:hover {
+  background: #505050;
+  color: #fff;
+}
+
+.addEditServerModalBox .formActions button[type="submit"]:hover {
+  background: #1177bb;
+  border-color: #1177bb;
+}
+
+.addEditServerModalBox form label {
+  display: block;
+  margin-bottom: 8px;
+  color: #d4d4d4;
+  font-size: 13px;
+}
+
+.addEditServerModalBox form label span {
+  display: inline-block;
+  min-width: 100px;
+}
+
+.addEditServerModalBox form input,
+.addEditServerModalBox form select {
+  background: #3c3c3c;
+  border: 1px solid #555;
+  border-radius: 4px;
+  color: #d4d4d4;
+  padding: 4px 8px;
+  font-size: 13px;
+}
+
+.addEditServerModalBox form input::placeholder {
+  color: #858585;
+}
+
+.addEditServerModalBox form input:focus,
+.addEditServerModalBox form select:focus {
+  outline: none;
+  border-color: #0e639c;
+}
+
+.sidebarFooter {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.sidebarFooter button {
+  flex: 1;
+  min-width: 0;
+}
+
+.settingsModalTitle,
+.planModalTitle {
+  margin: 0 0 16px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #d4d4d4;
+}
+
+.settingsModalSection {
+  margin-bottom: 16px;
+}
+
+.settingsModalSectionTitle {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #858585;
+  text-transform: uppercase;
+}
+
+.settingsModalSection #firebaseAuthSection {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.settingsModalSection .settingsAccountRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.settingsModalSection .settingsAccountRow--billing {
+  padding-top: 4px;
+  border-top: 1px solid #333;
+}
+
+.settingsModalSection #firebaseUserEmail {
+  color: #fff;
+  font-size: 13px;
+}
+
+.settingsModalSection #firebaseAuthSection button {
+  padding: 4px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  border: none;
+  border-radius: 4px;
+  background: #0e639c;
+  color: #fff;
+}
+
+.settingsModalSection #firebaseAuthSection button:hover {
+  background: #1177bb;
+}
+
+.settingsModalSection #firebaseAuthSection button[id="btnFirebaseLogout"] {
+  background: #555;
+  color: #ccc;
+}
+
+.settingsModalSection #firebaseAuthSection button[id="btnFirebaseLogout"]:hover {
+  background: #666;
+  color: #fff;
+}
+
+.settingsModalLanguage {
+  display: flex;
+  gap: 8px;
+}
+
+.settingsModalLanguage button {
+  padding: 4px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  border: 1px solid #555;
+  border-radius: 4px;
+  background: #3c3c3c;
+  color: #d4d4d4;
+}
+
+.settingsModalLanguage button:hover {
+  background: #505050;
+}
+
+.settingsModalLanguage button.is-selected {
+  background: #0066cc;
+  border-color: #0066cc;
+  color: #fff;
+}
+
+.settingsModalLanguage button.is-selected:hover {
+  background: #0077ee;
+  border-color: #0077ee;
+}
+
+.settingsModalActions {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid #333;
+}
+
+.settingsModalActions button {
+  padding: 4px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  border: none;
+  border-radius: 4px;
+  background: #555;
+  color: #ccc;
+}
+
+.settingsModalActions button:hover {
+  background: #666;
+  color: #fff;
+}
+
+.planModalPlans {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.planModalPlan {
+  padding: 12px;
+  border: 1px solid #444;
+  border-radius: 6px;
+  background: #2d2d30;
+}
+
+.planModalPlanName {
+  font-weight: 600;
+  color: #d4d4d4;
+  margin-bottom: 4px;
+}
+
+.planModalPlanPrice {
+  font-size: 14px;
+  color: #0e639c;
+  margin-bottom: 2px;
+}
+
+.planModalPlanDetail {
+  font-size: 12px;
+  color: #858585;
+  margin-bottom: 8px;
+}
+
+.planModalPlanBtn {
+  padding: 4px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  border: none;
+  border-radius: 4px;
+  background: #0e639c;
+  color: #fff;
+}
+
+.planModalPlanBtn:hover {
+  background: #1177bb;
+}
+
+.planModalActions {
+  padding-top: 12px;
+  border-top: 1px solid #333;
+}
+
+.planModalActions button {
+  padding: 4px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  border: none;
+  border-radius: 4px;
+  background: #555;
+  color: #ccc;
+}
+
+.planModalActions button:hover {
+  background: #666;
+  color: #fff;
+}
+
+.sidebarHeader {
+  padding: 12px;
+  font-weight: 600;
+  border-bottom: 1px solid #333;
+}
+
+.connectList {
+  flex: 1;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.serverItem {
+  padding: 8px 12px;
+  cursor: pointer;
+  border-bottom: 1px solid #333;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.serverItem:hover {
+  background: #2a2d2e;
+}
+
+.serverItem.selected {
+  background: #094771;
+  color: #fff;
+}
+
+.serverItemName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.serverItemActions {
+  display: flex;
+  gap: 4px;
+}
+
+.serverItemActions button {
+  padding: 2px 6px;
+  font-size: 12px;
+  cursor: pointer;
+  background: #333;
+  color: #ccc;
+  border: none;
+  border-radius: 2px;
+}
+
+.serverItemActions button:hover {
+  background: #444;
+  color: #fff;
+}
+
+.sidebarFooter {
+  padding: 6px 8px;
+  border-top: 1px solid #333;
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.sidebarFooter button {
+  flex-shrink: 0;
+  padding: 2px 6px;
+  font-size: 11px;
+  cursor: pointer;
+  border: 1px solid #444;
+  border-radius: 3px;
+  background: #3c3c3c;
+  color: #d4d4d4;
+}
+
+.sidebarFooter button:hover {
+  background: #505050;
+}
+
+/* Welcome エリアの Connect / Local ボタンもサイドバーと同じスタイルにする */
+#welcomeArea .mainAreaPlaceholder button {
+  flex-shrink: 0;
+  padding: 2px 6px;
+  font-size: 11px;
+  cursor: pointer;
+  border: 1px solid #444;
+  border-radius: 3px;
+  background: #3c3c3c;
+  color: #d4d4d4;
+}
+
+#welcomeArea .mainAreaPlaceholder button:hover {
+  background: #505050;
+}
+
+#welcomeArea h1 {
+  margin: 0;
+  padding: 16px 0 0 16px;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #858585;
+}
+
+.mainArea {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: #1e1e1e;
+  color: #d4d4d4;
+  min-width: 0;
+  min-height: 0;
+}
+
+.mainAreaPlaceholder {
+  padding: 16px;
+  color: #858585;
+}
+
+.mainPanel {
+  display: none;
+  flex-direction: column;
+  flex: 1;
+  position: relative;
+  min-height: 0;
+}
+
+.mainPanel.visible {
+  display: flex;
+}
+
+.terminalTabBar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 4px 8px 0;
+  background: #252526;
+  border-bottom: 1px solid #333;
+  min-height: 32px;
+}
+
+.terminalTab {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: #2d2d30;
+  color: #ccc;
+  font-size: 12px;
+  border: 1px solid #333;
+  border-bottom: none;
+  border-radius: 4px 4px 0 0;
+  cursor: pointer;
+  max-width: 160px;
+}
+
+.terminalTab:hover {
+  background: #3c3c3c;
+  color: #fff;
+}
+
+.terminalTab.active {
+  background: #1e1e1e;
+  color: #fff;
+  border-bottom: 1px solid #1e1e1e;
+  margin-bottom: -1px;
+}
+
+.terminalTabLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.terminalTabDirty {
+  color: #888;
+  font-size: 0.9em;
+  flex-shrink: 0;
+}
+
+.terminalTabClose {
+  padding: 0 2px;
+  margin: 0;
+  background: transparent;
+  border: none;
+  color: #858585;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: 2px;
+}
+
+.terminalTabClose:hover {
+  color: #fff;
+  background: #555;
+}
+
+.terminalTabContent {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.terminalToolbar {
+  padding: 8px 12px;
+  background: #252526;
+  border-bottom: 1px solid #333;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.terminalToolbar .terminalEnvName {
+  flex: 1;
+  font-size: 12px;
+  color: #ccc;
+}
+
+.terminalContainer {
+  flex: 1;
+  padding: 8px;
+  min-height: 0;
+  position: relative;
+}
+
+.terminalContainer .terminalTabContent {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  right: 8px;
+  bottom: 8px;
+}
+
+.terminalContainer .terminalTabContent .xterm {
+  width: 100%;
+  height: 100%;
+  user-select: text;
+}
+
+.editorContainer {
+  display: none;
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+
+.editorContainer.visible {
+  display: block;
+}
+
+.editorContainer .editorTabContent {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+.diffPreviewWrap {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  background: #1e1e1e;
+  z-index: 10;
+}
+
+.diffPreviewToolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 10px;
+  background: #2d2d30;
+  border-bottom: 1px solid #444;
+  flex-shrink: 0;
+  z-index: 11;
+  position: relative;
+}
+
+.diffPreviewHint {
+  font-size: 12px;
+  color: #888;
+  margin-right: auto;
+}
+
+.diffPreviewToolbar button {
+  padding: 6px 12px;
+  cursor: pointer;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.diffPreviewToolbar #btnDiffApply {
+  background: #0e639c;
+  color: #fff;
+}
+
+.diffPreviewToolbar #btnDiffCancel {
+  background: #555;
+  color: #ccc;
+}
+
+.diffPreviewContainer {
+  flex: 1;
+  min-height: 0;
+}
+
+.formPanel {
+  padding: 12px;
+  background: #2d2d30;
+  border-top: 1px solid #333;
+}
+
+.formPanel h3 {
+  margin-bottom: 8px;
+  font-size: 12px;
+}
+
+.formPanel label {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+}
+
+.formPanel input {
+  width: 100%;
+  padding: 6px 8px;
+  margin-top: 2px;
+  background: #3c3c3c;
+  border: 1px solid #555;
+  color: #ccc;
+  border-radius: 4px;
+}
+
+.formPanel .formActions {
+  margin-top: 12px;
+  display: flex;
+  gap: 8px;
+}
+
+.formPanel .formActions button {
+  padding: 6px 12px;
+  cursor: pointer;
+  border: none;
+  border-radius: 4px;
+}
+
+.formPanel .formActions button[type="submit"] {
+  background: #0e639c;
+  color: #fff;
+}
+
+.formPanel .formActions button[type="button"] {
+  background: #555;
+  color: #ccc;
+}
+
+.formPanel .formActions button:hover {
+  opacity: 0.9;
+}
