@@ -147,6 +147,48 @@ export function renderLayout(root: HTMLElement): void {
           <div class="settingsModalActions">
             <button type="button" id="btnSettingsClose">Close</button>
           </div>
+          <div class="settingsModalSection" id="aiSettingsSection">
+            <h3 class="settingsModalSectionTitle" data-i18n="ai.title">${t('ai.title')}</h3>
+            <div class="aiSettingsForm">
+              <div class="aiSettingsField">
+                <label data-i18n="ai.apiUrl">${t('ai.apiUrl')}</label>
+                <input type="text" id="aiApiUrl" data-i18n-placeholder="ai.placeholder.url" placeholder="${t('ai.placeholder.url')}" />
+              </div>
+              <div class="aiSettingsField">
+                <label data-i18n="ai.apiKey">${t('ai.apiKey')}</label>
+                <div class="aiSettingsKeyRow">
+                  <input type="password" id="aiApiKey" data-i18n-placeholder="ai.placeholder.apiKey" placeholder="${t('ai.placeholder.apiKey')}" />
+                  <button type="button" id="btnToggleApiKey" class="aiSettingsToggleBtn">Show</button>
+                </div>
+              </div>
+              <div class="aiSettingsField">
+                <label data-i18n="ai.model">${t('ai.model')}</label>
+                <input type="text" id="aiModel" data-i18n-placeholder="ai.placeholder.model" placeholder="${t('ai.placeholder.model')}" />
+              </div>
+              <div class="aiSettingsField aiSettingsField--row">
+                <div class="aiSettingsFieldHalf">
+                  <label>Temperature: <span id="aiTempValue">0.7</span></label>
+                  <input type="range" id="aiTemperature" min="0" max="2" step="0.1" value="0.7" />
+                </div>
+                <div class="aiSettingsFieldHalf">
+                  <label data-i18n="ai.maxTokens">${t('ai.maxTokens')}</label>
+                  <input type="number" id="aiMaxTokens" value="4096" min="1" max="128000" />
+                </div>
+              </div>
+              <div class="aiSettingsField">
+                <label data-i18n="ai.systemPrompt">${t('ai.systemPrompt')}</label>
+                <textarea id="aiSystemPrompt" rows="3" data-i18n-placeholder="ai.placeholder.systemPrompt" placeholder="${t('ai.placeholder.systemPrompt')}"></textarea>
+              </div>
+              <div id="aiSettingsTestResult" class="aiSettingsTestResult" style="display:none;"></div>
+              <div class="aiSettingsActions">
+                <button type="button" id="btnAiTest" data-i18n="ai.test">${t('ai.test')}</button>
+                <button type="button" id="btnAiSave" data-i18n="ai.save">${t('ai.save')}</button>
+              </div>
+            </div>
+          </div>
+          <div class="settingsModalActions">
+            <button type="button" id="btnSettingsClose">Close</button>
+          </div>
         </div>
       </div>
       <div id="accountListModal" class="accountListModal" style="display: none;">

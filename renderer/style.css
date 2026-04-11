@@ -978,6 +978,149 @@ body {
   color: #fff;
 }
 
+/* AI Settings */
+.aiSettingsForm {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.aiSettingsField {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.aiSettingsField label {
+  font-size: 12px;
+  color: #858585;
+  font-weight: 600;
+}
+
+.aiSettingsField input[type="text"],
+.aiSettingsField input[type="password"],
+.aiSettingsField input[type="number"],
+.aiSettingsField textarea {
+  padding: 4px 8px;
+  font-size: 13px;
+  border: 1px solid #555;
+  border-radius: 4px;
+  background: #3c3c3c;
+  color: #d4d4d4;
+  outline: none;
+}
+
+.aiSettingsField input:focus,
+.aiSettingsField textarea:focus {
+  border-color: #007acc;
+}
+
+.aiSettingsField textarea {
+  resize: vertical;
+  min-height: 60px;
+  font-family: inherit;
+}
+
+.aiSettingsField--row {
+  flex-direction: row;
+  gap: 16px;
+}
+
+.aiSettingsFieldHalf {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.aiSettingsFieldHalf label {
+  font-size: 12px;
+  color: #858585;
+  font-weight: 600;
+}
+
+.aiSettingsFieldHalf input[type="range"] {
+  width: 100%;
+  accent-color: #007acc;
+}
+
+.aiSettingsFieldHalf input[type="number"] {
+  padding: 4px 8px;
+  font-size: 13px;
+  border: 1px solid #555;
+  border-radius: 4px;
+  background: #3c3c3c;
+  color: #d4d4d4;
+  outline: none;
+}
+
+.aiSettingsFieldHalf input[type="number"]:focus {
+  border-color: #007acc;
+}
+
+.aiSettingsKeyRow {
+  display: flex;
+  gap: 6px;
+}
+
+.aiSettingsKeyRow input {
+  flex: 1;
+}
+
+.aiSettingsToggleBtn {
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  border: 1px solid #555;
+  border-radius: 4px;
+  background: #3c3c3c;
+  color: #ccc;
+  white-space: nowrap;
+}
+
+.aiSettingsToggleBtn:hover {
+  background: #505050;
+}
+
+.aiSettingsActions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.aiSettingsActions button {
+  padding: 4px 16px;
+  font-size: 13px;
+  cursor: pointer;
+  border: none;
+  border-radius: 4px;
+  background: #0e639c;
+  color: #fff;
+}
+
+.aiSettingsActions button:hover {
+  background: #1177bb;
+}
+
+.aiSettingsTestResult {
+  padding: 6px 10px;
+  font-size: 12px;
+  border-radius: 4px;
+  word-break: break-word;
+}
+
+.aiSettingsTestResult--ok {
+  background: #1a3a1a;
+  color: #4ec94e;
+  border: 1px solid #2a5a2a;
+}
+
+.aiSettingsTestResult--fail {
+  background: #3a1a1a;
+  color: #f44747;
+  border: 1px solid #5a2a2a;
+}
+
 .planModalPlans {
   display: flex;
   flex-direction: column;

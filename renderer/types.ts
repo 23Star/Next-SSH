@@ -117,6 +117,12 @@ declare global {
       settings?: {
         onOpen: (callback: () => void) => void;
       };
+      aiSettings?: {
+        get: () => Promise<{ apiUrl: string; apiKeyMasked: string; model: string; temperature: number; maxTokens: number; systemPrompt: string }>;
+        set: (input: { apiUrl: string; apiKey: string; model: string; temperature: number; maxTokens: number; systemPrompt: string }) => Promise<void>;
+        test: () => Promise<{ ok: boolean; message: string }>;
+        isConfigured: () => Promise<boolean>;
+      };
     };
   }
 }

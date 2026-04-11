@@ -2,7 +2,7 @@ import { app, BrowserWindow, ipcMain, Menu, shell } from 'electron';
 import path from 'path';
 import { loadFirebaseConfig } from './config/loadFirebaseConfig';
 import { getLocale, setLocale, type Locale } from './config/userSettings';
-import { registerChatHandlers } from './ipc/chatHandler';
+import { registerChatHandlers, registerAiSettingsHandlers } from './ipc/chatHandler';
 import { registerEnvironmentHandlers } from './ipc/environmentHandler';
 import { registerExplorerHandlers } from './ipc/explorerHandler';
 import { registerLocaleHandlers } from './ipc/localeHandler';
@@ -102,6 +102,7 @@ app.whenReady().then(async () => {
   });
   registerEnvironmentHandlers();
   registerChatHandlers();
+  registerAiSettingsHandlers();
   registerExplorerHandlers();
   registerLocaleHandlers();
 

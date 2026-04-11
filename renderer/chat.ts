@@ -2,7 +2,6 @@ import type { ChatMessage } from './types';
 import { state } from './state';
 import { t } from './i18n';
 import { escapeHtml } from './util';
-import { callChatComplete, getCurrentUser } from './firebase';
 import * as terminal from './terminal';
 import * as editor from './editor';
 import { showMessage } from './message';
@@ -31,7 +30,17 @@ const CHAT_SYSTEM_PROMPT_FALLBACK = `あなたは Linux サーバー管理のア
 質問に対して、まず1〜2文で結論（いちばんメジャーな答え）を書き、そのあと必要なら詳細や例外を書く。
 相手が初心者か上級者か分からないときは、最初は一般的で分かりやすい説明にし、『もっと詳しく』と言われたら技術的に深く答える。`;
 
+let cachedCustomSystemPrompt: string | null = null;
+
+/** ユーザー設定のシステムプロンプトをキャッシュする（設定画面で保存時に更新） */
+export function setCustomSystemPrompt(prompt: string | null): void {
+  cachedCustomSystemPrompt = prompt;
+}
+
 function getChatSystemPrompt(): string {
+  if (cachedCustomSystemPrompt && cachedCustomSystemPrompt.trim()) {
+    return cachedCustomSystemPrompt.trim();
+  }
   const p = t('chat.systemPrompt');
   return p && p !== 'chat.systemPrompt' ? p : CHAT_SYSTEM_PROMPT_FALLBACK;
 }
@@ -314,7 +323,6 @@ async function applySearchReplaceToEditor(btn: HTMLButtonElement): Promise<void>
 }
 
 export async function sendChatMessage(api: Api, userContent: string): Promise<void> {
-  if (getCurrentUser() === null) return;
   if (!userContent.trim() || !api.chat || state.chatLoading || state.activeChatSessionId === null) return;
   if (!api.chatContext) return;
   const content = userContent.trim();
@@ -361,8 +369,8 @@ export async function sendChatMessage(api: Api, userContent: string): Promise<vo
       { role: 'system' as const, content: getChatSystemPrompt() + terminalContext + fileContext },
       ...messages.map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content })),
     ];
-    const reply = await callChatComplete(payload);
-    if (reply === null) throw new Error('チャットに応答できませんでした。ログインを確認してください。');
+    const reply = await api.chat.complete(payload);
+    if (!reply) throw new Error('AI からの応答がありませんでした。');
     const suggestedCommands = extractSuggestedCommands(reply);
     const assistantRow = await api.chatContext.add(sessionId, 'assistant', reply, suggestedCommands);
     state.chatMessagesBySession[sessionId].push({
@@ -487,15 +495,15 @@ export function closeChatTab(api: Api, sessionId: number): void {
   renderChatMessages();
 }
 
-/** 未ログイン時は送信不可＋ログイン促し表示。ログイン時は有効。 */
-export function updateChatFormLoginState(): void {
-  const user = getCurrentUser();
+/** AI 未設定時は送信不可＋設定促し表示。設定済み時は有効。 */
+export async function updateChatFormLoginState(): Promise<void> {
+  const configured = await window.electronAPI?.aiSettings?.isConfigured() ?? false;
   const prompt = document.getElementById('chatLoginPrompt');
   const sendBtn = document.getElementById('btnChatSend');
   const input = document.getElementById('chatInput') as HTMLTextAreaElement | null;
-  if (prompt) prompt.style.display = user === null ? 'block' : 'none';
-  if (sendBtn) (sendBtn as HTMLButtonElement).disabled = user === null;
-  if (input) input.disabled = user === null;
+  if (prompt) prompt.style.display = configured ? 'none' : 'block';
+  if (sendBtn) (sendBtn as HTMLButtonElement).disabled = !configured;
+  if (input) input.disabled = !configured;
 }
 
 export function bindChatEvents(api: Api): void {

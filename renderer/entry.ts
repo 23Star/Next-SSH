@@ -10,7 +10,6 @@ import * as explorer from './explorer';
 import * as chat from './chat';
 import * as editor from './editor';
 import * as shortcuts from './shortcuts';
-import { initFirebase, bindFirebaseAuthUI, onAuthStateChange, openCheckoutForPlan } from './firebase';
 
 const rootEl = document.getElementById('root');
 if (!rootEl) throw new Error('root not found');
@@ -88,11 +87,112 @@ async function updateSettingsLanguageHighlight(api: NonNullable<typeof window.el
   });
 }
 
+async function loadAiSettingsToForm(): Promise<void> {
+  const settings = await api.aiSettings?.get();
+  if (!settings) return;
+  const urlInput = document.getElementById('aiApiUrl') as HTMLInputElement | null;
+  const keyInput = document.getElementById('aiApiKey') as HTMLInputElement | null;
+  const modelInput = document.getElementById('aiModel') as HTMLInputElement | null;
+  const tempInput = document.getElementById('aiTemperature') as HTMLInputElement | null;
+  const tempValue = document.getElementById('aiTempValue');
+  const maxTokensInput = document.getElementById('aiMaxTokens') as HTMLInputElement | null;
+  const systemPromptInput = document.getElementById('aiSystemPrompt') as HTMLTextAreaElement | null;
+  if (urlInput) urlInput.value = settings.apiUrl ?? '';
+  if (keyInput) keyInput.value = settings.apiKeyMasked ?? '';
+  if (modelInput) modelInput.value = settings.model ?? '';
+  if (tempInput) {
+    tempInput.value = String(settings.temperature ?? 0.7);
+    if (tempValue) tempValue.textContent = String(settings.temperature ?? 0.7);
+  }
+  if (maxTokensInput) maxTokensInput.value = String(settings.maxTokens ?? 4096);
+  if (systemPromptInput) systemPromptInput.value = settings.systemPrompt ?? '';
+}
+
+function bindAiSettingsEvents(api: NonNullable<typeof window.electronAPI>): void {
+  // Temperature slider value display
+  const tempInput = document.getElementById('aiTemperature') as HTMLInputElement | null;
+  const tempValue = document.getElementById('aiTempValue');
+  tempInput?.addEventListener('input', () => {
+    if (tempValue) tempValue.textContent = tempInput.value;
+  });
+
+  // Toggle API Key visibility
+  document.getElementById('btnToggleApiKey')?.addEventListener('click', () => {
+    const keyInput = document.getElementById('aiApiKey') as HTMLInputElement | null;
+    if (!keyInput) return;
+    keyInput.type = keyInput.type === 'password' ? 'text' : 'password';
+  });
+
+  // Test connection
+  document.getElementById('btnAiTest')?.addEventListener('click', async () => {
+    const resultEl = document.getElementById('aiSettingsTestResult');
+    if (resultEl) resultEl.style.display = 'none';
+    const urlInput = document.getElementById('aiApiUrl') as HTMLInputElement | null;
+    const keyInput = document.getElementById('aiApiKey') as HTMLInputElement | null;
+    const modelInput = document.getElementById('aiModel') as HTMLInputElement | null;
+    const tempInput = document.getElementById('aiTemperature') as HTMLInputElement | null;
+    const maxTokensInput = document.getElementById('aiMaxTokens') as HTMLInputElement | null;
+    const systemPromptInput = document.getElementById('aiSystemPrompt') as HTMLTextAreaElement | null;
+
+    // Save first, then test
+    await api.aiSettings?.set({
+      apiUrl: urlInput?.value ?? '',
+      apiKey: keyInput?.value ?? '',
+      model: modelInput?.value ?? '',
+      temperature: parseFloat(tempInput?.value ?? '0.7'),
+      maxTokens: parseInt(maxTokensInput?.value ?? '4096', 10),
+      systemPrompt: systemPromptInput?.value ?? '',
+    });
+
+    const result = await api.aiSettings?.test();
+    if (resultEl) {
+      resultEl.style.display = 'block';
+      resultEl.textContent = result?.message ?? '';
+      resultEl.className = `aiSettingsTestResult ${result?.ok ? 'aiSettingsTestResult--ok' : 'aiSettingsTestResult--fail'}`;
+    }
+  });
+
+  // Save settings
+  document.getElementById('btnAiSave')?.addEventListener('click', async () => {
+    const urlInput = document.getElementById('aiApiUrl') as HTMLInputElement | null;
+    const keyInput = document.getElementById('aiApiKey') as HTMLInputElement | null;
+    const modelInput = document.getElementById('aiModel') as HTMLInputElement | null;
+    const tempInput = document.getElementById('aiTemperature') as HTMLInputElement | null;
+    const maxTokensInput = document.getElementById('aiMaxTokens') as HTMLInputElement | null;
+    const systemPromptInput = document.getElementById('aiSystemPrompt') as HTMLTextAreaElement | null;
+    const resultEl = document.getElementById('aiSettingsTestResult');
+
+    await api.aiSettings?.set({
+      apiUrl: urlInput?.value ?? '',
+      apiKey: keyInput?.value ?? '',
+      model: modelInput?.value ?? '',
+      temperature: parseFloat(tempInput?.value ?? '0.7'),
+      maxTokens: parseInt(maxTokensInput?.value ?? '4096', 10),
+      systemPrompt: systemPromptInput?.value ?? '',
+    });
+
+    // Update custom system prompt cache
+    chat.setCustomSystemPrompt(systemPromptInput?.value ?? '');
+
+    // Show success feedback
+    if (resultEl) {
+      resultEl.style.display = 'block';
+      resultEl.textContent = 'Saved';
+      resultEl.className = 'aiSettingsTestResult aiSettingsTestResult--ok';
+      setTimeout(() => { resultEl.style.display = 'none'; }, 2000);
+    }
+
+    // Update chat panel state
+    void chat.updateChatFormLoginState();
+  });
+}
+
 function bindSettingsAndPlanModals(api: NonNullable<typeof window.electronAPI>): void {
   api.settings?.onOpen(() => {
     const el = document.getElementById('settingsModal');
     if (el) el.style.display = 'flex';
     void updateSettingsLanguageHighlight(api);
+    void loadAiSettingsToForm();
   });
 
   document.getElementById('settingsModalBackdrop')?.addEventListener('click', () => {
@@ -107,26 +207,6 @@ function bindSettingsAndPlanModals(api: NonNullable<typeof window.electronAPI>):
   document.getElementById('btnLangJa')?.addEventListener('click', () => api.locale?.set('ja'));
   document.getElementById('btnLangEn')?.addEventListener('click', () => api.locale?.set('en'));
   document.getElementById('btnLangZn')?.addEventListener('click', () => api.locale?.set('zn'));
-
-  document.getElementById('planModalBackdrop')?.addEventListener('click', () => {
-    const el = document.getElementById('planModal');
-    if (el) el.style.display = 'none';
-  });
-  document.getElementById('btnPlanClose')?.addEventListener('click', () => {
-    const el = document.getElementById('planModal');
-    if (el) el.style.display = 'none';
-  });
-
-  document.querySelectorAll('.planModalPlan').forEach((planEl) => {
-    const planId = planEl.getAttribute('data-plan');
-    const btn = planEl.querySelector('.planModalPlanBtn');
-    if (!planId || !btn) return;
-    btn.addEventListener('click', async () => {
-      await openCheckoutForPlan(planId);
-      const modal = document.getElementById('planModal');
-      if (modal) modal.style.display = 'none';
-    });
-  });
 }
 
 async function runApp(): Promise<void> {
@@ -142,14 +222,8 @@ async function runApp(): Promise<void> {
   renderLayout(root);
   if (api.locale) void updateSettingsLanguageHighlight(api);
   bindEvents();
-  if (api.firebase) {
-    const ok = await initFirebase(() => api.firebase!.getConfig());
-    if (ok) {
-      bindFirebaseAuthUI();
-      onAuthStateChange(() => chat.updateChatFormLoginState());
-    }
-  }
   bindSettingsAndPlanModals(api);
+  bindAiSettingsEvents(api);
   chat.updateChatFormLoginState();
   await sidebar.refreshList(api);
   chat.renderChatMessages();
@@ -162,6 +236,13 @@ async function runApp(): Promise<void> {
   explorer.setupExplorerContextMenu(api);
   explorer.setupExplorerKeyboard(api);
   await chat.loadChatSessions(api);
+
+  // Load custom system prompt on startup
+  const aiConf = await api.aiSettings?.get();
+  if (aiConf?.systemPrompt) {
+    chat.setCustomSystemPrompt(aiConf.systemPrompt);
+  }
+
   if (api.locale) {
     api.locale.onChanged(async (newLocale) => {
       setCurrentLang(await api.locale!.getLangPack(newLocale));

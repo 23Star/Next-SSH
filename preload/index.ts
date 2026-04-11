@@ -98,6 +98,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.on('open-settings', () => callback());
     },
   },
+  aiSettings: {
+    get: () => ipcRenderer.invoke('aiSettings:get'),
+    set: (input: { apiUrl: string; apiKey: string; model: string; temperature: number; maxTokens: number; systemPrompt: string }) =>
+      ipcRenderer.invoke('aiSettings:set', input),
+    test: () => ipcRenderer.invoke('aiSettings:test') as Promise<{ ok: boolean; message: string }>,
+    isConfigured: () => ipcRenderer.invoke('aiSettings:isConfigured') as Promise<boolean>,
+  },
 });
 
 interface FirebaseConfig {
