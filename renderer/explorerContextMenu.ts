@@ -1,7 +1,6 @@
 /**
- * エクスプローラー右クリックコンテキストメニュー。
- * ファイル・フォルダ両方対象。貼り付けは「右クリックしたフォルダの中」または「ファイルの親フォルダ」に実行。
- * showContextMenu はメインパネル・ファイルタブの右クリックでも利用する。
+ * Explorer right-click context menu. Supports files and folders.
+ * showContextMenu is also used by main panel tabs.
  */
 import { t } from './i18n';
 import { state } from './state';
@@ -15,19 +14,15 @@ function hideMenu(): void {
   if (el) el.remove();
 }
 
-/** パスから親ディレクトリを取得（/ と \ 両対応）。 */
+/** Get parent directory from path (supports / and \). */
 function getParentDir(pathStr: string): string {
   const i = Math.max(pathStr.lastIndexOf('/'), pathStr.lastIndexOf('\\'));
   return i <= 0 ? pathStr : pathStr.slice(0, i);
 }
 
-/** Main に送る前にパスを正規化（混在区切りを / に統一。Main 側で path.sep に変換される）。 */
+/** Normalize path separators to / before sending to main process. */
 function normalizePathForIpc(p: string): string {
   return p.replace(/\\/g, '/');
-}
-
-function menuItemStyle(): string {
-  return 'display:block;width:100%;text-align:left;padding:8px 14px;border:none;background:transparent;color:inherit;cursor:pointer;font-size:13px;';
 }
 
 function createMenuItem(label: string, onClick: () => void): HTMLButtonElement {
@@ -35,13 +30,6 @@ function createMenuItem(label: string, onClick: () => void): HTMLButtonElement {
   btn.type = 'button';
   btn.className = 'explorerContextMenuItem';
   btn.textContent = label;
-  btn.style.cssText = menuItemStyle();
-  btn.addEventListener('mouseenter', () => {
-    btn.style.background = 'var(--hover-bg, rgba(255,255,255,0.08))';
-  });
-  btn.addEventListener('mouseleave', () => {
-    btn.style.background = 'transparent';
-  });
   btn.addEventListener('click', () => {
     hideMenu();
     onClick();
@@ -54,13 +42,14 @@ export interface ContextMenuItem {
   onClick: () => void;
 }
 
-/** 任意の位置にコンテキストメニューを表示（エクスプローラー・メインパネルタブ共通）。 */
+/** Show a context menu at the specified position (shared by explorer and main panel tabs). */
 export function showContextMenu(ev: MouseEvent, items: ContextMenuItem[]): void {
   hideMenu();
   const menu = document.createElement('div');
   menu.id = MENU_ID;
   menu.className = 'explorerContextMenu';
-  menu.style.cssText = `position:fixed;left:${ev.clientX}px;top:${ev.clientY}px;z-index:9999;background:var(--panel-bg, #2d2d2d);border:1px solid var(--border, #444);border-radius:6px;padding:4px 0;min-width:140px;box-shadow:0 4px 12px rgba(0,0,0,0.3);`;
+  menu.style.left = `${ev.clientX}px`;
+  menu.style.top = `${ev.clientY}px`;
   items.forEach((item) => menu.appendChild(createMenuItem(item.label, item.onClick)));
   document.body.appendChild(menu);
   const close = () => {
@@ -72,12 +61,11 @@ export function showContextMenu(ev: MouseEvent, items: ContextMenuItem[]): void 
   document.addEventListener('contextmenu', close, { once: true });
 }
 
-/** 削除後に親フォルダを再読み込みするコールバック（explorer.refreshExplorerDir を渡す）。 */
 export type OnRefreshExplorerDir = (api: Api, parentDir: string) => Promise<void>;
 
 /**
- * コンテナにコンテキストメニューをバインドする。
- * ファイル・フォルダ両方でメニュー表示。貼り付け＝右クリックしたフォルダの中（ファイルの場合はその親）へ。
+ * Bind context menu to a container. Supports both files and folders.
+ * Paste = into right-clicked folder (or parent of right-clicked file).
  */
 export function bindExplorerContextMenu(
   container: HTMLElement,
@@ -117,13 +105,13 @@ export function bindExplorerContextMenu(
             try {
               await api.explorer.downloadToDestination([pathNorm]);
             } catch {
-              // エラーは Main でログ済み
+              // Error logged by main process
             }
           } else if (!isLocal && connectionId != null && api.explorer?.downloadFromRemote) {
             try {
               await api.explorer.downloadFromRemote(connectionId, [pathVal]);
             } catch {
-              // エラーは Main でログ済み
+              // Error logged by main process
             }
           }
         },
@@ -146,7 +134,7 @@ export function bindExplorerContextMenu(
             try {
               await api.explorer.copyToFolder(state.copiedFilePaths, targetDir);
             } catch {
-              // エラーは Main でログ済み
+              // Error logged by main process
             }
           },
         });
@@ -164,10 +152,10 @@ export function bindExplorerContextMenu(
         items.push({
           label: t('delete'),
           onClick: async () => {
-            if (!confirm(t('confirmDelete') ?? '削除しますか？')) return;
+            if (!confirm(t('confirmDelete'))) return;
             try {
               await explorerApi.deletePath(pathNorm);
-              await onRefreshDir(api, getParentDir(pathVal));
+              await onRefreshDir(api, getParentDir(pathNorm));
             } catch (err) {
               api.logToMain?.('[explorerContextMenu] delete error', err);
             }

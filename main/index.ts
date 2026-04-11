@@ -1,6 +1,5 @@
 import { app, BrowserWindow, ipcMain, Menu, shell } from 'electron';
 import path from 'path';
-import { loadFirebaseConfig } from './config/loadFirebaseConfig';
 import { getLocale, setLocale, type Locale } from './config/userSettings';
 import { registerChatHandlers, registerAiSettingsHandlers } from './ipc/chatHandler';
 import { registerEnvironmentHandlers } from './ipc/environmentHandler';
@@ -19,7 +18,6 @@ function applyLocaleToWindows(locale: Locale): void {
 }
 
 function buildApplicationMenu(): Menu {
-  const current = getLocale();
   return Menu.buildFromTemplate([
     {
       label: 'File',
@@ -61,7 +59,7 @@ function createWindow(rendererUrl: string | null): void {
       contextIsolation: true,
       preload: preloadPath,
     },
-    title: 'AISSH',
+    title: 'Next-SSH',
   });
 
   if (isDev) {
@@ -76,12 +74,6 @@ function createWindow(rendererUrl: string | null): void {
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
-
-  // 認証ポップアップ（Firebase/Google OAuth）のタイトルを「Aissh」に統一
-  mainWindow.webContents.setWindowOpenHandler(() => ({
-    action: 'allow',
-    overrideBrowserWindowOptions: { title: 'Aissh' },
-  }));
 }
 
 app.whenReady().then(async () => {
@@ -96,7 +88,6 @@ app.whenReady().then(async () => {
       win.focus();
     }
   });
-  ipcMain.handle('firebase:getConfig', () => loadFirebaseConfig());
   ipcMain.handle('openExternal', (_event, url: string) => {
     if (typeof url === 'string' && url.startsWith('https://')) shell.openExternal(url);
   });
@@ -115,7 +106,7 @@ app.whenReady().then(async () => {
       rendererUrl = url;
       rendererServerClose = close;
     } catch (err) {
-      console.error('[main] Renderer server failed, falling back to loadFile. Firebase Auth may not work:', err);
+      console.error('[main] Renderer server failed, falling back to loadFile:', err);
     }
   }
 

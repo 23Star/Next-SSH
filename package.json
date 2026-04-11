@@ -1,7 +1,7 @@
 {
-    "name": "aissh",
+    "name": "next-ssh",
     "version": "0.1.0",
-    "description": "AI × SSH ハイブリッド管理ツール",
+    "description": "Next-SSH - AI × SSH hybrid management tool",
     "private": false,
     "license": "MIT",
     "author": "PANDAAS <pandaas886@gmail.com>",
@@ -25,7 +25,7 @@
     "dependencies": {
         "@xterm/addon-fit": "^0.11.0",
         "better-sqlite3": "^9.2.2",
-        "firebase": "^11.0.0",
+        "marked": "^15.0.0",
         "monaco-editor": "^0.52.2",
         "node-pty": "^1.1.0",
         "openai": "^6.22.0",
@@ -50,15 +50,14 @@
         "vite": "^5.0.8"
     },
     "build": {
-        "appId": "com.aissh.app",
-        "productName": "AISSH",
+        "appId": "com.nextssh.app",
+        "productName": "Next-SSH",
         "directories": {
             "output": "release"
         },
         "files": [
             "dist/**/*",
             "resource/**/*",
-            "config/firebase.local.json",
             "package.json"
         ],
         "win": {

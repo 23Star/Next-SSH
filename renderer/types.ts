@@ -19,7 +19,6 @@ export interface TerminalTab {
   name: string;
 }
 
-/** メインパネルのタブ（1列で並ぶ。のちに db を追加） */
 export type MainPanelTab =
   | { id: string; kind: 'terminal'; connectionId: number; envId: number; name: string }
   | { id: string; kind: 'local-terminal' }
@@ -68,6 +67,8 @@ declare global {
       };
       chat?: {
         complete: (messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>) => Promise<string>;
+        streamStart: (messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>) => void;
+        onStreamChunk: (callback: (chunk: { type: 'content' | 'thinking' | 'done' | 'error'; text: string }) => void) => void;
       };
       chatSession?: {
         list: () => Promise<Array<{ id: number; title: string; createdAt: string; updatedAt: string }>>;
@@ -104,13 +105,15 @@ declare global {
         copyOnRemote: (connectionId: number, sourcePaths: string[], targetDir: string) => Promise<void>;
       };
       locale?: {
-        get: () => Promise<'ja' | 'en' | 'zn'>;
-        set: (locale: 'ja' | 'en' | 'zn') => Promise<void>;
-        getLangPack: (locale: 'ja' | 'en' | 'zn') => Promise<Record<string, string>>;
-        onChanged: (callback: (locale: 'ja' | 'en' | 'zn') => void) => void;
+        get: () => Promise<'en' | 'zn' | 'ru'>;
+        set: (locale: 'en' | 'zn' | 'ru') => Promise<void>;
+        getLangPack: (locale: 'en' | 'zn' | 'ru') => Promise<Record<string, string>>;
+        onChanged: (callback: (locale: 'en' | 'zn' | 'ru') => void) => void;
       };
-      firebase?: {
-        getConfig: () => Promise<FirebaseConfig | null>;
+      theme?: {
+        get: () => Promise<'dark' | 'light'>;
+        set: (theme: 'dark' | 'light') => Promise<void>;
+        onChanged: (callback: (theme: 'dark' | 'light') => void) => void;
       };
       openExternal?: (url: string) => Promise<void>;
       refocusWindow?: () => Promise<void>;
@@ -122,17 +125,9 @@ declare global {
         set: (input: { apiUrl: string; apiKey: string; model: string; temperature: number; maxTokens: number; systemPrompt: string }) => Promise<void>;
         test: () => Promise<{ ok: boolean; message: string }>;
         isConfigured: () => Promise<boolean>;
+        getModels: () => Promise<{ ok: boolean; models: Array<{ id: string; owned_by: string }>; error: string }>;
+        getPresets: () => Promise<Array<{ name: string; apiUrl: string; model: string }>>;
       };
     };
   }
-}
-
-export interface FirebaseConfig {
-  apiKey: string;
-  authDomain: string;
-  projectId: string;
-  storageBucket: string;
-  messagingSenderId: string;
-  appId: string;
-  measurementId?: string;
 }

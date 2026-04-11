@@ -1,3 +1,137 @@
+/* === CSS Variables: Dark (default) === */
+:root,
+[data-theme="dark"] {
+  --bg-primary: #1A1918;
+  --bg-secondary: #1F1E1D;
+  --bg-tertiary: #262624;
+  --bg-elevated: #2A2D2E;
+  --bg-input: #2D2D2D;
+  --bg-active: #1E1E1E;
+
+  --text-primary: #FAF9F5;
+  --text-secondary: #E8E6DC;
+  --text-tertiary: #B0AEA5;
+  --text-inverse: #141413;
+
+  --accent: #D97757;
+  --accent-hover: #C96442;
+  --accent-muted: rgba(217, 119, 87, 0.15);
+
+  --selection-bg: rgba(217, 119, 87, 0.3);
+  --focus-ring: rgba(217, 119, 87, 0.5);
+
+  --border-primary: #3D3D3A;
+  --border-secondary: #30302E;
+  --border-hover: #505050;
+
+  --success-bg: #1a3a1a;
+  --success-text: #4ec94e;
+  --success-border: #2a5a2a;
+  --error-bg: #3a1a1a;
+  --error-text: #f44747;
+  --error-border: #5a2a2a;
+
+  --resizer-bg: #3D3D3A;
+  --resizer-hover: var(--accent);
+
+  --scrollbar-thumb: #555;
+  --scrollbar-track: transparent;
+
+  --shadow-modal: 0 8px 32px rgba(0, 0, 0, 0.5);
+  --shadow-dropdown: 0 4px 12px rgba(0, 0, 0, 0.3);
+  --backdrop: rgba(0, 0, 0, 0.5);
+
+  --chat-user-bg: rgba(217, 119, 87, 0.12);
+  --chat-ai-bg: var(--bg-tertiary);
+  --chat-code-bg: #1a1a2e;
+  --chat-inline-code-bg: rgba(255, 255, 255, 0.08);
+  --chat-inline-code-color: #ce9178;
+  --chat-link-color: #D97757;
+
+  --thinking-bg: var(--bg-tertiary);
+  --thinking-border: var(--border-primary);
+  --thinking-text: var(--text-tertiary);
+
+  --terminal-bg: #1A1918;
+  --terminal-fg: #E8E6DC;
+  --terminal-selection-bg: #264f78;
+  --terminal-selection-fg: #E8E6DC;
+
+  --drop-target-bg: rgba(217, 119, 87, 0.25);
+  --drop-target-border: rgba(217, 119, 87, 0.7);
+
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+
+  --transition-fast: 150ms ease;
+  --transition-normal: 250ms ease;
+}
+
+/* === CSS Variables: Light === */
+[data-theme="light"] {
+  --bg-primary: #FAF9F5;
+  --bg-secondary: #F5F4ED;
+  --bg-tertiary: #F0EEE6;
+  --bg-elevated: #EBE9E0;
+  --bg-input: #FFFFFF;
+  --bg-active: #FAF9F5;
+
+  --text-primary: #141413;
+  --text-secondary: #30302E;
+  --text-tertiary: #5E5D59;
+  --text-inverse: #FAF9F5;
+
+  --accent: #D97757;
+  --accent-hover: #C96442;
+  --accent-muted: rgba(217, 119, 87, 0.1);
+
+  --selection-bg: rgba(217, 119, 87, 0.2);
+  --focus-ring: rgba(217, 119, 87, 0.4);
+
+  --border-primary: #B0AEA5;
+  --border-secondary: #D1CFC5;
+  --border-hover: #9A9890;
+
+  --success-bg: #e8f5e8;
+  --success-text: #2a7a2a;
+  --success-border: #b8dab8;
+  --error-bg: #f5e8e8;
+  --error-text: #c04040;
+  --error-border: #dab8b8;
+
+  --resizer-bg: #D1CFC5;
+  --resizer-hover: var(--accent);
+
+  --scrollbar-thumb: #B0AEA5;
+  --scrollbar-track: transparent;
+
+  --shadow-modal: 0 8px 32px rgba(0, 0, 0, 0.15);
+  --shadow-dropdown: 0 4px 12px rgba(0, 0, 0, 0.1);
+  --backdrop: rgba(0, 0, 0, 0.3);
+
+  --chat-user-bg: rgba(217, 119, 87, 0.08);
+  --chat-ai-bg: var(--bg-tertiary);
+  --chat-code-bg: #F0EEE6;
+  --chat-inline-code-bg: rgba(0, 0, 0, 0.06);
+  --chat-inline-code-color: #B35B2A;
+  --chat-link-color: #C96442;
+
+  --thinking-bg: var(--bg-tertiary);
+  --thinking-border: var(--border-primary);
+  --thinking-text: var(--text-tertiary);
+
+  --terminal-bg: #FFFFFF;
+  --terminal-fg: #30302E;
+  --terminal-selection-bg: rgba(217, 119, 87, 0.2);
+  --terminal-selection-fg: #30302E;
+
+  --drop-target-bg: rgba(217, 119, 87, 0.15);
+  --drop-target-border: rgba(217, 119, 87, 0.5);
+}
+
+/* === Reset & Base === */
 * {
   margin: 0;
   padding: 0;
@@ -5,12 +139,35 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
   font-size: 14px;
   height: 100vh;
   overflow: hidden;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  transition: background var(--transition-normal), color var(--transition-normal);
 }
 
+::selection {
+  background: var(--selection-bg);
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: var(--radius-xs);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--border-hover);
+}
+
+/* === Layout === */
 .layout {
   display: flex;
   height: 100vh;
@@ -21,22 +178,24 @@ body {
   min-width: 200px;
   max-width: 600px;
   flex-shrink: 0;
-  background: #252526;
-  color: #ccc;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
   display: flex;
   flex-direction: column;
-  border-right: 1px solid #333;
+  border-right: 1px solid var(--border-secondary);
   min-height: 0;
+  transition: background var(--transition-normal), border-color var(--transition-normal);
 }
 
 .layoutResizer {
   flex-shrink: 0;
-  background: #333;
+  background: var(--resizer-bg);
   z-index: 10;
+  transition: background var(--transition-fast);
 }
 
 .layoutResizer:hover {
-  background: #0e639c;
+  background: var(--resizer-hover);
 }
 
 .layoutResizer--vertical {
@@ -64,15 +223,16 @@ body {
 .sidebarSection.explorer {
   flex: 0 0 200px;
   min-height: 80px;
-  border-top: 1px solid #333;
+  border-top: 1px solid var(--border-secondary);
 }
 
 .panelHeader {
   padding: 10px 12px;
   font-weight: 600;
   font-size: 12px;
-  border-bottom: 1px solid #333;
-  background: #2d2d30;
+  border-bottom: 1px solid var(--border-secondary);
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
 }
 
 .explorerPanelHeader {
@@ -80,8 +240,8 @@ body {
   align-items: center;
   gap: 6px;
   padding: 6px 8px;
-  border-bottom: 1px solid #333;
-  background: #2d2d30;
+  border-bottom: 1px solid var(--border-secondary);
+  background: var(--bg-tertiary);
   flex-shrink: 0;
 }
 
@@ -104,25 +264,26 @@ body {
   flex-shrink: 0;
   padding: 2px 6px;
   font-size: 11px;
-  border: 1px solid #444;
-  border-radius: 3px;
-  background: #3c3c3c;
-  color: #ccc;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-xs);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
   cursor: pointer;
   max-width: 80px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
 }
 
 .explorerTab:hover {
-  background: #505050;
+  background: var(--border-hover);
 }
 
 .explorerTab.active {
-  background: #0e639c;
-  border-color: #0e639c;
-  color: #fff;
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--text-inverse);
 }
 
 .explorerUpBtn {
@@ -130,17 +291,18 @@ body {
   width: 24px;
   height: 24px;
   padding: 0;
-  border: 1px solid #444;
-  border-radius: 3px;
-  background: #3c3c3c;
-  color: #ccc;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-xs);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
   cursor: pointer;
   font-size: 14px;
   line-height: 1;
+  transition: background var(--transition-fast);
 }
 
 .explorerUpBtn:hover:not(:disabled) {
-  background: #505050;
+  background: var(--border-hover);
 }
 
 .explorerUpBtn:disabled {
@@ -151,7 +313,7 @@ body {
 .panelPlaceholder {
   padding: 12px;
   font-size: 12px;
-  color: #858585;
+  color: var(--text-tertiary);
   flex: 1;
   overflow-y: auto;
 }
@@ -167,10 +329,10 @@ body {
   cursor: default;
 }
 
-/* ドラッグ中にマウスが重なっているフォルダ（ドロップ先）を明示。アイコンで隠れても分かるように。 */
+/* Highlight the folder under the cursor during drag (drop target indicator). */
 .explorerItem.explorerItem--dropTarget .explorerItemLabel {
-  background: rgba(0, 122, 204, 0.35);
-  outline: 1px dashed rgba(0, 122, 204, 0.8);
+  background: var(--drop-target-bg);
+  outline: 1px dashed var(--drop-target-border);
   outline-offset: -1px;
 }
 
@@ -181,19 +343,20 @@ body {
   padding: 2px 8px;
   cursor: pointer;
   user-select: none;
+  transition: background var(--transition-fast);
 }
 
 .explorerItemLabel:hover {
-  background: #2a2d2e;
+  background: var(--bg-elevated);
 }
 
 .explorerItem.explorerItem--selected .explorerItemLabel {
-  background: rgba(0, 122, 204, 0.25);
+  background: var(--accent-muted);
 }
 
 .explorerItemExpand {
   width: 14px;
-  color: #858585;
+  color: var(--text-tertiary);
   font-size: 10px;
 }
 
@@ -204,7 +367,7 @@ body {
 }
 
 .explorerChildren {
-  border-left: 1px solid #333;
+  border-left: 1px solid var(--border-secondary);
   margin-left: 8px;
 }
 
@@ -215,17 +378,19 @@ body {
   min-height: 0;
 }
 
+/* === Chat Panel === */
 .chatPanel {
   width: 320px;
   min-width: 200px;
   max-width: 800px;
   flex-shrink: 0;
-  background: #252526;
-  color: #ccc;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
   display: flex;
   flex-direction: column;
-  border-left: 1px solid #333;
+  border-left: 1px solid var(--border-secondary);
   min-height: 0;
+  transition: background var(--transition-normal), border-color var(--transition-normal);
 }
 
 .chatTabBar {
@@ -234,8 +399,8 @@ body {
   align-items: center;
   gap: 0;
   padding: 4px 4px 0;
-  background: #2d2d30;
-  border-bottom: 1px solid #333;
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border-secondary);
   min-height: 32px;
 }
 
@@ -244,20 +409,21 @@ body {
   align-items: center;
   padding: 4px 8px;
   font-size: 12px;
-  border-radius: 4px 4px 0 0;
+  border-radius: var(--radius-xs) var(--radius-xs) 0 0;
   cursor: pointer;
   max-width: 120px;
-  color: #ccc;
+  color: var(--text-secondary);
+  transition: background var(--transition-fast);
 }
 
 .chatTab:hover {
-  background: #3c3c3c;
-  color: #fff;
+  background: var(--bg-elevated);
+  color: var(--text-primary);
 }
 
 .chatTab.active {
-  background: #252526;
-  color: #fff;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
 }
 
 .chatTabLabel {
@@ -271,15 +437,15 @@ body {
   margin: 0 0 0 4px;
   background: none;
   border: none;
-  color: #858585;
+  color: var(--text-tertiary);
   cursor: pointer;
   font-size: 14px;
   line-height: 1;
 }
 
 .chatTabClose:hover {
-  color: #fff;
-  background: #555;
+  color: var(--text-primary);
+  background: var(--bg-elevated);
 }
 
 .chatTabNew {
@@ -287,15 +453,15 @@ body {
   margin: 0;
   background: none;
   border: none;
-  color: #858585;
+  color: var(--text-tertiary);
   cursor: pointer;
   font-size: 16px;
   line-height: 1;
 }
 
 .chatTabNew:hover {
-  color: #fff;
-  background: #3c3c3c;
+  color: var(--text-primary);
+  background: var(--bg-elevated);
 }
 
 .chatMessages {
@@ -309,24 +475,27 @@ body {
 
 .chatEmpty {
   font-size: 12px;
-  color: #858585;
+  color: var(--text-tertiary);
   margin: 0;
 }
 
 .chatMessage {
-  padding: 8px 10px;
-  border-radius: 6px;
+  padding: 8px 0;
+  border-radius: var(--radius-sm);
   font-size: 13px;
 }
 
 .chatMessage--user {
-  background: #094771;
-  margin-left: 24px;
+  background: var(--chat-user-bg);
+  border-left: 3px solid var(--accent);
+  padding: 8px 10px;
+  margin-left: 12px;
 }
 
 .chatMessage--assistant {
-  background: #2d2d30;
-  margin-right: 24px;
+  background: var(--chat-ai-bg);
+  padding: 8px 10px;
+  margin-right: 12px;
 }
 
 .chatMessageRole {
@@ -334,18 +503,19 @@ body {
   font-size: 11px;
   font-weight: 600;
   margin-bottom: 4px;
-  color: #858585;
+  color: var(--text-tertiary);
 }
 
 .chatMessageContent {
   white-space: pre-wrap;
   word-break: break-word;
+  color: var(--text-primary);
 }
 
 .chatInputForm {
   padding: 12px;
   padding-top: 4px;
-  border-top: 1px solid #333;
+  border-top: 1px solid var(--border-secondary);
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -354,14 +524,15 @@ body {
 .chatInputResizer {
   height: 6px;
   margin: 0 0 4px;
-  background: #333;
+  background: var(--border-secondary);
   border-radius: 3px;
   cursor: row-resize;
   flex-shrink: 0;
+  transition: background var(--transition-fast);
 }
 
 .chatInputResizer:hover {
-  background: #0e639c;
+  background: var(--accent);
 }
 
 .chatInputForm textarea {
@@ -369,41 +540,51 @@ body {
   min-height: 48px;
   max-height: 240px;
   padding: 8px 10px;
-  background: #3c3c3c;
-  border: 1px solid #555;
-  color: #d4d4d4;
-  border-radius: 4px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-primary);
+  color: var(--text-primary);
+  border-radius: var(--radius-sm);
   font-family: inherit;
   font-size: 13px;
   resize: none;
+  transition: border-color var(--transition-fast);
 }
 
 .chatInputForm textarea::placeholder {
-  color: #858585;
+  color: var(--text-tertiary);
+}
+
+.chatInputForm textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--focus-ring);
 }
 
 .chatInputForm button[type="submit"] {
   padding: 8px 12px;
   cursor: pointer;
-  background: #0e639c;
-  color: #fff;
+  background: var(--accent);
+  color: var(--text-inverse);
   border: none;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   font-size: 13px;
+  font-weight: 500;
+  transition: background var(--transition-fast);
 }
 
 .chatInputForm button[type="submit"]:hover:not(:disabled) {
-  background: #1177bb;
+  background: var(--accent-hover);
 }
 
 .chatInputForm button[type="submit"]:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
+
 .chatApplyBlocks {
   margin-top: 10px;
   padding: 8px 0;
-  border-top: 1px solid var(--border, #444);
+  border-top: 1px solid var(--border-primary);
 }
 
 .chatApplyBlock {
@@ -419,7 +600,7 @@ body {
 
 .chatApplyBlockLabel {
   font-size: 12px;
-  color: var(--muted, #888);
+  color: var(--text-tertiary);
   min-width: 140px;
 }
 
@@ -432,28 +613,32 @@ body {
   padding: 4px 10px;
   font-size: 12px;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   cursor: pointer;
+  font-weight: 500;
+  transition: background var(--transition-fast);
 }
 
 .chatApplyBlockActions button[data-chat-action="apply-replace"] {
-  background: #0e639c;
-  color: #fff;
+  background: var(--accent);
+  color: var(--text-inverse);
 }
 
 .chatApplyBlockActions button[data-chat-action="apply-replace"]:hover {
-  background: #1177bb;
+  background: var(--accent-hover);
 }
 
 .chatApplyBlockActions button[data-chat-action="apply-insert"] {
-  background: #2d5a27;
-  color: #fff;
+  background: var(--success-bg);
+  color: var(--success-text);
+  border: 1px solid var(--success-border);
 }
 
 .chatApplyBlockActions button[data-chat-action="apply-insert"]:hover {
-  background: #3d7a37;
+  opacity: 0.85;
 }
 
+/* === Passphrase Dialog === */
 .passphraseDialog {
   position: fixed;
   inset: 0;
@@ -467,30 +652,31 @@ body {
 .passphraseDialogBackdrop {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: var(--backdrop);
+  backdrop-filter: blur(4px);
 }
 
 .passphraseDialogBox {
   position: relative;
-  background: #252526;
-  border: 1px solid #555;
-  border-radius: 8px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
   padding: 20px;
   min-width: 280px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  box-shadow: var(--shadow-modal);
 }
 
 .passphraseDialogTitle {
   margin: 0 0 8px;
   font-size: 14px;
   font-weight: 600;
-  color: #d4d4d4;
+  color: var(--text-primary);
 }
 
 .passphraseDialogHint {
   margin: 0 0 12px;
   font-size: 12px;
-  color: #858585;
+  color: var(--text-tertiary);
 }
 
 .passphraseDialog input,
@@ -498,12 +684,19 @@ body {
   width: 100%;
   padding: 8px 10px;
   margin-bottom: 12px;
-  background: #3c3c3c;
-  border: 1px solid #555;
-  color: #d4d4d4;
-  border-radius: 4px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-primary);
+  color: var(--text-primary);
+  border-radius: var(--radius-sm);
   font-size: 13px;
   box-sizing: border-box;
+}
+
+.passphraseDialog input:focus,
+.passphraseDialog .renameDialogInput:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--focus-ring);
 }
 
 .passphraseDialogActions {
@@ -517,34 +710,34 @@ body {
   font-size: 13px;
   cursor: pointer;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
+  font-weight: 500;
+  transition: background var(--transition-fast);
 }
 
 .passphraseDialogActions button:first-child {
-  background: #0e639c;
-  color: #fff;
+  background: var(--accent);
+  color: var(--text-inverse);
 }
 
 .passphraseDialogActions button:first-child:hover {
-  background: #1177bb;
+  background: var(--accent-hover);
 }
 
 .passphraseDialogActions button:last-child {
-  background: #555;
-  color: #ccc;
+  background: var(--border-hover);
+  color: var(--text-secondary);
 }
 
 .passphraseDialogActions button:last-child:hover {
-  background: #666;
-  color: #fff;
+  opacity: 0.85;
 }
 
+/* === Modals === */
 .settingsModal,
-.planModal,
 .connectModal,
 .addEditServerModal,
-.messageModal,
-.accountListModal {
+.messageModal {
   position: fixed;
   inset: 0;
   z-index: 1000;
@@ -554,105 +747,29 @@ body {
   padding: 20px;
 }
 
-.accountListModal {
-  z-index: 1001;
-}
-
 .settingsModalBackdrop,
-.planModalBackdrop,
 .connectModalBackdrop,
 .addEditServerModalBackdrop,
-.messageModalBackdrop,
-.accountListModalBackdrop {
+.messageModalBackdrop {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: var(--backdrop);
   cursor: pointer;
+  backdrop-filter: blur(4px);
 }
 
 .settingsModalBox,
-.planModalBox,
 .connectModalBox,
 .addEditServerModalBox,
-.messageModalBox,
-.accountListModalBox {
+.messageModalBox {
   position: relative;
-  background: #252526;
-  border: 1px solid #555;
-  border-radius: 8px;
-  padding: 20px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  padding: 24px;
   min-width: 320px;
   max-width: 480px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-}
-
-.accountListModalTitle {
-  margin: 0 0 16px;
-  font-size: 16px;
-  font-weight: 600;
-  color: #d4d4d4;
-}
-
-.accountListModalList {
-  margin: 0 0 16px;
-  max-height: 240px;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.accountListModalList .accountItem {
-  padding: 10px 12px;
-  text-align: left;
-  cursor: pointer;
-  border: 1px solid #555;
-  border-radius: 4px;
-  background: #3c3c3c;
-  color: #d4d4d4;
-  font-size: 13px;
-}
-
-.accountListModalList .accountItem:hover {
-  background: #0e639c;
-  border-color: #0e639c;
-  color: #fff;
-}
-
-.accountListModalList .accountListEmpty {
-  padding: 12px 0;
-  color: #999;
-  font-size: 13px;
-}
-
-.accountListModalActions {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.accountListModalActions button {
-  padding: 6px 12px;
-  font-size: 13px;
-  cursor: pointer;
-  border: 1px solid #555;
-  border-radius: 4px;
-  background: #0e639c;
-  color: #fff;
-}
-
-.accountListModalActions button:hover {
-  background: #1177bb;
-}
-
-.accountListModalActions button[id="accountListModalClose"] {
-  background: #555;
-  color: #ccc;
-}
-
-.accountListModalActions button[id="accountListModalClose"]:hover {
-  background: #666;
-  color: #fff;
+  box-shadow: var(--shadow-modal);
 }
 
 .connectModalTitle,
@@ -660,7 +777,7 @@ body {
   margin: 0 0 16px;
   font-size: 16px;
   font-weight: 600;
-  color: #d4d4d4;
+  color: var(--text-primary);
 }
 
 .connectModalList {
@@ -677,12 +794,13 @@ body {
   gap: 8px;
   padding: 10px 12px;
   cursor: pointer;
-  border-radius: 4px;
-  color: #d4d4d4;
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  transition: background var(--transition-fast);
 }
 
 .connectModalItem:hover {
-  background: #3c3c3c;
+  background: var(--bg-elevated);
 }
 
 .connectModalItemActions {
@@ -695,23 +813,24 @@ body {
   padding: 2px 8px;
   font-size: 12px;
   cursor: pointer;
-  border: 1px solid #555;
-  border-radius: 4px;
-  background: #3c3c3c;
-  color: #d4d4d4;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-xs);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  transition: background var(--transition-fast);
 }
 
 .connectModalBtn:hover {
-  background: #505050;
+  background: var(--border-hover);
 }
 
 .connectModalBtnEdit:hover,
 .connectModalBtnDelete:hover {
-  color: #fff;
+  color: var(--text-primary);
 }
 
 .connectModalDot {
-  color: #094771;
+  color: var(--accent);
   font-size: 0.6em;
   line-height: 1;
   flex-shrink: 0;
@@ -726,7 +845,7 @@ body {
 
 .connectModalActions {
   padding-top: 12px;
-  border-top: 1px solid #333;
+  border-top: 1px solid var(--border-secondary);
 }
 
 .connectModalActions button {
@@ -734,21 +853,21 @@ body {
   font-size: 13px;
   cursor: pointer;
   border: none;
-  border-radius: 4px;
-  background: #555;
-  color: #ccc;
+  border-radius: var(--radius-sm);
+  background: var(--border-hover);
+  color: var(--text-secondary);
+  transition: background var(--transition-fast);
 }
 
 .connectModalActions button:hover {
-  background: #666;
-  color: #fff;
+  opacity: 0.85;
 }
 
 .messageModalTitle {
   margin: 0 0 12px;
   font-size: 16px;
   font-weight: 600;
-  color: #d4d4d4;
+  color: var(--text-primary);
 }
 
 .messageModalBody {
@@ -760,12 +879,12 @@ body {
 .messageModalBody p {
   white-space: pre-wrap;
   font-size: 13px;
-  color: #d4d4d4;
+  color: var(--text-secondary);
 }
 
 .messageModalActions {
   padding-top: 12px;
-  border-top: 1px solid #333;
+  border-top: 1px solid var(--border-secondary);
   text-align: right;
 }
 
@@ -774,19 +893,21 @@ body {
   font-size: 13px;
   cursor: pointer;
   border: none;
-  border-radius: 4px;
-  background: #0e639c;
-  color: #fff;
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: var(--text-inverse);
+  font-weight: 500;
+  transition: background var(--transition-fast);
 }
 
 .messageModalActions button:hover {
-  background: #1177bb;
+  background: var(--accent-hover);
 }
 
 .addEditServerModalBox .formActions {
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px solid #333;
+  border-top: 1px solid var(--border-secondary);
   display: flex;
   gap: 8px;
 }
@@ -795,32 +916,32 @@ body {
   padding: 4px 12px;
   font-size: 13px;
   cursor: pointer;
-  border: 1px solid #555;
-  border-radius: 4px;
-  background: #3c3c3c;
-  color: #d4d4d4;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  transition: background var(--transition-fast);
 }
 
 .addEditServerModalBox .formActions button[type="submit"] {
-  background: #0e639c;
-  border-color: #0e639c;
-  color: #fff;
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--text-inverse);
+  font-weight: 500;
 }
 
 .addEditServerModalBox .formActions button:hover {
-  background: #505050;
-  color: #fff;
+  opacity: 0.85;
 }
 
 .addEditServerModalBox .formActions button[type="submit"]:hover {
-  background: #1177bb;
-  border-color: #1177bb;
+  background: var(--accent-hover);
 }
 
 .addEditServerModalBox form label {
   display: block;
   margin-bottom: 8px;
-  color: #d4d4d4;
+  color: var(--text-secondary);
   font-size: 13px;
 }
 
@@ -831,41 +952,84 @@ body {
 
 .addEditServerModalBox form input,
 .addEditServerModalBox form select {
-  background: #3c3c3c;
-  border: 1px solid #555;
-  border-radius: 4px;
-  color: #d4d4d4;
+  background: var(--bg-input);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
   padding: 4px 8px;
   font-size: 13px;
+  transition: border-color var(--transition-fast);
 }
 
 .addEditServerModalBox form input::placeholder {
-  color: #858585;
+  color: var(--text-tertiary);
 }
 
 .addEditServerModalBox form input:focus,
 .addEditServerModalBox form select:focus {
   outline: none;
-  border-color: #0e639c;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--focus-ring);
 }
 
+/* === Sidebar === */
 .sidebarFooter {
   display: flex;
-  gap: 8px;
+  gap: 4px;
   flex-wrap: wrap;
+  padding: 6px 8px;
+  border-top: 1px solid var(--border-secondary);
 }
 
 .sidebarFooter button {
-  flex: 1;
-  min-width: 0;
+  flex-shrink: 0;
+  padding: 2px 6px;
+  font-size: 11px;
+  cursor: pointer;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-xs);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  transition: background var(--transition-fast);
 }
 
-.settingsModalTitle,
-.planModalTitle {
+.sidebarFooter button:hover {
+  background: var(--border-hover);
+  color: var(--text-primary);
+}
+
+/* Style Welcome area Connect/Local buttons same as sidebar buttons */
+#welcomeArea .mainAreaPlaceholder button {
+  flex-shrink: 0;
+  padding: 2px 6px;
+  font-size: 11px;
+  cursor: pointer;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-xs);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  transition: background var(--transition-fast);
+}
+
+#welcomeArea .mainAreaPlaceholder button:hover {
+  background: var(--border-hover);
+  color: var(--text-primary);
+}
+
+#welcomeArea h1 {
+  margin: 0;
+  padding: 16px 0 0 16px;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-tertiary);
+}
+
+/* === Settings Modal === */
+.settingsModalTitle {
   margin: 0 0 16px;
   font-size: 16px;
   font-weight: 600;
-  color: #d4d4d4;
+  color: var(--text-primary);
 }
 
 .settingsModalSection {
@@ -876,55 +1040,8 @@ body {
   margin: 0 0 8px;
   font-size: 12px;
   font-weight: 600;
-  color: #858585;
+  color: var(--text-tertiary);
   text-transform: uppercase;
-}
-
-.settingsModalSection #firebaseAuthSection {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.settingsModalSection .settingsAccountRow {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-}
-
-.settingsModalSection .settingsAccountRow--billing {
-  padding-top: 4px;
-  border-top: 1px solid #333;
-}
-
-.settingsModalSection #firebaseUserEmail {
-  color: #fff;
-  font-size: 13px;
-}
-
-.settingsModalSection #firebaseAuthSection button {
-  padding: 4px 12px;
-  font-size: 13px;
-  cursor: pointer;
-  border: none;
-  border-radius: 4px;
-  background: #0e639c;
-  color: #fff;
-}
-
-.settingsModalSection #firebaseAuthSection button:hover {
-  background: #1177bb;
-}
-
-.settingsModalSection #firebaseAuthSection button[id="btnFirebaseLogout"] {
-  background: #555;
-  color: #ccc;
-}
-
-.settingsModalSection #firebaseAuthSection button[id="btnFirebaseLogout"]:hover {
-  background: #666;
-  color: #fff;
 }
 
 .settingsModalLanguage {
@@ -936,31 +1053,31 @@ body {
   padding: 4px 12px;
   font-size: 13px;
   cursor: pointer;
-  border: 1px solid #555;
-  border-radius: 4px;
-  background: #3c3c3c;
-  color: #d4d4d4;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
 }
 
 .settingsModalLanguage button:hover {
-  background: #505050;
+  background: var(--border-hover);
 }
 
 .settingsModalLanguage button.is-selected {
-  background: #0066cc;
-  border-color: #0066cc;
-  color: #fff;
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--text-inverse);
 }
 
 .settingsModalLanguage button.is-selected:hover {
-  background: #0077ee;
-  border-color: #0077ee;
+  background: var(--accent-hover);
 }
 
 .settingsModalActions {
   margin-top: 16px;
   padding-top: 12px;
-  border-top: 1px solid #333;
+  border-top: 1px solid var(--border-secondary);
 }
 
 .settingsModalActions button {
@@ -968,17 +1085,17 @@ body {
   font-size: 13px;
   cursor: pointer;
   border: none;
-  border-radius: 4px;
-  background: #555;
-  color: #ccc;
+  border-radius: var(--radius-sm);
+  background: var(--border-hover);
+  color: var(--text-secondary);
+  transition: background var(--transition-fast);
 }
 
 .settingsModalActions button:hover {
-  background: #666;
-  color: #fff;
+  opacity: 0.85;
 }
 
-/* AI Settings */
+/* === AI Settings === */
 .aiSettingsForm {
   display: flex;
   flex-direction: column;
@@ -993,7 +1110,7 @@ body {
 
 .aiSettingsField label {
   font-size: 12px;
-  color: #858585;
+  color: var(--text-tertiary);
   font-weight: 600;
 }
 
@@ -1003,16 +1120,18 @@ body {
 .aiSettingsField textarea {
   padding: 4px 8px;
   font-size: 13px;
-  border: 1px solid #555;
-  border-radius: 4px;
-  background: #3c3c3c;
-  color: #d4d4d4;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+  color: var(--text-primary);
   outline: none;
+  transition: border-color var(--transition-fast);
 }
 
 .aiSettingsField input:focus,
 .aiSettingsField textarea:focus {
-  border-color: #007acc;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--focus-ring);
 }
 
 .aiSettingsField textarea {
@@ -1035,27 +1154,28 @@ body {
 
 .aiSettingsFieldHalf label {
   font-size: 12px;
-  color: #858585;
+  color: var(--text-tertiary);
   font-weight: 600;
 }
 
 .aiSettingsFieldHalf input[type="range"] {
   width: 100%;
-  accent-color: #007acc;
+  accent-color: var(--accent);
 }
 
 .aiSettingsFieldHalf input[type="number"] {
   padding: 4px 8px;
   font-size: 13px;
-  border: 1px solid #555;
-  border-radius: 4px;
-  background: #3c3c3c;
-  color: #d4d4d4;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+  color: var(--text-primary);
   outline: none;
 }
 
 .aiSettingsFieldHalf input[type="number"]:focus {
-  border-color: #007acc;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--focus-ring);
 }
 
 .aiSettingsKeyRow {
@@ -1071,15 +1191,16 @@ body {
   padding: 4px 10px;
   font-size: 12px;
   cursor: pointer;
-  border: 1px solid #555;
-  border-radius: 4px;
-  background: #3c3c3c;
-  color: #ccc;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
   white-space: nowrap;
+  transition: background var(--transition-fast);
 }
 
 .aiSettingsToggleBtn:hover {
-  background: #505050;
+  background: var(--border-hover);
 }
 
 .aiSettingsActions {
@@ -1093,104 +1214,41 @@ body {
   font-size: 13px;
   cursor: pointer;
   border: none;
-  border-radius: 4px;
-  background: #0e639c;
-  color: #fff;
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: var(--text-inverse);
+  font-weight: 500;
+  transition: background var(--transition-fast);
 }
 
 .aiSettingsActions button:hover {
-  background: #1177bb;
+  background: var(--accent-hover);
 }
 
 .aiSettingsTestResult {
   padding: 6px 10px;
   font-size: 12px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   word-break: break-word;
 }
 
 .aiSettingsTestResult--ok {
-  background: #1a3a1a;
-  color: #4ec94e;
-  border: 1px solid #2a5a2a;
+  background: var(--success-bg);
+  color: var(--success-text);
+  border: 1px solid var(--success-border);
 }
 
 .aiSettingsTestResult--fail {
-  background: #3a1a1a;
-  color: #f44747;
-  border: 1px solid #5a2a2a;
+  background: var(--error-bg);
+  color: var(--error-text);
+  border: 1px solid var(--error-border);
 }
 
-.planModalPlans {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.planModalPlan {
-  padding: 12px;
-  border: 1px solid #444;
-  border-radius: 6px;
-  background: #2d2d30;
-}
-
-.planModalPlanName {
-  font-weight: 600;
-  color: #d4d4d4;
-  margin-bottom: 4px;
-}
-
-.planModalPlanPrice {
-  font-size: 14px;
-  color: #0e639c;
-  margin-bottom: 2px;
-}
-
-.planModalPlanDetail {
-  font-size: 12px;
-  color: #858585;
-  margin-bottom: 8px;
-}
-
-.planModalPlanBtn {
-  padding: 4px 12px;
-  font-size: 13px;
-  cursor: pointer;
-  border: none;
-  border-radius: 4px;
-  background: #0e639c;
-  color: #fff;
-}
-
-.planModalPlanBtn:hover {
-  background: #1177bb;
-}
-
-.planModalActions {
-  padding-top: 12px;
-  border-top: 1px solid #333;
-}
-
-.planModalActions button {
-  padding: 4px 12px;
-  font-size: 13px;
-  cursor: pointer;
-  border: none;
-  border-radius: 4px;
-  background: #555;
-  color: #ccc;
-}
-
-.planModalActions button:hover {
-  background: #666;
-  color: #fff;
-}
-
+/* === Sidebar Header & List === */
 .sidebarHeader {
   padding: 12px;
   font-weight: 600;
-  border-bottom: 1px solid #333;
+  border-bottom: 1px solid var(--border-secondary);
 }
 
 .connectList {
@@ -1202,19 +1260,20 @@ body {
 .serverItem {
   padding: 8px 12px;
   cursor: pointer;
-  border-bottom: 1px solid #333;
+  border-bottom: 1px solid var(--border-secondary);
   display: flex;
   justify-content: space-between;
   align-items: center;
+  transition: background var(--transition-fast);
 }
 
 .serverItem:hover {
-  background: #2a2d2e;
+  background: var(--bg-elevated);
 }
 
 .serverItem.selected {
-  background: #094771;
-  color: #fff;
+  background: var(--accent-muted);
+  color: var(--text-primary);
 }
 
 .serverItemName {
@@ -1232,77 +1291,33 @@ body {
   padding: 2px 6px;
   font-size: 12px;
   cursor: pointer;
-  background: #333;
-  color: #ccc;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
   border: none;
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
+  transition: background var(--transition-fast);
 }
 
 .serverItemActions button:hover {
-  background: #444;
-  color: #fff;
+  background: var(--border-hover);
+  color: var(--text-primary);
 }
 
-.sidebarFooter {
-  padding: 6px 8px;
-  border-top: 1px solid #333;
-  display: flex;
-  gap: 4px;
-  flex-wrap: wrap;
-}
-
-.sidebarFooter button {
-  flex-shrink: 0;
-  padding: 2px 6px;
-  font-size: 11px;
-  cursor: pointer;
-  border: 1px solid #444;
-  border-radius: 3px;
-  background: #3c3c3c;
-  color: #d4d4d4;
-}
-
-.sidebarFooter button:hover {
-  background: #505050;
-}
-
-/* Welcome エリアの Connect / Local ボタンもサイドバーと同じスタイルにする */
-#welcomeArea .mainAreaPlaceholder button {
-  flex-shrink: 0;
-  padding: 2px 6px;
-  font-size: 11px;
-  cursor: pointer;
-  border: 1px solid #444;
-  border-radius: 3px;
-  background: #3c3c3c;
-  color: #d4d4d4;
-}
-
-#welcomeArea .mainAreaPlaceholder button:hover {
-  background: #505050;
-}
-
-#welcomeArea h1 {
-  margin: 0;
-  padding: 16px 0 0 16px;
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: #858585;
-}
-
+/* === Main Area === */
 .mainArea {
   flex: 1;
   display: flex;
   flex-direction: column;
-  background: #1e1e1e;
-  color: #d4d4d4;
+  background: var(--bg-primary);
+  color: var(--text-primary);
   min-width: 0;
   min-height: 0;
+  transition: background var(--transition-normal);
 }
 
 .mainAreaPlaceholder {
   padding: 16px;
-  color: #858585;
+  color: var(--text-tertiary);
 }
 
 .mainPanel {
@@ -1317,13 +1332,14 @@ body {
   display: flex;
 }
 
+/* === Terminal Tabs === */
 .terminalTabBar {
   display: flex;
   flex-wrap: wrap;
   gap: 2px;
   padding: 4px 8px 0;
-  background: #252526;
-  border-bottom: 1px solid #333;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-secondary);
   min-height: 32px;
 }
 
@@ -1332,25 +1348,26 @@ body {
   align-items: center;
   gap: 4px;
   padding: 4px 8px;
-  background: #2d2d30;
-  color: #ccc;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
   font-size: 12px;
-  border: 1px solid #333;
+  border: 1px solid var(--border-secondary);
   border-bottom: none;
-  border-radius: 4px 4px 0 0;
+  border-radius: var(--radius-xs) var(--radius-xs) 0 0;
   cursor: pointer;
   max-width: 160px;
+  transition: background var(--transition-fast);
 }
 
 .terminalTab:hover {
-  background: #3c3c3c;
-  color: #fff;
+  background: var(--bg-elevated);
+  color: var(--text-primary);
 }
 
 .terminalTab.active {
-  background: #1e1e1e;
-  color: #fff;
-  border-bottom: 1px solid #1e1e1e;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--bg-primary);
   margin-bottom: -1px;
 }
 
@@ -1364,7 +1381,7 @@ body {
 }
 
 .terminalTabDirty {
-  color: #888;
+  color: var(--accent);
   font-size: 0.9em;
   flex-shrink: 0;
 }
@@ -1374,16 +1391,16 @@ body {
   margin: 0;
   background: transparent;
   border: none;
-  color: #858585;
+  color: var(--text-tertiary);
   font-size: 14px;
   line-height: 1;
   cursor: pointer;
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
 }
 
 .terminalTabClose:hover {
-  color: #fff;
-  background: #555;
+  color: var(--text-primary);
+  background: var(--bg-elevated);
 }
 
 .terminalTabContent {
@@ -1394,8 +1411,8 @@ body {
 
 .terminalToolbar {
   padding: 8px 12px;
-  background: #252526;
-  border-bottom: 1px solid #333;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-secondary);
   display: flex;
   gap: 8px;
   align-items: center;
@@ -1404,7 +1421,7 @@ body {
 .terminalToolbar .terminalEnvName {
   flex: 1;
   font-size: 12px;
-  color: #ccc;
+  color: var(--text-secondary);
 }
 
 .terminalContainer {
@@ -1428,6 +1445,7 @@ body {
   user-select: text;
 }
 
+/* === Editor === */
 .editorContainer {
   display: none;
   flex: 1;
@@ -1447,6 +1465,7 @@ body {
   bottom: 0;
 }
 
+/* === Diff Preview === */
 .diffPreviewWrap {
   position: absolute;
   top: 0;
@@ -1455,7 +1474,7 @@ body {
   bottom: 0;
   display: flex;
   flex-direction: column;
-  background: #1e1e1e;
+  background: var(--bg-primary);
   z-index: 10;
 }
 
@@ -1464,8 +1483,8 @@ body {
   align-items: center;
   gap: 12px;
   padding: 6px 10px;
-  background: #2d2d30;
-  border-bottom: 1px solid #444;
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border-primary);
   flex-shrink: 0;
   z-index: 11;
   position: relative;
@@ -1473,7 +1492,7 @@ body {
 
 .diffPreviewHint {
   font-size: 12px;
-  color: #888;
+  color: var(--text-tertiary);
   margin-right: auto;
 }
 
@@ -1481,18 +1500,28 @@ body {
   padding: 6px 12px;
   cursor: pointer;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   font-size: 12px;
+  font-weight: 500;
+  transition: background var(--transition-fast);
 }
 
 .diffPreviewToolbar #btnDiffApply {
-  background: #0e639c;
-  color: #fff;
+  background: var(--accent);
+  color: var(--text-inverse);
+}
+
+.diffPreviewToolbar #btnDiffApply:hover {
+  background: var(--accent-hover);
 }
 
 .diffPreviewToolbar #btnDiffCancel {
-  background: #555;
-  color: #ccc;
+  background: var(--border-hover);
+  color: var(--text-secondary);
+}
+
+.diffPreviewToolbar #btnDiffCancel:hover {
+  opacity: 0.85;
 }
 
 .diffPreviewContainer {
@@ -1500,10 +1529,11 @@ body {
   min-height: 0;
 }
 
+/* === Form Panel === */
 .formPanel {
   padding: 12px;
-  background: #2d2d30;
-  border-top: 1px solid #333;
+  background: var(--bg-tertiary);
+  border-top: 1px solid var(--border-secondary);
 }
 
 .formPanel h3 {
@@ -1521,10 +1551,10 @@ body {
   width: 100%;
   padding: 6px 8px;
   margin-top: 2px;
-  background: #3c3c3c;
-  border: 1px solid #555;
-  color: #ccc;
-  border-radius: 4px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-primary);
+  color: var(--text-primary);
+  border-radius: var(--radius-sm);
 }
 
 .formPanel .formActions {
@@ -1537,19 +1567,237 @@ body {
   padding: 6px 12px;
   cursor: pointer;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
 }
 
 .formPanel .formActions button[type="submit"] {
-  background: #0e639c;
-  color: #fff;
+  background: var(--accent);
+  color: var(--text-inverse);
 }
 
 .formPanel .formActions button[type="button"] {
-  background: #555;
-  color: #ccc;
+  background: var(--border-hover);
+  color: var(--text-secondary);
 }
 
 .formPanel .formActions button:hover {
-  opacity: 0.9;
+  opacity: 0.85;
+}
+
+/* === Explorer Context Menu === */
+.explorerContextMenu {
+  position: fixed;
+  z-index: 9999;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-sm);
+  padding: 4px 0;
+  min-width: 140px;
+  box-shadow: var(--shadow-dropdown);
+}
+
+.explorerContextMenuItem {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 8px 14px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 13px;
+  transition: background var(--transition-fast);
+}
+
+.explorerContextMenuItem:hover {
+  background: var(--accent-muted);
+}
+
+/* === Markdown rendering inside chat messages === */
+.chatMessageContent h1,
+.chatMessageContent h2,
+.chatMessageContent h3,
+.chatMessageContent h4,
+.chatMessageContent h5,
+.chatMessageContent h6 {
+  margin: 8px 0 4px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.chatMessageContent h1 { font-size: 1.25em; }
+.chatMessageContent h2 { font-size: 1.15em; }
+.chatMessageContent h3 { font-size: 1.05em; }
+
+.chatMessageContent p {
+  margin: 4px 0;
+}
+
+.chatMessageContent ul,
+.chatMessageContent ol {
+  margin: 4px 0;
+  padding-left: 20px;
+}
+
+.chatMessageContent li {
+  margin: 2px 0;
+}
+
+.chatMessageContent blockquote {
+  margin: 6px 0;
+  padding: 4px 12px;
+  border-left: 3px solid var(--border-primary);
+  background: var(--bg-elevated);
+  color: var(--text-tertiary);
+}
+
+.chatMessageContent pre {
+  margin: 6px 0;
+  padding: 10px 12px;
+  background: var(--chat-code-bg);
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--radius-sm);
+  overflow-x: auto;
+  font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.chatMessageContent code {
+  font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+  font-size: 0.9em;
+}
+
+.chatMessageContent :not(pre) > code {
+  padding: 1px 5px;
+  background: var(--chat-inline-code-bg);
+  border-radius: 3px;
+  color: var(--chat-inline-code-color);
+}
+
+.chatMessageContent table {
+  margin: 6px 0;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.chatMessageContent th,
+.chatMessageContent td {
+  padding: 4px 10px;
+  border: 1px solid var(--border-primary);
+}
+
+.chatMessageContent th {
+  background: var(--bg-tertiary);
+  font-weight: 600;
+}
+
+.chatMessageContent a {
+  color: var(--chat-link-color);
+  text-decoration: none;
+}
+
+.chatMessageContent a:hover {
+  text-decoration: underline;
+}
+
+.chatMessageContent hr {
+  margin: 8px 0;
+  border: none;
+  border-top: 1px solid var(--border-secondary);
+}
+
+.chatMessageContent img {
+  max-width: 100%;
+  border-radius: var(--radius-sm);
+}
+
+.chatMessageContent strong {
+  color: var(--text-primary);
+}
+
+/* === Thinking / Reasoning collapse === */
+.chatThinking {
+  margin: 0 0 8px;
+  border: 1px solid var(--thinking-border);
+  border-radius: var(--radius-sm);
+  background: var(--thinking-bg);
+  overflow: hidden;
+}
+
+.chatThinkingSummary {
+  padding: 6px 10px;
+  font-size: 12px;
+  color: var(--thinking-text);
+  cursor: pointer;
+  user-select: none;
+  font-style: italic;
+  transition: color var(--transition-fast);
+}
+
+.chatThinkingSummary:hover {
+  color: var(--text-secondary);
+  background: var(--bg-elevated);
+}
+
+.chatThinkingContent {
+  padding: 6px 10px;
+  font-size: 12px;
+  color: var(--thinking-text);
+  line-height: 1.5;
+  border-top: 1px solid var(--thinking-border);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+/* === Streaming message === */
+.chatMessage--streaming .chatMessageContent {
+  opacity: 0.95;
+}
+
+/* === AI Models list === */
+.aiModelsList {
+  margin-top: 6px;
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-sm);
+  background: var(--bg-primary);
+}
+
+.aiModelItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 10px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border-secondary);
+  font-size: 12px;
+  transition: background var(--transition-fast);
+}
+
+.aiModelItem:last-child {
+  border-bottom: none;
+}
+
+.aiModelItem:hover {
+  background: var(--accent-muted);
+}
+
+.aiModelId {
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.aiModelOwner {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  margin-left: 8px;
+  flex-shrink: 0;
 }

@@ -1,7 +1,7 @@
 import { app, BrowserWindow, ipcMain } from 'electron';
 import fs from 'fs';
 import path from 'path';
-import { getLocale as getStoredLocale, setLocale as setStoredLocale, type Locale } from '../config/userSettings';
+import { getLocale as getStoredLocale, setLocale as setStoredLocale, getTheme as getStoredTheme, setTheme as setStoredTheme, type Locale, type Theme } from '../config/userSettings';
 
 type LangPack = Record<string, string>;
 
@@ -24,7 +24,7 @@ function loadLangJson(): Record<string, LangPack> {
       // continue
     }
   }
-  langCache = { ja: {}, en: {}, zn: {} };
+  langCache = { en: {}, zn: {}, ru: {} };
   return langCache;
 }
 
@@ -36,7 +36,13 @@ export function registerLocaleHandlers(): void {
   });
   ipcMain.handle('locale:getLangPack', (_event, locale: Locale) => {
     const all = loadLangJson();
-    const pack = all[locale] ?? all.ja ?? {};
+    const pack = all[locale] ?? all.en ?? {};
     return pack as LangPack;
+  });
+
+  ipcMain.handle('theme:get', () => getStoredTheme());
+  ipcMain.handle('theme:set', (_event, theme: Theme) => {
+    setStoredTheme(theme);
+    BrowserWindow.getAllWindows().forEach((win) => win.webContents.send('theme-changed', theme));
   });
 }

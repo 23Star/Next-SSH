@@ -3,6 +3,7 @@ import { FitAddon } from '@xterm/addon-fit';
 import { state, getExplorerState, getNextConnectionId, syncTerminalStateFromMainPanel } from './state';
 import { t } from './i18n';
 import { displayName, escapeHtml } from './util';
+import { getXtermTheme } from './theme';
 import * as explorer from './explorer';
 import * as editor from './editor';
 import * as explorerContextMenu from './explorerContextMenu';
@@ -20,12 +21,7 @@ export function createTerminalForTab(api: Api, connectionId: number, name: strin
 
   const term = new Terminal({
     cursorBlink: true,
-    theme: {
-      background: '#1e1e1e',
-      foreground: '#d4d4d4',
-      selectionBackground: '#264f78',
-      selectionForeground: '#d4d4d4',
-    },
+    theme: getXtermTheme(),
   });
   const fitAddon = new FitAddon();
   term.loadAddon(fitAddon);
@@ -70,12 +66,7 @@ export async function createLocalTerminalForTab(api: Api, tabId: string): Promis
 
   const term = new Terminal({
     cursorBlink: true,
-    theme: {
-      background: '#1e1e1e',
-      foreground: '#d4d4d4',
-      selectionBackground: '#264f78',
-      selectionForeground: '#d4d4d4',
-    },
+    theme: getXtermTheme(),
   });
   const fitAddon = new FitAddon();
   term.loadAddon(fitAddon);
@@ -161,11 +152,11 @@ export function renderMainPanelTabBar(api: Api): void {
         const label = escapeHtml(getMainPanelTabLabel(tab));
         const dirtyDot =
           tab.kind === 'editor' && state.editorDirtyByTabId[tab.id]
-            ? '<span class="terminalTabDirty" title="未保存">●</span>'
+            ? `<span class="terminalTabDirty" title="${t('terminal.unsaved')}">●</span>`
             : '';
         return `<span class="terminalTab ${tab.id === state.activeMainPanelTabId ? 'active' : ''}" data-tab-id="${escapeHtml(tab.id)}" title="${escapeHtml(getMainPanelTabLabel(tab))}">
           <span class="terminalTabLabel">${dirtyDot}${label}</span>
-          <button type="button" class="terminalTabClose" data-tab-id="${escapeHtml(tab.id)}" aria-label="閉じる">×</button>
+          <button type="button" class="terminalTabClose" data-tab-id="${escapeHtml(tab.id)}" aria-label="${t('terminal.close')}">×</button>
         </span>`;
       },
     )
@@ -473,6 +464,12 @@ export function bindPassphraseDialog(api: Api): void {
   });
 }
 
+export function applyThemeToAllTerminals(): void {
+  const theme = getXtermTheme();
+  state.terminalInstances.forEach((inst) => { inst.term.options.theme = theme; });
+  state.localTerminalInstances.forEach((inst) => { inst.term.options.theme = theme; });
+}
+
 export function doDisconnect(api: Api): void {
   if (state.activeMainPanelTabId) closeMainPanelTab(api, state.activeMainPanelTabId);
 }
@@ -494,7 +491,7 @@ export async function openLocalTerminalTab(api: Api): Promise<void> {
     renderMainPanelTabBar(api);
     explorer.renderExplorerTabBar(api);
     void showMessage({
-      title: 'Local terminal error',
+      title: t('terminal.localError'),
       message: err instanceof Error ? err.message : String(err),
     });
     return;

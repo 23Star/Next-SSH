@@ -35,6 +35,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   chat: {
     complete: (messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>) =>
       ipcRenderer.invoke('chat:complete', messages),
+    streamStart: (messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>) =>
+      ipcRenderer.send('chat:streamStart', messages),
+    onStreamChunk: (callback: (chunk: { type: 'content' | 'thinking' | 'done' | 'error'; text: string }) => void) => {
+      ipcRenderer.on('chat:streamChunk', (_event, chunk) => callback(chunk));
+    },
   },
   chatSession: {
     list: () => ipcRenderer.invoke('chatSession:list'),
@@ -81,15 +86,19 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.invoke('explorer:copyOnRemote', connectionId, sourcePaths, targetDir),
   },
   locale: {
-    get: () => ipcRenderer.invoke('locale:get') as Promise<'ja' | 'en' | 'zn'>,
-    set: (locale: 'ja' | 'en' | 'zn') => ipcRenderer.invoke('locale:set', locale),
-    getLangPack: (locale: 'ja' | 'en' | 'zn') => ipcRenderer.invoke('locale:getLangPack', locale) as Promise<Record<string, string>>,
-    onChanged: (callback: (locale: 'ja' | 'en' | 'zn') => void) => {
-      ipcRenderer.on('locale-changed', (_event, locale: 'ja' | 'en' | 'zn') => callback(locale));
+    get: () => ipcRenderer.invoke('locale:get') as Promise<'en' | 'zn' | 'ru'>,
+    set: (locale: 'en' | 'zn' | 'ru') => ipcRenderer.invoke('locale:set', locale),
+    getLangPack: (locale: 'en' | 'zn' | 'ru') => ipcRenderer.invoke('locale:getLangPack', locale) as Promise<Record<string, string>>,
+    onChanged: (callback: (locale: 'en' | 'zn' | 'ru') => void) => {
+      ipcRenderer.on('locale-changed', (_event, locale: 'en' | 'zn' | 'ru') => callback(locale));
     },
   },
-  firebase: {
-    getConfig: () => ipcRenderer.invoke('firebase:getConfig') as Promise<FirebaseConfig | null>,
+  theme: {
+    get: () => ipcRenderer.invoke('theme:get') as Promise<'dark' | 'light'>,
+    set: (theme: 'dark' | 'light') => ipcRenderer.invoke('theme:set', theme),
+    onChanged: (callback: (theme: 'dark' | 'light') => void) => {
+      ipcRenderer.on('theme-changed', (_event, theme: 'dark' | 'light') => callback(theme));
+    },
   },
   openExternal: (url: string) => ipcRenderer.invoke('openExternal', url),
   refocusWindow: () => ipcRenderer.invoke('window:refocus'),
@@ -104,15 +113,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.invoke('aiSettings:set', input),
     test: () => ipcRenderer.invoke('aiSettings:test') as Promise<{ ok: boolean; message: string }>,
     isConfigured: () => ipcRenderer.invoke('aiSettings:isConfigured') as Promise<boolean>,
+    getModels: () => ipcRenderer.invoke('aiSettings:getModels') as Promise<{ ok: boolean; models: Array<{ id: string; owned_by: string }>; error: string }>,
+    getPresets: () => ipcRenderer.invoke('aiSettings:getPresets') as Promise<Array<{ name: string; apiUrl: string; model: string }>>,
   },
 });
-
-interface FirebaseConfig {
-  apiKey: string;
-  authDomain: string;
-  projectId: string;
-  storageBucket: string;
-  messagingSenderId: string;
-  appId: string;
-  measurementId?: string;
-}

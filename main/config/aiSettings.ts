@@ -30,6 +30,22 @@ export interface AiSettingsInput {
   systemPrompt: string;
 }
 
+export interface AiModelPreset {
+  name: string;
+  apiUrl: string;
+  model: string;
+}
+
+export const AI_MODEL_PRESETS: AiModelPreset[] = [
+  { name: 'DeepSeek', apiUrl: 'https://api.deepseek.com/v1', model: 'deepseek-chat' },
+  { name: 'DeepSeek R1', apiUrl: 'https://api.deepseek.com/v1', model: 'deepseek-reasoner' },
+  { name: 'OpenAI GPT-4o', apiUrl: 'https://api.openai.com/v1', model: 'gpt-4o-mini' },
+  { name: 'GLM-5 (Z.AI)', apiUrl: 'https://open.bigmodel.cn/api/paas/v4', model: 'glm-5' },
+  { name: 'GLM-4.7 (Z.AI)', apiUrl: 'https://open.bigmodel.cn/api/paas/v4', model: 'glm-4.7' },
+  { name: 'Qwen', apiUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1', model: 'qwen-turbo' },
+  { name: 'Ollama', apiUrl: 'http://localhost:11434/v1', model: 'qwen2.5:latest' },
+];
+
 const FILENAME = 'ai-settings.json';
 const DEFAULTS: AiSettings = {
   apiUrl: '',

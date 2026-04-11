@@ -213,7 +213,7 @@ export function renderExplorerTree(api: Api): void {
       .join('');
   }
   const html = renderLevel(es.home, 0);
-  el.innerHTML = html || '<p class="panelPlaceholder">（空）</p>';
+  el.innerHTML = html || `<p class="panelPlaceholder">${t('explorer.empty')}</p>`;
   if (isLocal && api.explorer?.startDrag) {
     el.querySelectorAll('.explorerItem').forEach((item) => {
       const pathVal = (item as HTMLElement).dataset.path;
@@ -308,7 +308,7 @@ function showRenameDialog(defaultName: string): Promise<string | null> {
       wrap.innerHTML = `
         <div class="passphraseDialogBackdrop"></div>
         <div class="passphraseDialogBox">
-          <p class="passphraseDialogTitle">${escapeHtml(t('renamePrompt') || '新しい名前')}</p>
+          <p class="passphraseDialogTitle">${escapeHtml(t('renamePrompt'))}</p>
           <input type="text" id="renameDialogInput" class="renameDialogInput" />
           <div class="passphraseDialogActions">
             <button type="button" id="renameDialogOk">OK</button>

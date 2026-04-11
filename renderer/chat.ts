@@ -2,37 +2,34 @@ import type { ChatMessage } from './types';
 import { state } from './state';
 import { t } from './i18n';
 import { escapeHtml } from './util';
+import { marked } from 'marked';
 import * as terminal from './terminal';
 import * as editor from './editor';
 import { showMessage } from './message';
 
 type Api = NonNullable<typeof window.electronAPI>;
 
-/** システムプロンプト（言語未取得時のフォールバック・日本語） */
-const CHAT_SYSTEM_PROMPT_FALLBACK = `あなたは Linux サーバー管理のアシスタントです。ユーザーの質問に答え、必要な場合は実行可能なコマンドを提案してください。
-コマンドを提案する場合は、必ず次の形式のコードブロックで1行ずつ書いてください。
+const CHAT_SYSTEM_PROMPT_FALLBACK = `You are a Linux server management assistant. Answer user questions and suggest runnable commands when needed.
+When suggesting commands, write them in code block format, one per line.
 \`\`\`bash
-コマンド1
-コマンド2
+command1
+command2
 \`\`\`
-説明はコードブロックの外に書いてください。
+Write explanations outside the code block.
 
-【ファイル修正】ユーザーがファイルの変更を依頼した場合、変更内容は必ず次の形式のコードブロック1つで返してください。ブロック内で 1 行目に ---OLD---、2 行目以降に「置き換え前の文字列」（省略可）、その次に ---NEW--- の行、その後に「置き換え後の文字列」を書きます。既存ファイルの一部だけを変える場合は、該当箇所の前後を含めて一意に特定できる範囲で OLD を書いてください。新規作成やファイル全体の上書きの場合は、OLD を空にすること（---OLD--- の直後に ---NEW--- を書く）。NEW では既存コードと同じインデント（空白・タブ）に合わせること。ファイル先頭で use しているクラスは先頭のバックスラッシュ（\\）を付けずに書くこと。
+[File edits] When the user asks for file changes, respond with one code block. First line ---OLD---, then "before" string (optional), then ---NEW---, then "after" string. For partial changes include enough context. For new files leave OLD empty.
 \`\`\`
 ---OLD---
-（置き換え前。全体上書きの場合は空でよい）
+(before; leave empty for full overwrite)
 ---NEW---
-（置き換え後の文字列。複数行可）
+(after; multiple lines OK)
 \`\`\`
 
-【重要】この会話では、システムメッセージの末尾に「直近のターミナル出力」が付与されている場合があります。その内容はあなたが参照できる共有情報です。「ターミナルを見れない」「直接確認できない」などと答えず、付与されているターミナル出力を根拠に回答してください。付与されていない場合（空の場合）のみ、必要なら「ターミナル出力を共有してください」と伝えてください。
-
-質問に対して、まず1〜2文で結論（いちばんメジャーな答え）を書き、そのあと必要なら詳細や例外を書く。
-相手が初心者か上級者か分からないときは、最初は一般的で分かりやすい説明にし、『もっと詳しく』と言われたら技術的に深く答える。`;
+[Important] Terminal output may be attached at the end of system messages. Use it as reference. Only ask for terminal output if none is provided.
+Answer in 1-2 sentences first, then add details if needed.`;
 
 let cachedCustomSystemPrompt: string | null = null;
 
-/** ユーザー設定のシステムプロンプトをキャッシュする（設定画面で保存時に更新） */
 export function setCustomSystemPrompt(prompt: string | null): void {
   cachedCustomSystemPrompt = prompt;
 }
@@ -57,14 +54,13 @@ function extractSuggestedCommands(text: string): string[] {
   while ((match = regex.exec(text)) !== null) {
     const block = match[1].trim();
     block.split('\n').forEach((line) => {
-      const t = line.trim();
-      if (t && !t.startsWith('#')) blocks.push(t);
+      const l = line.trim();
+      if (l && !l.startsWith('#')) blocks.push(l);
     });
   }
   return blocks;
 }
 
-/** メッセージ内の全コードブロックを抽出（言語問わず）。ファイル修正の「適用」用。 */
 function extractCodeBlocks(text: string): string[] {
   const blocks: string[] = [];
   const regex = /```(?:[\w+-]*)\s*\n?([\s\S]*?)```/g;
@@ -75,17 +71,22 @@ function extractCodeBlocks(text: string): string[] {
   return blocks;
 }
 
-/** search_replace 形式のブロックをパース。---OLD---/---NEW--- または --OLD--/--NEW-- の行で区切られた場合に { old, new } を返す。 */
 function parseSearchReplaceBlock(block: string): { old: string; new: string } | null {
   const lines = block.split('\n');
-  const isOld = (l: string) => { const t = l.trim(); return t === '---OLD---' || t === '--OLD--'; };
-  const isNew = (l: string) => { const t = l.trim(); return t === '---NEW---' || t === '--NEW--'; };
+  const isOld = (l: string) => { const v = l.trim(); return v === '---OLD---' || v === '--OLD--'; };
+  const isNew = (l: string) => { const v = l.trim(); return v === '---NEW---' || v === '--NEW--'; };
   const i = lines.findIndex((l) => isOld(l));
   const j = lines.findIndex((l) => isNew(l));
   if (i === -1 || j === -1 || j <= i) return null;
-  const oldStr = lines.slice(i + 1, j).join('\n').trimEnd();
-  const newStr = lines.slice(j + 1).join('\n').trimEnd();
-  return { old: oldStr, new: newStr };
+  return { old: lines.slice(i + 1, j).join('\n').trimEnd(), new: lines.slice(j + 1).join('\n').trimEnd() };
+}
+
+function renderMarkdown(text: string): string {
+  try {
+    return marked.parse(text, { async: false }) as string;
+  } catch {
+    return escapeHtml(text).replace(/\n/g, '<br>');
+  }
 }
 
 export function renderChatMessages(): void {
@@ -98,13 +99,83 @@ export function renderChatMessages(): void {
   }
   el.innerHTML = messages
     .map((m, msgIndex) => {
+      const isUser = m.role === 'user';
+      const contentHtml = isUser
+        ? escapeHtml(m.content).replace(/\n/g, '<br>')
+        : renderMarkdown(m.content);
       return `<div class="chatMessage chatMessage--${m.role}" data-msg-index="${msgIndex}">
-        <span class="chatMessageRole">${m.role === 'user' ? t('chat.roleUser') : t('chat.roleAi')}</span>
-        <div class="chatMessageContent">${escapeHtml(m.content).replace(/\n/g, '<br>')}</div>
+        <span class="chatMessageRole">${isUser ? t('chat.roleUser') : t('chat.roleAi')}</span>
+        <div class="chatMessageContent">${contentHtml}</div>
       </div>`;
     })
     .join('');
   el.scrollTop = el.scrollHeight;
+}
+
+/** Render streaming AI message with optional thinking block */
+function createStreamingMessage(): { thinkingEl: HTMLElement | null; contentEl: HTMLElement } {
+  const el = document.getElementById('chatMessages');
+  if (!el) return { thinkingEl: null, contentEl: document.createElement('div') };
+
+  const msgDiv = document.createElement('div');
+  msgDiv.className = 'chatMessage chatMessage--assistant chatMessage--streaming';
+
+  const roleSpan = document.createElement('span');
+  roleSpan.className = 'chatMessageRole';
+  roleSpan.textContent = t('chat.roleAi');
+  msgDiv.appendChild(roleSpan);
+
+  const contentDiv = document.createElement('div');
+  contentDiv.className = 'chatMessageContent';
+  msgDiv.appendChild(contentDiv);
+
+  el.appendChild(msgDiv);
+  el.scrollTop = el.scrollHeight;
+
+  return { thinkingEl: null, contentEl: contentDiv };
+}
+
+function ensureThinkingBlock(msgDiv: Element): HTMLElement {
+  let thinking = msgDiv.querySelector('.chatThinking');
+  if (thinking) return thinking as HTMLElement;
+  const details = document.createElement('details');
+  details.className = 'chatThinking';
+  const summary = document.createElement('summary');
+  summary.className = 'chatThinkingSummary';
+  summary.textContent = t('ai.thinking');
+  details.appendChild(summary);
+  const content = document.createElement('div');
+  content.className = 'chatThinkingContent';
+  details.appendChild(content);
+  const roleSpan = msgDiv.querySelector('.chatMessageRole');
+  const contentEl = msgDiv.querySelector('.chatMessageContent');
+  if (roleSpan && contentEl) {
+    msgDiv.insertBefore(details, contentEl);
+  }
+  return content;
+}
+
+function finishStreamingMessage(thinkingText: string, contentText: string): void {
+  const el = document.getElementById('chatMessages');
+  if (!el) return;
+  const msgDiv = el.querySelector('.chatMessage--streaming');
+  if (!msgDiv) return;
+  msgDiv.classList.remove('chatMessage--streaming');
+
+  // Remove empty thinking block
+  const thinkingBlock = msgDiv.querySelector('.chatThinking');
+  if (thinkingBlock && !thinkingText.trim()) {
+    thinkingBlock.remove();
+  } else if (thinkingBlock) {
+    const contentEl = thinkingBlock.querySelector('.chatThinkingContent') as HTMLElement | null;
+    if (contentEl) contentEl.textContent = thinkingText;
+  }
+
+  // Render final markdown content
+  const contentEl = msgDiv.querySelector('.chatMessageContent') as HTMLElement | null;
+  if (contentEl) {
+    contentEl.innerHTML = renderMarkdown(contentText);
+  }
 }
 
 let apiRef: Api | null = null;
@@ -113,13 +184,12 @@ export function setChatApi(api: Api): void {
   apiRef = api;
 }
 
-const APPLY_LOG = '[AISSH apply]';
+const APPLY_LOG = '[Next-SSH apply]';
 
 function logToStdout(...args: unknown[]): void {
   window.electronAPI?.logToMain?.(APPLY_LOG, ...args);
 }
 
-/** 行同士の類似度 0〜1。AI の誤字・余分スペースで完全一致しないときの照合用。レーベンシュタイン距離で 1 - distance/maxLen。 */
 function lineSimilarity(a: string, b: string): number {
   const ta = a.trimEnd();
   const tb = b.trimEnd();
@@ -134,9 +204,7 @@ function lineSimilarity(a: string, b: string): number {
 function levenshtein(a: string, b: string): number {
   const m = a.length;
   const n = b.length;
-  const dp: number[][] = Array(m + 1)
-    .fill(null)
-    .map(() => Array(n + 1).fill(0));
+  const dp: number[][] = Array(m + 1).fill(null).map(() => Array(n + 1).fill(0));
   for (let i = 0; i <= m; i++) dp[i][0] = i;
   for (let j = 0; j <= n; j++) dp[0][j] = j;
   for (let i = 1; i <= m; i++) {
@@ -148,7 +216,6 @@ function levenshtein(a: string, b: string): number {
   return dp[m][n];
 }
 
-/** ファイル内容の行ごとの開始・終了オフセット。 */
 function getLineBoundaries(content: string): { start: number; end: number }[] {
   const boundaries: { start: number; end: number }[] = [];
   let start = 0;
@@ -162,7 +229,6 @@ function getLineBoundaries(content: string): { start: number; end: number }[] {
   return boundaries;
 }
 
-/** ブロック内容と現在のエディタ内容から「適用後の内容」を計算する。OLD が見つからない場合は null。 */
 function computeProposedContent(blockContent: string, currentContent: string): string | null {
   const parsed = parseSearchReplaceBlock(blockContent);
   if (parsed) {
@@ -180,14 +246,14 @@ function computeProposedContent(blockContent: string, currentContent: string): s
       if (oldLines.length <= fileLines.length) {
         const threshold = 0.8;
         const minMatchRatio = 0.9;
-        for (let start = 0; start <= fileLines.length - oldLines.length; start++) {
+        for (let s = 0; s <= fileLines.length - oldLines.length; s++) {
           let matchCount = 0;
           for (let j = 0; j < oldLines.length; j++) {
-            if (lineSimilarity(fileLines[start + j], oldLines[j]) >= threshold) matchCount++;
+            if (lineSimilarity(fileLines[s + j], oldLines[j]) >= threshold) matchCount++;
           }
           if (matchCount >= oldLines.length * minMatchRatio) {
-            const blockStart = boundaries[start].start;
-            const blockEnd = boundaries[start + oldLines.length - 1].end;
+            const blockStart = boundaries[s].start;
+            const blockEnd = boundaries[s + oldLines.length - 1].end;
             return currentContent.slice(0, blockStart) + parsed.new + currentContent.slice(blockEnd);
           }
         }
@@ -199,7 +265,6 @@ function computeProposedContent(blockContent: string, currentContent: string): s
   return blockContent;
 }
 
-/** 隣り合う2ブロックを「置換前・置換後」として適用後の内容を返す。変化がなければ null。 */
 function computeProposedContentFromPair(oldBlock: string, newBlock: string, currentContent: string): string | null {
   let idx = currentContent.indexOf(oldBlock);
   let oldLen = oldBlock.length;
@@ -213,64 +278,35 @@ function computeProposedContentFromPair(oldBlock: string, newBlock: string, curr
   return proposed !== currentContent ? proposed : null;
 }
 
-/** 直近の AI メッセージにコードブロックがあれば、アクティブがエディタのとき diff プレビューを即開く。
- * @param forSessionId 指定時はそのセッションの最後のメッセージを使う（送信直後の diff 用）。未指定時はアクティブセッション。
- */
 export async function tryOpenDiffPreviewForLastMessage(forSessionId?: number | null): Promise<void> {
   const messages = forSessionId != null
     ? (state.chatMessagesBySession[forSessionId] ?? [])
     : getCurrentChatMessages();
   const last = messages[messages.length - 1];
-  logToStdout('tryOpenDiffPreviewForLastMessage START', 'sessionId', forSessionId ?? state.activeChatSessionId, 'msgCount', messages.length);
-  if (!last) {
-    logToStdout('tryOpenDiffPreview early return: no messages');
-    return;
-  }
-  if (last.role !== 'assistant') {
-    logToStdout('tryOpenDiffPreview early return: last role is', last.role);
-    return;
-  }
+  if (!last || last.role !== 'assistant') return;
   const blocks = extractCodeBlocks(last.content);
-  logToStdout('tryOpenDiffPreview blocks.length', blocks.length, 'blocks[0] len', blocks[0]?.length ?? 0);
-  if (blocks.length === 0) {
-    logToStdout('tryOpenDiffPreview early return: no blocks');
-    return;
-  }
+  if (blocks.length === 0) return;
   const activeTab = state.mainPanelTabs.find((t) => t.id === state.activeMainPanelTabId);
-  if (!activeTab || activeTab.kind !== 'editor') {
-    logToStdout('tryOpenDiffPreview early return: activeTab is not editor', activeTab?.kind ?? 'no-tab');
-    return;
-  }
+  if (!activeTab || activeTab.kind !== 'editor') return;
   const inst = state.editorInstances.get(activeTab.id);
-  if (!inst) {
-    logToStdout('tryOpenDiffPreview early return: no editor instance', activeTab.id);
-    return;
-  }
+  if (!inst) return;
   const currentContent = (inst.editor as { getValue(): string }).getValue();
-  logToStdout('tryOpenDiffPreview currentContent.length', currentContent.length);
   for (let bi = 0; bi < blocks.length; bi++) {
     const proposedContent = computeProposedContent(blocks[bi], currentContent);
-    const same = proposedContent === currentContent;
-    logToStdout('tryOpenDiffPreview block', bi, 'proposed', proposedContent === null ? 'null' : 'ok', 'same', same, 'proposedLen', proposedContent?.length ?? 0);
-    if (proposedContent !== null && !same) {
-      const opened = await editor.setPendingDiff(activeTab.id, proposedContent);
-      logToStdout('tryOpenDiffPreview setPendingDiff(block)', bi, 'opened', opened);
-      if (opened) return;
+    if (proposedContent !== null && proposedContent !== currentContent) {
+      await editor.setPendingDiff(activeTab.id, proposedContent);
+      return;
     }
   }
   for (let i = 0; i + 1 < blocks.length; i++) {
     const proposedContent = computeProposedContentFromPair(blocks[i], blocks[i + 1], currentContent);
-    logToStdout('tryOpenDiffPreview pair', i, i + 1, 'proposed', proposedContent === null ? 'null' : 'ok');
     if (proposedContent !== null) {
-      const opened = await editor.setPendingDiff(activeTab.id, proposedContent);
-      logToStdout('tryOpenDiffPreview setPendingDiff(pair)', i, 'opened', opened);
-      if (opened) return;
+      await editor.setPendingDiff(activeTab.id, proposedContent);
+      return;
     }
   }
-  logToStdout('tryOpenDiffPreview END: no diff opened');
 }
 
-/** チャットのコードブロックをアクティブなエディタに適用する。diff プレビューを開き、受け入れ Ctrl+Shift+Y / 拒否 Ctrl+N。 */
 async function applySearchReplaceToEditor(btn: HTMLButtonElement): Promise<void> {
   const api = apiRef;
   if (!api) return;
@@ -281,17 +317,10 @@ async function applySearchReplaceToEditor(btn: HTMLButtonElement): Promise<void>
   if (msg?.role !== 'assistant') return;
   const blocks = extractCodeBlocks(msg.content);
   const content = blocks[blockIndex];
-  if (content == null) {
-    logToStdout('WARN block not found', { msgIndex, blockIndex });
-    return;
-  }
+  if (content == null) return;
   const activeTab = state.mainPanelTabs.find((t) => t.id === state.activeMainPanelTabId);
   if (activeTab?.kind !== 'editor') {
-    logToStdout('WARN active tab is not editor', { activeTab: activeTab?.kind });
-    void showMessage({
-      title: 'Diff',
-      message: 'エディタでファイルを開いてから操作してください。',
-    });
+    void showMessage({ title: t('diff.title'), message: t('alert.selectEnv') });
     return;
   }
   const inst = state.editorInstances.get(activeTab.id);
@@ -299,26 +328,18 @@ async function applySearchReplaceToEditor(btn: HTMLButtonElement): Promise<void>
   const currentContent = (inst.editor as { getValue(): string }).getValue();
   const proposedContent = computeProposedContent(content, currentContent);
   if (proposedContent === null) {
-    logToStdout('WARN OLD not found in file');
-    void showMessage({
-      title: 'Diff',
-      message:
-        'ファイル内に OLD の文字列が見つかりません。内容が変わっているか、前後を含めて一意に一致する範囲で OLD を書き直してください。',
-    });
+    void showMessage({ title: t('diff.title'), message: t('diff.oldNotFound') });
     return;
   }
   const parsed = parseSearchReplaceBlock(content);
-  logToStdout('opening diff preview', { blockIndex, filePath: activeTab.filePath });
   const opened = await editor.setPendingDiff(activeTab.id, proposedContent);
   if (!opened) {
-    logToStdout('diff unchanged or error, applying directly');
     if (parsed) {
       editor.applySearchReplace(activeTab.id, parsed.old, parsed.new);
     } else {
       editor.applySearchReplace(activeTab.id, '', content);
     }
   }
-  logToStdout('done');
   terminal.renderMainPanelTabBar(api);
 }
 
@@ -339,6 +360,7 @@ export async function sendChatMessage(api: Api, userContent: string): Promise<vo
   state.chatLoading = true;
   const sendBtn = document.getElementById('btnChatSend');
   if (sendBtn) (sendBtn as HTMLButtonElement).disabled = true;
+
   try {
     const messages = getCurrentChatMessages();
     const activeTab = state.mainPanelTabs.find((t) => t.id === state.activeMainPanelTabId);
@@ -350,10 +372,9 @@ export async function sendChatMessage(api: Api, userContent: string): Promise<vo
           : '';
     const terminalContext =
       buf.trim().length > 0
-        ? `\n\n【直近のターミナル出力（参考）】以下はユーザーが接続しているターミナルの直近の出力です。この内容を参照して回答してください。\n---\n${buf.trim().slice(-8000)}`
+        ? `\n\n【Terminal Output (reference)】Recent output from the connected terminal:\n---\n${buf.trim().slice(-8000)}`
         : '';
 
-    // パターンA: 開いているエディタのファイル内容を AI に渡す（プロジェクト制なし・相対パスは使わない）
     const FILE_CONTEXT_MAX = 12000;
     let fileContext = '';
     if (activeTab?.kind === 'editor') {
@@ -361,7 +382,7 @@ export async function sendChatMessage(api: Api, userContent: string): Promise<vo
       const text = editorInstance?.editor.getValue() ?? '';
       if (text.trim().length > 0) {
         const trimmed = text.length > FILE_CONTEXT_MAX ? text.slice(-FILE_CONTEXT_MAX) : text;
-        fileContext = `\n\n【開いているファイル（エディタ）】以下はユーザーがエディタで開いているファイルの内容です。パス: ${activeTab.filePath}\n---\n${trimmed}`;
+        fileContext = `\n\n【Open file (editor)】Path: ${activeTab.filePath}\n---\n${trimmed}`;
       }
     }
 
@@ -369,27 +390,58 @@ export async function sendChatMessage(api: Api, userContent: string): Promise<vo
       { role: 'system' as const, content: getChatSystemPrompt() + terminalContext + fileContext },
       ...messages.map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content })),
     ];
-    const reply = await api.chat.complete(payload);
-    if (!reply) throw new Error('AI からの応答がありませんでした。');
-    const suggestedCommands = extractSuggestedCommands(reply);
-    const assistantRow = await api.chatContext.add(sessionId, 'assistant', reply, suggestedCommands);
-    state.chatMessagesBySession[sessionId].push({
-      id: assistantRow.id,
-      role: 'assistant',
-      content: assistantRow.content,
-      suggestedCommands: assistantRow.suggestedCommands ?? undefined,
+
+    // Streaming mode
+    const { thinkingEl, contentEl } = createStreamingMessage();
+    let thinkingText = '';
+    let contentText = '';
+    let done = false;
+
+    api.chat.onStreamChunk((chunk) => {
+      if (done) return;
+      if (chunk.type === 'thinking') {
+        thinkingText += chunk.text;
+      } else if (chunk.type === 'content') {
+        contentText += chunk.text;
+      } else if (chunk.type === 'done') {
+        done = true;
+        finishStreamingMessage(thinkingText, contentText);
+        // Persist to database
+        const suggestedCommands = extractSuggestedCommands(contentText);
+        api.chatContext!.add(sessionId, 'assistant', contentText, suggestedCommands).then((row) => {
+          state.chatMessagesBySession[sessionId].push({
+            id: row.id,
+            role: 'assistant',
+            content: row.content,
+            suggestedCommands: row.suggestedCommands ?? undefined,
+          });
+          renderChatMessages();
+          void tryOpenDiffPreviewForLastMessage(sessionId);
+        });
+      } else if (chunk.type === 'error') {
+        done = true;
+        contentText += `\n\n**Error:** ${chunk.text}`;
+        finishStreamingMessage(thinkingText, contentText);
+      }
+
+      // Live update during streaming
+      if (!done) {
+        const chatEl = document.getElementById('chatMessages');
+        if (chatEl) chatEl.scrollTop = chatEl.scrollHeight;
+      }
     });
-    renderChatMessages();
-    await tryOpenDiffPreviewForLastMessage(sessionId);
+
+    api.chat.streamStart(payload);
   } catch (err) {
-    const errContent = `エラー: ${err instanceof Error ? err.message : String(err)}`;
-    const assistantRow = await api.chatContext.add(sessionId, 'assistant', errContent);
-    state.chatMessagesBySession[sessionId].push({
-      id: assistantRow.id,
-      role: 'assistant',
-      content: assistantRow.content,
+    const errContent = `Error: ${err instanceof Error ? err.message : String(err)}`;
+    api.chatContext!.add(sessionId, 'assistant', errContent).then((row) => {
+      state.chatMessagesBySession[sessionId].push({
+        id: row.id,
+        role: 'assistant',
+        content: row.content,
+      });
+      renderChatMessages();
     });
-    renderChatMessages();
   } finally {
     state.chatLoading = false;
     if (sendBtn) (sendBtn as HTMLButtonElement).disabled = false;
@@ -495,7 +547,6 @@ export function closeChatTab(api: Api, sessionId: number): void {
   renderChatMessages();
 }
 
-/** AI 未設定時は送信不可＋設定促し表示。設定済み時は有効。 */
 export async function updateChatFormLoginState(): Promise<void> {
   const configured = await window.electronAPI?.aiSettings?.isConfigured() ?? false;
   const prompt = document.getElementById('chatLoginPrompt');
@@ -527,14 +578,13 @@ export function bindChatEvents(api: Api): void {
     }
   });
 
-  // チャットパネル内のどこをクリックしてもフォーカスし、Ctrl+Tab でタブ移動できるようにする
   const panel = document.getElementById('chatPanel');
   if (panel) {
     panel.addEventListener('mousedown', (e) => {
-      const t = e.target;
-      if (!(t instanceof HTMLElement) || !panel.contains(t)) return;
-      if (['INPUT', 'TEXTAREA', 'BUTTON', 'SELECT', 'A'].includes(t.tagName)) return;
-      const tabindex = t.getAttribute('tabindex');
+      const target = e.target;
+      if (!(target instanceof HTMLElement) || !panel.contains(target)) return;
+      if (['INPUT', 'TEXTAREA', 'BUTTON', 'SELECT', 'A'].includes(target.tagName)) return;
+      const tabindex = target.getAttribute('tabindex');
       if (tabindex !== null && tabindex !== '-1') return;
       panel.focus();
     });

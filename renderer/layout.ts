@@ -19,7 +19,7 @@ export function renderLayout(root: HTMLElement): void {
           <div class="explorerPanelHeader">
             <span class="panelHeader" data-i18n="panel.explorer">${t('panel.explorer')}</span>
             <div class="explorerTabBar" id="explorerTabBar"></div>
-            <button type="button" id="btnExplorerUp" class="explorerUpBtn" title="上へ" aria-label="上へ">↑</button>
+            <button type="button" id="btnExplorerUp" class="explorerUpBtn" data-i18n-title="explorer.up" title="${t('explorer.up')}" aria-label="${t('explorer.up')}">↑</button>
             <button type="button" id="btnExplorerReload" class="explorerUpBtn" data-i18n-title="reload" title="${t('reload')}" aria-label="${t('reload')}">↻</button>
           </div>
           <div class="explorerTreeContainer" id="explorerTreeContainer" tabindex="0"></div>
@@ -29,10 +29,10 @@ export function renderLayout(root: HTMLElement): void {
       <div class="contentArea">
         <main class="mainArea">
           <div id="welcomeArea">
-            <h1>AISSH</h1>
+            <h1 data-i18n="app.title">${t('app.title')}</h1>
             <p class="mainAreaPlaceholder" id="mainPlaceholder" data-i18n="main.placeholder">${t('main.placeholder')}</p>
             <p class="mainAreaPlaceholder" style="margin-top: 8px;"><button type="button" id="btnConnect" data-i18n="button.connect">${t('button.connect')}</button></p>
-            <p class="mainAreaPlaceholder" style="margin-top: 4px;"><button type="button" id="btnOpenLocalTerminal">Local</button></p>
+            <p class="mainAreaPlaceholder" style="margin-top: 4px;"><button type="button" id="btnOpenLocalTerminal" data-i18n="button.local">${t('button.local')}</button></p>
           </div>
           <div class="mainPanel" id="mainPanel" tabindex="0">
             <div class="terminalTabBar" id="terminalTabBar"></div>
@@ -43,9 +43,9 @@ export function renderLayout(root: HTMLElement): void {
             <div class="editorContainer" id="editorContainer"></div>
             <div id="diffPreviewWrap" class="diffPreviewWrap" style="display: none;">
               <div class="diffPreviewToolbar">
-                <span class="diffPreviewHint">受け入れ Ctrl+Y または Ctrl+Shift+Y / 拒否 Ctrl+N</span>
-                <button type="button" id="btnDiffApply">適用する</button>
-                <button type="button" id="btnDiffCancel">キャンセル</button>
+                <span class="diffPreviewHint" data-i18n="diff.hint">${t('diff.hint')}</span>
+                <button type="button" id="btnDiffApply" data-i18n="diff.apply">${t('diff.apply')}</button>
+                <button type="button" id="btnDiffCancel" data-i18n="diff.cancel">${t('diff.cancel')}</button>
               </div>
               <div id="diffPreviewContainer" class="diffPreviewContainer"></div>
             </div>
@@ -109,47 +109,43 @@ export function renderLayout(root: HTMLElement): void {
       <div id="messageModal" class="messageModal" style="display: none;">
         <div class="messageModalBackdrop" id="messageModalBackdrop"></div>
         <div class="messageModalBox">
-          <h2 class="messageModalTitle" id="messageModalTitle">Message</h2>
+          <h2 class="messageModalTitle" id="messageModalTitle" data-i18n="message.title">${t('message.title')}</h2>
           <div class="messageModalBody">
             <p id="messageModalText"></p>
           </div>
           <div class="messageModalActions">
-            <button type="button" id="btnMessageOk">OK</button>
+            <button type="button" id="btnMessageOk" data-i18n="message.ok">${t('message.ok')}</button>
           </div>
         </div>
       </div>
       <div id="settingsModal" class="settingsModal" style="display: none;">
         <div class="settingsModalBackdrop" id="settingsModalBackdrop"></div>
         <div class="settingsModalBox">
-          <h2 class="settingsModalTitle">Settings</h2>
+          <h2 class="settingsModalTitle" data-i18n="settings.title">${t('settings.title')}</h2>
           <div class="settingsModalSection">
-            <h3 class="settingsModalSectionTitle">Account</h3>
-            <div id="firebaseAuthSection">
-              <div class="settingsAccountRow">
-                <button type="button" id="btnFirebaseLogin" data-i18n="auth.login">${t('auth.login')}</button>
-                <button type="button" id="btnFirebaseSignUp" data-i18n="auth.signUp">${t('auth.signUp')}</button>
-                <span id="firebaseUserEmail" style="display: none;"></span>
-                <button type="button" id="btnFirebaseLogout" style="display: none;">Log out</button>
-              </div>
-              <div class="settingsAccountRow settingsAccountRow--billing">
-                <button type="button" id="btnBilling" style="display: none;">Subscribe</button>
-              </div>
-            </div>
-          </div>
-          <div class="settingsModalSection">
-            <h3 class="settingsModalSectionTitle">Language</h3>
+            <h3 class="settingsModalSectionTitle" data-i18n="settings.language">${t('settings.language')}</h3>
             <div class="settingsModalLanguage">
-              <button type="button" id="btnLangJa" data-locale="ja">日本語</button>
               <button type="button" id="btnLangEn" data-locale="en">English</button>
               <button type="button" id="btnLangZn" data-locale="zn">简体中文</button>
+              <button type="button" id="btnLangRu" data-locale="ru">Русский</button>
             </div>
           </div>
-          <div class="settingsModalActions">
-            <button type="button" id="btnSettingsClose">Close</button>
+          <div class="settingsModalSection">
+            <h3 class="settingsModalSectionTitle" data-i18n="settings.theme">${t('settings.theme')}</h3>
+            <div class="settingsModalLanguage">
+              <button type="button" id="btnThemeDark" data-theme-value="dark" data-i18n="theme.dark">${t('theme.dark')}</button>
+              <button type="button" id="btnThemeLight" data-theme-value="light" data-i18n="theme.light">${t('theme.light')}</button>
+            </div>
           </div>
           <div class="settingsModalSection" id="aiSettingsSection">
             <h3 class="settingsModalSectionTitle" data-i18n="ai.title">${t('ai.title')}</h3>
             <div class="aiSettingsForm">
+              <div class="aiSettingsField">
+                <label data-i18n="ai.preset">${t('ai.preset')}</label>
+                <select id="aiPresetSelect">
+                  <option value="" data-i18n="ai.presetCustom">${t('ai.presetCustom')}</option>
+                </select>
+              </div>
               <div class="aiSettingsField">
                 <label data-i18n="ai.apiUrl">${t('ai.apiUrl')}</label>
                 <input type="text" id="aiApiUrl" data-i18n-placeholder="ai.placeholder.url" placeholder="${t('ai.placeholder.url')}" />
@@ -158,7 +154,7 @@ export function renderLayout(root: HTMLElement): void {
                 <label data-i18n="ai.apiKey">${t('ai.apiKey')}</label>
                 <div class="aiSettingsKeyRow">
                   <input type="password" id="aiApiKey" data-i18n-placeholder="ai.placeholder.apiKey" placeholder="${t('ai.placeholder.apiKey')}" />
-                  <button type="button" id="btnToggleApiKey" class="aiSettingsToggleBtn">Show</button>
+                  <button type="button" id="btnToggleApiKey" class="aiSettingsToggleBtn" data-i18n="ai.show">${t('ai.show')}</button>
                 </div>
               </div>
               <div class="aiSettingsField">
@@ -167,7 +163,7 @@ export function renderLayout(root: HTMLElement): void {
               </div>
               <div class="aiSettingsField aiSettingsField--row">
                 <div class="aiSettingsFieldHalf">
-                  <label>Temperature: <span id="aiTempValue">0.7</span></label>
+                  <label><span data-i18n="ai.temperature">${t('ai.temperature')}</span>: <span id="aiTempValue">0.7</span></label>
                   <input type="range" id="aiTemperature" min="0" max="2" step="0.1" value="0.7" />
                 </div>
                 <div class="aiSettingsFieldHalf">
@@ -180,54 +176,16 @@ export function renderLayout(root: HTMLElement): void {
                 <textarea id="aiSystemPrompt" rows="3" data-i18n-placeholder="ai.placeholder.systemPrompt" placeholder="${t('ai.placeholder.systemPrompt')}"></textarea>
               </div>
               <div id="aiSettingsTestResult" class="aiSettingsTestResult" style="display:none;"></div>
+              <div id="aiModelsList" class="aiModelsList" style="display:none;"></div>
               <div class="aiSettingsActions">
+                <button type="button" id="btnAiDetectModels" data-i18n="ai.detectModels">${t('ai.detectModels')}</button>
                 <button type="button" id="btnAiTest" data-i18n="ai.test">${t('ai.test')}</button>
                 <button type="button" id="btnAiSave" data-i18n="ai.save">${t('ai.save')}</button>
               </div>
             </div>
           </div>
           <div class="settingsModalActions">
-            <button type="button" id="btnSettingsClose">Close</button>
-          </div>
-        </div>
-      </div>
-      <div id="accountListModal" class="accountListModal" style="display: none;">
-        <div class="accountListModalBackdrop" id="accountListModalBackdrop"></div>
-        <div class="accountListModalBox">
-          <h2 class="accountListModalTitle" id="accountListModalTitle" data-i18n="auth.accountListTitle">${t('auth.accountListTitle')}</h2>
-          <div class="accountListModalList" id="accountListModalList"></div>
-          <div class="accountListModalActions">
-            <button type="button" id="accountListModalOther" data-i18n="auth.otherAccount">${t('auth.otherAccount')}</button>
-            <button type="button" id="accountListModalClose">Close</button>
-          </div>
-        </div>
-      </div>
-      <div id="planModal" class="planModal" style="display: none;">
-        <div class="planModalBackdrop" id="planModalBackdrop"></div>
-        <div class="planModalBox">
-          <h2 class="planModalTitle" data-i18n="plan.title">${t('plan.title')}</h2>
-          <div class="planModalPlans">
-            <div class="planModalPlan" data-plan="standard">
-              <div class="planModalPlanName" data-i18n="plan.standard">${t('plan.standard')}</div>
-              <div class="planModalPlanPrice" data-i18n="plan.price2000">${t('plan.price2000')}</div>
-              <div class="planModalPlanDetail" data-i18n="plan.tokens10M">${t('plan.tokens10M')}</div>
-              <button type="button" class="planModalPlanBtn" data-i18n="plan.subscribe">${t('plan.subscribe')}</button>
-            </div>
-            <div class="planModalPlan" data-plan="pro">
-              <div class="planModalPlanName" data-i18n="plan.pro">${t('plan.pro')}</div>
-              <div class="planModalPlanPrice" data-i18n="plan.price5000">${t('plan.price5000')}</div>
-              <div class="planModalPlanDetail" data-i18n="plan.tokens40M">${t('plan.tokens40M')}</div>
-              <button type="button" class="planModalPlanBtn" data-i18n="plan.subscribe">${t('plan.subscribe')}</button>
-            </div>
-            <div class="planModalPlan" data-plan="expert">
-              <div class="planModalPlanName" data-i18n="plan.expert">${t('plan.expert')}</div>
-              <div class="planModalPlanPrice" data-i18n="plan.price30000">${t('plan.price30000')}</div>
-              <div class="planModalPlanDetail" data-i18n="plan.tokens200M">${t('plan.tokens200M')}</div>
-              <button type="button" class="planModalPlanBtn" data-i18n="plan.subscribe">${t('plan.subscribe')}</button>
-            </div>
-          </div>
-          <div class="planModalActions">
-            <button type="button" id="btnPlanClose" data-i18n="plan.cancel">${t('plan.cancel')}</button>
+            <button type="button" id="btnSettingsClose" data-i18n="button.close">${t('button.close')}</button>
           </div>
         </div>
       </div>
@@ -237,7 +195,6 @@ export function renderLayout(root: HTMLElement): void {
 
 let initialSidebarRatioApplied = false;
 
-/** 起動時のサーバーリスト : エクスプローラー = 4 : 6 にする。レイアウト確定後に1回だけ適用。 */
 function applyInitialSidebarRatio(): void {
   if (initialSidebarRatioApplied) return;
   const sidebar = document.getElementById('sidebar');

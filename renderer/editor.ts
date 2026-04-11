@@ -3,6 +3,8 @@
  * monaco-editor は動的 import で読み込む（起動時の Vite 解決エラーを避ける）。
  */
 import { state } from './state';
+import { t } from './i18n';
+import { getMonacoThemeId } from './theme';
 import * as terminal from './terminal';
 import { showMessage } from './message';
 
@@ -106,7 +108,7 @@ export async function createEditorForTab(api: Api, tabId: string, filePath: stri
   const editor = monaco.editor.create(container, {
     value: initialContent,
     language,
-    theme: 'vs-dark',
+    theme: getMonacoThemeId(),
     minimap: { enabled: false },
     fontSize: 14,
     wordWrap: 'on',
@@ -219,7 +221,7 @@ export async function setPendingDiff(tabId: string, proposedContent: string): Pr
   }
   container.innerHTML = '';
   const diffEditor = monaco.editor.createDiffEditor(container, {
-    theme: 'vs-dark',
+    theme: getMonacoThemeId(),
     readOnly: true,
     renderSideBySide: true,
     automaticLayout: true,
@@ -368,9 +370,12 @@ export function applySearchReplace(tabId: string, oldStr: string, newStr: string
   return true;
 }
 
+export async function applyThemeToAllEditors(): Promise<void> {
+  const monaco = await import('monaco-editor');
+  monaco.editor.setTheme(getMonacoThemeId());
+}
+
 /**
- * 指定タブの内容を保存する。ローカル／リモートに応じて writeLocalFile または writeRemoteFile。
- */
 export function saveEditorTab(api: Api, tabId: string): void {
   const tab = state.mainPanelTabs.find((t) => t.id === tabId);
   if (!tab || tab.kind !== 'editor' || !api.explorer) return;
@@ -379,8 +384,8 @@ export function saveEditorTab(api: Api, tabId: string): void {
   const content = inst.editor.getValue();
   const onFail = (err: unknown) =>
     showMessage({
-      title: 'Save failed',
-      message: `保存に失敗しました: ${err instanceof Error ? err.message : String(err)}`,
+      title: t('editor.saveFailed'),
+      message: `${t('editor.saveFailed')}: ${err instanceof Error ? err.message : String(err)}`,
     });
   if (tab.target === 'local') {
     api.explorer.writeLocalFile(tab.filePath, content).then(() => {
@@ -436,8 +441,8 @@ export async function openFileInEditor(api: Api, filePath: string, target: Edito
     }
   } catch (err) {
     await showMessage({
-      title: 'Open failed',
-      message: `開けませんでした: ${err instanceof Error ? err.message : String(err)}`,
+      title: t('editor.openFailed'),
+      message: `${t('editor.openFailed')}: ${err instanceof Error ? err.message : String(err)}`,
     });
     return null;
   }
