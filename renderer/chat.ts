@@ -162,16 +162,16 @@ function finishStreamingMessage(thinkingText: string, contentText: string): void
   if (!msgDiv) return;
   msgDiv.classList.remove('chatMessage--streaming');
 
-  // Remove empty thinking block
   const thinkingBlock = msgDiv.querySelector('.chatThinking');
-  if (thinkingBlock && !thinkingText.trim()) {
-    thinkingBlock.remove();
-  } else if (thinkingBlock) {
-    const contentEl = thinkingBlock.querySelector('.chatThinkingContent') as HTMLElement | null;
-    if (contentEl) contentEl.textContent = thinkingText;
+  if (thinkingBlock) {
+    if (!thinkingText.trim() || !state.showThinking) {
+      thinkingBlock.remove();
+    } else {
+      const thinkingContent = thinkingBlock.querySelector('.chatThinkingContent') as HTMLElement | null;
+      if (thinkingContent) thinkingContent.textContent = thinkingText;
+    }
   }
 
-  // Render final markdown content
   const contentEl = msgDiv.querySelector('.chatMessageContent') as HTMLElement | null;
   if (contentEl) {
     contentEl.innerHTML = renderMarkdown(contentText);
@@ -401,12 +401,19 @@ export async function sendChatMessage(api: Api, userContent: string): Promise<vo
       if (done) return;
       if (chunk.type === 'thinking') {
         thinkingText += chunk.text;
+        if (state.showThinking) {
+          const msgDiv = document.querySelector('.chatMessage--streaming');
+          if (msgDiv) {
+            const thinkingContent = ensureThinkingBlock(msgDiv);
+            thinkingContent.textContent = thinkingText;
+          }
+        }
       } else if (chunk.type === 'content') {
         contentText += chunk.text;
+        contentEl.textContent = contentText;
       } else if (chunk.type === 'done') {
         done = true;
         finishStreamingMessage(thinkingText, contentText);
-        // Persist to database
         const suggestedCommands = extractSuggestedCommands(contentText);
         api.chatContext!.add(sessionId, 'assistant', contentText, suggestedCommands).then((row) => {
           state.chatMessagesBySession[sessionId].push({
@@ -424,7 +431,6 @@ export async function sendChatMessage(api: Api, userContent: string): Promise<vo
         finishStreamingMessage(thinkingText, contentText);
       }
 
-      // Live update during streaming
       if (!done) {
         const chatEl = document.getElementById('chatMessages');
         if (chatEl) chatEl.scrollTop = chatEl.scrollHeight;
@@ -545,6 +551,19 @@ export function closeChatTab(api: Api, sessionId: number): void {
   }
   renderChatTabBar();
   renderChatMessages();
+}
+
+export function bindThinkToggle(): void {
+  const btn = document.getElementById('btnThinkToggle');
+  if (!btn) return;
+  btn.classList.toggle('active', state.showThinking);
+  btn.addEventListener('click', () => {
+    state.showThinking = !state.showThinking;
+    btn.classList.toggle('active', state.showThinking);
+    document.querySelectorAll('.chatThinking').forEach((el) => {
+      (el as HTMLElement).style.display = state.showThinking ? '' : 'none';
+    });
+  });
 }
 
 export async function updateChatFormLoginState(): Promise<void> {

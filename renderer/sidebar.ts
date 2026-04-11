@@ -3,6 +3,7 @@ import { state } from './state';
 import { t } from './i18n';
 import { displayName, escapeHtml } from './util';
 import * as terminal from './terminal';
+import * as explorerContextMenu from './explorerContextMenu';
 
 type Api = NonNullable<typeof window.electronAPI>;
 
@@ -13,71 +14,77 @@ export function setConnectHandler(handler: () => void): void {
   connectHandler = handler;
 }
 
-/** 接続中（ターミナルタブがある）env の id 一覧（dot 表示用）。 */
-function getConnectedEnvIds(): number[] {
-  return [
-    ...new Set(
-      state.mainPanelTabs
-        .filter((t): t is typeof t & { kind: 'terminal' } => t.kind === 'terminal')
-        .map((t) => t.envId),
-    ),
-  ];
+interface ConnectListItem {
+  envId: number;
+  label: string;
+  isConnected: boolean;
 }
 
-/** Connect list 用: mainPanelTabs からタブ単位の行データを生成。 */
-function getConnectListItems(): Array<{ tabId: string; label: string }> {
-  const items: Array<{ tabId: string; label: string }> = [];
-
-  const localTabs = state.mainPanelTabs.filter((t) => t.kind === 'local-terminal');
-  localTabs.forEach((tab, idx) => {
-    const n = idx + 1;
-    const base = 'Local';
-    const label = n === 1 ? base : `${base}_${n}`;
-    items.push({ tabId: tab.id, label });
-  });
-
-  const terminalTabs = state.mainPanelTabs.filter((t) => t.kind === 'terminal');
-  const occurrences: Record<number, number> = {};
-  terminalTabs.forEach((t) => {
-    occurrences[t.envId] = (occurrences[t.envId] ?? 0) + 1;
-  });
-  const seen: Record<number, number> = {};
-
-  terminalTabs.forEach((tab) => {
-    const envId = tab.envId;
-    const env = state.envList.find((e) => e.id === envId);
-    const base = env ? displayName(env) : `Env ${envId}`;
-    const total = occurrences[envId] ?? 1;
-    let label = base;
-    if (total > 1) {
-      const idx = (seen[envId] ?? 0) + 1;
-      seen[envId] = idx;
-      if (idx > 1) label = `${base}_${idx}`;
-    }
-    items.push({ tabId: tab.id, label });
-  });
-
-  return items;
+/** Build list items from all saved connections. */
+function getConnectListItems(): ConnectListItem[] {
+  const connectedEnvIds = new Set(
+    state.mainPanelTabs
+      .filter((tab): tab is typeof tab & { kind: 'terminal' } => tab.kind === 'terminal')
+      .map((tab) => tab.envId),
+  );
+  return state.envList.map((env) => ({
+    envId: env.id,
+    label: displayName(env),
+    isConnected: connectedEnvIds.has(env.id),
+  }));
 }
 
-export function renderList(api: Api, items: Array<{ tabId: string; label: string }>): void {
+export function renderList(api: Api, items: ConnectListItem[]): void {
   const listEl = document.getElementById('connectList');
   if (!listEl) return;
-  const activeTabId = state.activeMainPanelTabId;
+  if (items.length === 0) {
+    listEl.innerHTML = `<p class="panelPlaceholder">${t('main.placeholder')}</p>`;
+    return;
+  }
   listEl.innerHTML = items
-    .map(
-      (item) =>
-        `<li class="serverItem ${activeTabId === item.tabId ? 'selected' : ''}" data-tab-id="${escapeHtml(item.tabId)}">
-      <span class="serverItemName" title="${escapeHtml(item.label)}">${escapeHtml(item.label)}</span>
-    </li>`,
-    )
+    .map((item) => {
+      const dot = item.isConnected
+        ? '<span class="connectDot" aria-hidden="true">●</span>'
+        : '';
+      const selected = state.selectedId === item.envId ? 'selected' : '';
+      return `<li class="serverItem ${selected}" data-env-id="${item.envId}">
+        ${dot}
+        <span class="serverItemName" title="${escapeHtml(item.label)}">${escapeHtml(item.label)}</span>
+      </li>`;
+    })
     .join('');
 
   listEl.querySelectorAll('.serverItem').forEach((el) => {
-    const tabId = (el as HTMLElement).dataset.tabId;
-    if (!tabId) return;
+    const envId = Number((el as HTMLElement).dataset.envId);
     el.addEventListener('click', () => {
-      terminal.switchMainPanelTab(api, tabId);
+      const connectedTab = state.mainPanelTabs.find(
+        (tab) => tab.kind === 'terminal' && tab.envId === envId,
+      );
+      if (connectedTab) {
+        terminal.switchMainPanelTab(api, connectedTab.id);
+      } else {
+        state.selectedId = envId;
+        refreshConnectListDisplay(api);
+        terminal.doConnect(api);
+      }
+    });
+    el.addEventListener('contextmenu', (e: Event) => {
+      const ev = e as MouseEvent;
+      ev.preventDefault();
+      ev.stopPropagation();
+      const items: explorerContextMenu.ContextMenuItem[] = [
+        {
+          label: t('button.edit'),
+          onClick: () => openForm(api, envId),
+        },
+        {
+          label: t('button.delete'),
+          onClick: async () => {
+            await deleteEnv(api, envId);
+          },
+        },
+      ];
+      explorerContextMenu.showContextMenu(ev, items);
     });
   });
 }
@@ -88,7 +95,7 @@ export async function refreshList(api: Api): Promise<void> {
   refreshConnectListDisplay(api);
 }
 
-/** パネル表示だけ更新（接続中のサーバーのみ）。 */
+/** Refresh the sidebar list display. */
 export function refreshConnectListDisplay(api: Api): void {
   renderList(api, getConnectListItems());
 }
@@ -136,18 +143,22 @@ function showConnectModal(show: boolean): void {
 export function openConnectModal(api: Api): void {
   const listEl = document.getElementById('connectModalList');
   if (!listEl) return;
-  const connectedIds = new Set(getConnectedEnvIds());
-  const hasLocal = state.mainPanelTabs.some((t) => t.kind === 'local-terminal');
+  const connectedEnvIds = new Set(
+    state.mainPanelTabs
+      .filter((tab): tab is typeof tab & { kind: 'terminal' } => tab.kind === 'terminal')
+      .map((tab) => tab.envId),
+  );
+  const hasLocal = state.mainPanelTabs.some((tab) => tab.kind === 'local-terminal');
   const localDot = hasLocal ? '<span class="connectModalDot" aria-hidden="true">●</span>' : '';
   const localRow = `<li class="connectModalItem" data-kind="local" tabindex="0">
           ${localDot}
-          <span class="connectModalItemName">Local</span>
+          <span class="connectModalItemName">${t('button.local')}</span>
         </li>`;
   const envRows = state.envList
     .map(
       (env) =>
         `<li class="connectModalItem" data-kind="env" data-id="${env.id}" tabindex="0">
-          ${connectedIds.has(env.id) ? '<span class="connectModalDot" aria-hidden="true">●</span>' : ''}
+          ${connectedEnvIds.has(env.id) ? '<span class="connectModalDot" aria-hidden="true">●</span>' : ''}
           <span class="connectModalItemName">${displayName(env)}</span>
           <span class="connectModalItemActions">
             <button type="button" class="connectModalBtn connectModalBtnEdit" data-action="edit" data-id="${env.id}">${t('button.edit')}</button>

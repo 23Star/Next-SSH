@@ -35,7 +35,7 @@ function bindEvents(): void {
     sidebar.toggleAuthFields((e.target as HTMLSelectElement).value);
   });
   document.getElementById('btnConnect')?.addEventListener('click', () => terminal.doConnect(api));
-  document.getElementById('btnSidebarConnect')?.addEventListener('click', () => sidebar.openConnectModal(api));
+  document.getElementById('btnAdd')?.addEventListener('click', () => sidebar.openForm(api));
   document.getElementById('btnOpenLocalTerminal')?.addEventListener('click', () => terminal.openLocalTerminalTab(api));
   document.getElementById('btnAddLocalTerminal')?.addEventListener('click', () => terminal.openLocalTerminalTab(api));
   document.getElementById('btnDisconnect')?.addEventListener('click', () => terminal.doDisconnect(api));
@@ -47,6 +47,7 @@ function bindEvents(): void {
   terminal.setupTerminalDataListener(api);
   terminal.bindPassphraseDialog(api);
   chat.bindChatEvents(api);
+  chat.bindThinkToggle();
   document.getElementById('btnDiffApply')?.addEventListener('click', () => editor.applyPendingDiff(api));
   document.getElementById('btnDiffCancel')?.addEventListener('click', () => editor.cancelPendingDiff());
   const diffWrap = document.getElementById('diffPreviewWrap');

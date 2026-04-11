@@ -1801,3 +1801,45 @@ body {
   margin-left: 8px;
   flex-shrink: 0;
 }
+
+/* === Connect dot indicator === */
+.connectDot {
+  color: var(--accent);
+  font-size: 8px;
+  margin-right: 6px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.serverItem {
+  display: flex;
+  align-items: center;
+}
+
+/* === Think toggle button === */
+.chatThinkToggle {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-secondary);
+  color: var(--text-tertiary);
+  border-radius: var(--radius-sm);
+  padding: 0 10px;
+  height: 32px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+  align-self: flex-end;
+}
+
+.chatThinkToggle:hover {
+  border-color: var(--border-hover);
+  color: var(--text-secondary);
+}
+
+.chatThinkToggle.active {
+  background: var(--accent-muted);
+  border-color: var(--accent);
+  color: var(--accent);
+}

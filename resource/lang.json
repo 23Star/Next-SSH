@@ -104,7 +104,14 @@
     "explorer.newName": "New name",
     "settings.theme": "Theme",
     "theme.dark": "Dark",
-    "theme.light": "Light"
+    "theme.light": "Light",
+    "menu.file": "File",
+    "menu.window": "Window",
+    "menu.settings": "Settings",
+    "menu.settingsOpen": "Settings...",
+    "menu.help": "Help",
+    "explorer.local": "Local",
+    "ai.thinkMode": "Think"
   },
   "zn": {
     "sidebar.connectList": "连接列表",
@@ -211,7 +218,14 @@
     "explorer.newName": "新名称",
     "settings.theme": "主题",
     "theme.dark": "深色",
-    "theme.light": "浅色"
+    "theme.light": "浅色",
+    "menu.file": "文件",
+    "menu.window": "窗口",
+    "menu.settings": "设置",
+    "menu.settingsOpen": "设置...",
+    "menu.help": "帮助",
+    "explorer.local": "本地",
+    "ai.thinkMode": "思考"
   },
   "ru": {
     "sidebar.connectList": "Подключения",
@@ -318,6 +332,13 @@
     "explorer.newName": "Новое имя",
     "settings.theme": "Тема",
     "theme.dark": "Темная",
-    "theme.light": "Светлая"
+    "theme.light": "Светлая",
+    "menu.file": "Файл",
+    "menu.window": "Окно",
+    "menu.settings": "Настройки",
+    "menu.settingsOpen": "Настройки...",
+    "menu.help": "Справка",
+    "explorer.local": "Локальный",
+    "ai.thinkMode": "Размышления"
   }
 }

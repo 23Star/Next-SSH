@@ -7,7 +7,7 @@ type LangPack = Record<string, string>;
 
 let langCache: Record<string, LangPack> | null = null;
 
-function loadLangJson(): Record<string, LangPack> {
+export function loadLangJson(): Record<string, LangPack> {
   if (langCache) return langCache;
   const projectRoot = path.join(__dirname, '..', '..');
   const candidates = [
@@ -28,11 +28,18 @@ function loadLangJson(): Record<string, LangPack> {
   return langCache;
 }
 
+let _localeChangedCallback: ((locale: Locale) => void) | null = null;
+
+export function onLocaleChanged(callback: (locale: Locale) => void): void {
+  _localeChangedCallback = callback;
+}
+
 export function registerLocaleHandlers(): void {
   ipcMain.handle('locale:get', () => getStoredLocale());
   ipcMain.handle('locale:set', (_event, locale: Locale) => {
     setStoredLocale(locale);
     BrowserWindow.getAllWindows().forEach((win) => win.webContents.send('locale-changed', locale));
+    if (_localeChangedCallback) _localeChangedCallback(locale);
   });
   ipcMain.handle('locale:getLangPack', (_event, locale: Locale) => {
     const all = loadLangJson();

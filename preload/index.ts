@@ -38,6 +38,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     streamStart: (messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>) =>
       ipcRenderer.send('chat:streamStart', messages),
     onStreamChunk: (callback: (chunk: { type: 'content' | 'thinking' | 'done' | 'error'; text: string }) => void) => {
+      ipcRenderer.removeAllListeners('chat:streamChunk');
       ipcRenderer.on('chat:streamChunk', (_event, chunk) => callback(chunk));
     },
   },

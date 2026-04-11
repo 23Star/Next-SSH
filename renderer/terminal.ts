@@ -127,12 +127,14 @@ export function disposeTerminalForTab(connectionId: number): void {
   delete state.terminalBufferByConnection[connectionId];
 }
 
-const LOCAL_TERMINAL_LABEL = 'Local';
+function getLocalTerminalLabel(): string {
+  return t('button.local');
+}
 
 /** メインパネルタブのラベル（種別に応じて） */
 function getMainPanelTabLabel(tab: import('./types').MainPanelTab): string {
   if (tab.kind === 'terminal') return tab.name;
-  if (tab.kind === 'local-terminal') return LOCAL_TERMINAL_LABEL;
+  if (tab.kind === 'local-terminal') return getLocalTerminalLabel();
   if (tab.kind === 'editor') return tab.label;
   return (tab as { id: string }).id;
 }
@@ -415,7 +417,7 @@ export async function doConnectWithPassphrase(api: Api, passphrase: string | nul
     if (saved) state.terminalBufferByConnection[connectionId] = saved.slice(-state.TERMINAL_BUFFER_MAX);
     updateTerminalPanelVisibility(api);
     renderMainPanelTabBar(api);
-    explorer.renderExplorerTabBar(api);
+    explorer.setActiveExplorerTarget(api, connectionId);
     focusActiveTerminal();
     window.dispatchEvent(new Event('main-panel-tabs-changed'));
   } catch (err) {

@@ -1,38 +1,35 @@
 import { app, BrowserWindow, ipcMain, Menu, shell } from 'electron';
 import path from 'path';
-import { getLocale, setLocale, type Locale } from './config/userSettings';
+import { getLocale, type Locale } from './config/userSettings';
 import { registerChatHandlers, registerAiSettingsHandlers } from './ipc/chatHandler';
 import { registerEnvironmentHandlers } from './ipc/environmentHandler';
 import { registerExplorerHandlers } from './ipc/explorerHandler';
-import { registerLocaleHandlers } from './ipc/localeHandler';
+import { registerLocaleHandlers, loadLangJson, onLocaleChanged } from './ipc/localeHandler';
 import { registerTerminalHandlers } from './ipc/terminalHandler';
 import { startRendererServer } from './server/rendererServer';
 
 let mainWindow: BrowserWindow | null = null;
 let rendererServerClose: (() => void) | null = null;
 
-function applyLocaleToWindows(locale: Locale): void {
-  BrowserWindow.getAllWindows().forEach((win) => {
-    win.webContents.send('locale-changed', locale);
-  });
-}
-
 function buildApplicationMenu(): Menu {
+  const locale = getLocale();
+  const pack = loadLangJson()[locale] ?? loadLangJson()['en'] ?? {};
+  const t = (key: string): string => pack[key] ?? key;
   return Menu.buildFromTemplate([
     {
-      label: 'File',
+      label: t('menu.file'),
       submenu: [{ role: 'quit' as const }],
     },
     { role: 'editMenu' as const },
     {
-      label: 'Window',
+      label: t('menu.window'),
       submenu: [{ role: 'minimize' as const }, { role: 'zoom' as const }, { role: 'close' as const }],
     },
     {
-      label: 'Settings',
+      label: t('menu.settings'),
       submenu: [
         {
-          label: 'Settings...',
+          label: t('menu.settingsOpen'),
           click: () => {
             const win = BrowserWindow.getFocusedWindow();
             win?.webContents?.send('open-settings');
@@ -41,7 +38,7 @@ function buildApplicationMenu(): Menu {
       ],
     },
     {
-      label: 'Help',
+      label: t('menu.help'),
       submenu: [{ role: 'about' as const }],
     },
   ]);
@@ -112,6 +109,7 @@ app.whenReady().then(async () => {
 
   createWindow(rendererUrl);
   Menu.setApplicationMenu(buildApplicationMenu());
+  onLocaleChanged(() => Menu.setApplicationMenu(buildApplicationMenu()));
   if (mainWindow) registerTerminalHandlers(mainWindow.webContents);
 
   app.on('activate', () => {

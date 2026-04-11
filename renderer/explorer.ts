@@ -7,7 +7,9 @@ import * as terminal from './terminal';
 
 type Api = NonNullable<typeof window.electronAPI>;
 
-const EXPLORER_LOCAL_LABEL = 'PC';
+function getExplorerLocalLabel(): string {
+  return t('explorer.local');
+}
 
 function getCurrentExplorerState(): { home: string | null; loadedPaths: Record<string, import('./types').ExplorerEntry[]>; expanded: Set<string> } {
   return getExplorerState(state.activeExplorerTarget);
@@ -98,7 +100,7 @@ export function setActiveExplorerTarget(api: Api, target: 'local' | number): voi
 export function renderExplorerTabBar(api: Api): void {
   const bar = document.getElementById('explorerTabBar');
   if (!bar) return;
-  const tabs: { target: 'local' | number; label: string }[] = [{ target: 'local', label: EXPLORER_LOCAL_LABEL }];
+  const tabs: { target: 'local' | number; label: string }[] = [{ target: 'local', label: getExplorerLocalLabel() }];
   state.terminalTabs.forEach((tab) => {
     tabs.push({ target: tab.connectionId, label: tab.name });
   });

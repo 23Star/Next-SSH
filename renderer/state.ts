@@ -43,6 +43,7 @@ export const state = {
   activeChatSessionId: null as number | null,
   chatMessagesBySession: {} as Record<number, ChatMessage[]>,
   chatLoading: false,
+  showThinking: true,
 
   /** Explorer で今表示しているターゲット。'local' または connectionId。ターミナルの activeTab とは独立。 */
   activeExplorerTarget: 'local' as 'local' | number,

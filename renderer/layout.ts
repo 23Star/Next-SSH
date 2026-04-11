@@ -10,7 +10,6 @@ export function renderLayout(root: HTMLElement): void {
           <div class="sidebarHeader" data-i18n="sidebar.connectList">${t('sidebar.connectList')}</div>
           <ul class="connectList" id="connectList" tabindex="0"></ul>
           <div class="sidebarFooter">
-            <button type="button" id="btnSidebarConnect" data-i18n="button.connect">${t('button.connect')}</button>
             <button type="button" id="btnAdd" data-i18n="sidebar.add">${t('sidebar.add')}</button>
           </div>
         </section>
@@ -72,6 +71,7 @@ export function renderLayout(root: HTMLElement): void {
           <form class="chatInputForm" id="chatInputForm">
             <div class="chatInputResizer" id="chatInputResizer" data-i18n-title="resizer.horizontal" title="${t('resizer.horizontal')}"></div>
             <textarea id="chatInput" data-i18n-placeholder="chat.placeholder" placeholder="${t('chat.placeholder')}" autocomplete="off"></textarea>
+            <button type="button" id="btnThinkToggle" class="chatThinkToggle" data-i18n-title="ai.thinkMode" title="${t('ai.thinkMode')}">T</button>
             <button type="submit" id="btnChatSend" data-i18n="chat.send">${t('chat.send')}</button>
           </form>
         </aside>
