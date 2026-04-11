@@ -87,7 +87,6 @@ export function setActiveExplorerTarget(api: Api, target: 'local' | number): voi
   state.activeExplorerTarget = target;
   state.selectedExplorerPath = null;
   state.selectedExplorerIsDir = null;
-  renderExplorerTabBar(api);
   const es = getExplorerState(target);
   if (es.home !== null) {
     renderExplorerTree(api);
@@ -97,25 +96,9 @@ export function setActiveExplorerTarget(api: Api, target: 'local' | number): voi
   updateExplorerUpButton(api);
 }
 
-export function renderExplorerTabBar(api: Api): void {
-  const bar = document.getElementById('explorerTabBar');
-  if (!bar) return;
-  const tabs: { target: 'local' | number; label: string }[] = [{ target: 'local', label: getExplorerLocalLabel() }];
-  state.terminalTabs.forEach((tab) => {
-    tabs.push({ target: tab.connectionId, label: tab.name });
-  });
-  bar.innerHTML = tabs
-    .map(
-      (tab) =>
-        `<button type="button" class="explorerTab ${state.activeExplorerTarget === tab.target ? 'active' : ''}" data-explorer-target="${tab.target === 'local' ? 'local' : String(tab.target)}" title="${escapeHtml(tab.label)}">${escapeHtml(tab.label)}</button>`,
-    )
-    .join('');
-  bar.querySelectorAll('.explorerTab').forEach((btn) => {
-    const targetVal = (btn as HTMLElement).dataset.explorerTarget;
-    if (!targetVal) return;
-    const target: 'local' | number = targetVal === 'local' ? 'local' : Number(targetVal);
-    btn.addEventListener('click', () => setActiveExplorerTarget(api, target));
-  });
+/** No-op: tab bar removed. Kept for API compat. */
+export function renderExplorerTabBar(_api: Api): void {
+  // Explorer now auto-follows the active connection. No manual tab switching.
 }
 
 function updateExplorerUpButton(_api: Api): void {

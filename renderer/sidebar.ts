@@ -15,39 +15,45 @@ export function setConnectHandler(handler: () => void): void {
 }
 
 interface ConnectListItem {
-  envId: number;
+  kind: 'local' | 'env';
+  envId?: number;
   label: string;
   isConnected: boolean;
 }
 
-/** Build list items from all saved connections. */
+/** Build list items: Local Terminal (always) + all saved connections. */
 function getConnectListItems(): ConnectListItem[] {
+  const items: ConnectListItem[] = [];
+  const hasLocal = state.mainPanelTabs.some((tab) => tab.kind === 'local-terminal');
+  items.push({ kind: 'local', label: t('button.local'), isConnected: hasLocal });
+
   const connectedEnvIds = new Set(
     state.mainPanelTabs
       .filter((tab): tab is typeof tab & { kind: 'terminal' } => tab.kind === 'terminal')
       .map((tab) => tab.envId),
   );
-  return state.envList.map((env) => ({
-    envId: env.id,
-    label: displayName(env),
-    isConnected: connectedEnvIds.has(env.id),
-  }));
+  for (const env of state.envList) {
+    items.push({
+      kind: 'env',
+      envId: env.id,
+      label: displayName(env),
+      isConnected: connectedEnvIds.has(env.id),
+    });
+  }
+  return items;
 }
 
 export function renderList(api: Api, items: ConnectListItem[]): void {
   const listEl = document.getElementById('connectList');
   if (!listEl) return;
-  if (items.length === 0) {
-    listEl.innerHTML = `<p class="panelPlaceholder">${t('main.placeholder')}</p>`;
-    return;
-  }
   listEl.innerHTML = items
     .map((item) => {
       const dot = item.isConnected
         ? '<span class="connectDot" aria-hidden="true">●</span>'
         : '';
-      const selected = state.selectedId === item.envId ? 'selected' : '';
-      return `<li class="serverItem ${selected}" data-env-id="${item.envId}">
+      const selected = item.kind === 'env' && state.selectedId === item.envId ? 'selected' : '';
+      const isLocal = item.kind === 'local';
+      return `<li class="serverItem ${isLocal ? 'serverItem--local' : ''} ${selected}" data-kind="${item.kind}" data-env-id="${item.envId ?? ''}">
         ${dot}
         <span class="serverItemName" title="${escapeHtml(item.label)}">${escapeHtml(item.label)}</span>
       </li>`;
@@ -55,37 +61,45 @@ export function renderList(api: Api, items: ConnectListItem[]): void {
     .join('');
 
   listEl.querySelectorAll('.serverItem').forEach((el) => {
-    const envId = Number((el as HTMLElement).dataset.envId);
+    const kind = (el as HTMLElement).dataset.kind;
+    const envIdStr = (el as HTMLElement).dataset.envId;
+    const envId = envIdStr ? Number(envIdStr) : null;
+
     el.addEventListener('click', () => {
-      const connectedTab = state.mainPanelTabs.find(
-        (tab) => tab.kind === 'terminal' && tab.envId === envId,
-      );
-      if (connectedTab) {
-        terminal.switchMainPanelTab(api, connectedTab.id);
-      } else {
-        state.selectedId = envId;
-        refreshConnectListDisplay(api);
-        terminal.doConnect(api);
+      if (kind === 'local') {
+        const existing = state.mainPanelTabs.find((tab) => tab.kind === 'local-terminal');
+        if (existing) {
+          terminal.switchMainPanelTab(api, existing.id);
+        } else {
+          void terminal.openLocalTerminalTab(api);
+        }
+      } else if (envId != null) {
+        const connectedTab = state.mainPanelTabs.find(
+          (tab) => tab.kind === 'terminal' && tab.envId === envId,
+        );
+        if (connectedTab) {
+          terminal.switchMainPanelTab(api, connectedTab.id);
+        } else {
+          state.selectedId = envId;
+          refreshConnectListDisplay(api);
+          terminal.doConnect(api);
+        }
       }
     });
-    el.addEventListener('contextmenu', (e: Event) => {
-      const ev = e as MouseEvent;
-      ev.preventDefault();
-      ev.stopPropagation();
-      const items: explorerContextMenu.ContextMenuItem[] = [
-        {
-          label: t('button.edit'),
-          onClick: () => openForm(api, envId),
-        },
-        {
-          label: t('button.delete'),
-          onClick: async () => {
-            await deleteEnv(api, envId);
-          },
-        },
-      ];
-      explorerContextMenu.showContextMenu(ev, items);
-    });
+
+    // Right-click: only env items get edit/delete
+    if (kind === 'env' && envId != null) {
+      el.addEventListener('contextmenu', (e: Event) => {
+        const ev = e as MouseEvent;
+        ev.preventDefault();
+        ev.stopPropagation();
+        const items: explorerContextMenu.ContextMenuItem[] = [
+          { label: t('button.edit'), onClick: () => openForm(api, envId) },
+          { label: t('button.delete'), onClick: async () => { await deleteEnv(api, envId); } },
+        ];
+        explorerContextMenu.showContextMenu(ev, items);
+      });
+    }
   });
 }
 
@@ -95,7 +109,6 @@ export async function refreshList(api: Api): Promise<void> {
   refreshConnectListDisplay(api);
 }
 
-/** Refresh the sidebar list display. */
 export function refreshConnectListDisplay(api: Api): void {
   renderList(api, getConnectListItems());
 }
@@ -277,6 +290,38 @@ export function handleFormSubmit(api: Api, e: Event): void {
       closeAddEditServerModal();
       refreshList(api);
     });
+  }
+}
+
+export async function testConnection(api: Api): Promise<void> {
+  const form = document.getElementById('envForm') as HTMLFormElement | null;
+  if (!form) return;
+  const host = (form.querySelector('[name="host"]') as HTMLInputElement).value.trim();
+  const port = Number((form.querySelector('[name="port"]') as HTMLInputElement).value) || 22;
+  if (!host) return;
+  const btn = document.getElementById('btnTestConnection') as HTMLButtonElement | null;
+  if (btn) btn.disabled = true;
+  try {
+    const ok = await api.environment?.testConnection(host, port);
+    if (btn) {
+      btn.textContent = ok ? t('form.testSuccess') : t('form.testFail');
+      btn.style.color = ok ? 'var(--success-text)' : 'var(--error-text)';
+      setTimeout(() => {
+        btn.textContent = t('form.testConnection');
+        btn.style.color = '';
+        if (btn) btn.disabled = false;
+      }, 2000);
+    }
+  } catch {
+    if (btn) {
+      btn.textContent = t('form.testFail');
+      btn.style.color = 'var(--error-text)';
+      setTimeout(() => {
+        btn.textContent = t('form.testConnection');
+        btn.style.color = '';
+        if (btn) btn.disabled = false;
+      }, 2000);
+    }
   }
 }
 

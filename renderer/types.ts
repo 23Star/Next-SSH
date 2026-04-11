@@ -64,6 +64,7 @@ declare global {
         create: (input: Record<string, unknown>) => Promise<Environment>;
         update: (id: number, input: Record<string, unknown>) => Promise<Environment | null>;
         delete: (id: number) => Promise<boolean>;
+        testConnection: (host: string, port: number) => Promise<boolean>;
       };
       chat?: {
         complete: (messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>) => Promise<string>;

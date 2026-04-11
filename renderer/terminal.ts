@@ -253,7 +253,13 @@ export function switchMainPanelTab(api: Api, tabId: string): void {
   state.activeMainPanelTabId = tabId;
   syncTerminalStateFromMainPanel();
   renderMainPanelTabBar(api);
-  explorer.renderExplorerTabBar(api);
+  // Explorer auto-follows active tab
+  const tab = state.mainPanelTabs.find((t) => t.id === tabId);
+  if (tab?.kind === 'terminal') {
+    explorer.setActiveExplorerTarget(api, tab.connectionId);
+  } else if (tab?.kind === 'local-terminal') {
+    explorer.setActiveExplorerTarget(api, 'local');
+  }
   window.dispatchEvent(new Event('main-panel-tabs-changed'));
 }
 
@@ -299,8 +305,14 @@ function closeMainPanelTab(api: Api, tabId: string): void {
   syncTerminalStateFromMainPanel();
   updateTerminalPanelVisibility(api);
   renderMainPanelTabBar(api);
-  explorer.renderExplorerTabBar(api);
-  explorer.renderExplorerTree(api);
+  // If closed tab was the explorer target, switch to local
+  const remainingTerminal = state.mainPanelTabs.find((t) => t.kind === 'terminal');
+  if (state.activeExplorerTarget === tab.connectionId) {
+    const hasLocal = state.mainPanelTabs.some((t) => t.kind === 'local-terminal');
+    explorer.setActiveExplorerTarget(api, hasLocal ? 'local' : (remainingTerminal ? remainingTerminal.connectionId : 'local'));
+  } else {
+    explorer.renderExplorerTree(api);
+  }
   window.dispatchEvent(new Event('main-panel-tabs-changed'));
 }
 
@@ -340,7 +352,6 @@ export function switchToTabByEnvId(api: Api, envId: number): void {
   syncTerminalStateFromMainPanel();
   updateTerminalPanelVisibility(api);
   renderMainPanelTabBar(api);
-  explorer.renderExplorerTabBar(api);
   focusActiveTerminal();
 }
 
@@ -352,7 +363,6 @@ export function focusOrCreateLocalTerminalTab(api: Api): void {
     syncTerminalStateFromMainPanel();
     updateTerminalPanelVisibility(api);
     renderMainPanelTabBar(api);
-    explorer.renderExplorerTabBar(api);
     focusActiveTerminal();
     return;
   }
@@ -491,7 +501,6 @@ export async function openLocalTerminalTab(api: Api): Promise<void> {
     syncTerminalStateFromMainPanel();
     updateTerminalPanelVisibility(api);
     renderMainPanelTabBar(api);
-    explorer.renderExplorerTabBar(api);
     void showMessage({
       title: t('terminal.localError'),
       message: err instanceof Error ? err.message : String(err),
@@ -500,7 +509,7 @@ export async function openLocalTerminalTab(api: Api): Promise<void> {
   }
   updateTerminalPanelVisibility(api);
   renderMainPanelTabBar(api);
-  explorer.renderExplorerTabBar(api);
+  explorer.setActiveExplorerTarget(api, 'local');
   focusActiveTerminal();
   window.dispatchEvent(new Event('main-panel-tabs-changed'));
 }

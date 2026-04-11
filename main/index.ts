@@ -18,12 +18,29 @@ function buildApplicationMenu(): Menu {
   return Menu.buildFromTemplate([
     {
       label: t('menu.file'),
-      submenu: [{ role: 'quit' as const }],
+      submenu: [
+        { label: t('menu.quit'), accelerator: 'CmdOrCtrl+Q', click: () => app.quit() },
+      ],
     },
-    { role: 'editMenu' as const },
+    {
+      label: t('menu.edit'),
+      submenu: [
+        { label: t('menu.undo'), accelerator: 'CmdOrCtrl+Z', role: 'undo' },
+        { label: t('menu.redo'), accelerator: 'CmdOrCtrl+Shift+Z', role: 'redo' },
+        { type: 'separator' as const },
+        { label: t('menu.cut'), accelerator: 'CmdOrCtrl+X', role: 'cut' },
+        { label: t('menu.copy'), accelerator: 'CmdOrCtrl+C', role: 'copy' },
+        { label: t('menu.paste'), accelerator: 'CmdOrCtrl+V', role: 'paste' },
+        { label: t('menu.selectAll'), accelerator: 'CmdOrCtrl+A', role: 'selectAll' },
+      ],
+    },
     {
       label: t('menu.window'),
-      submenu: [{ role: 'minimize' as const }, { role: 'zoom' as const }, { role: 'close' as const }],
+      submenu: [
+        { label: t('menu.minimize'), accelerator: 'CmdOrCtrl+M', role: 'minimize' },
+        { label: t('menu.zoom'), role: 'zoom' },
+        { label: t('menu.close'), accelerator: 'CmdOrCtrl+W', role: 'close' },
+      ],
     },
     {
       label: t('menu.settings'),
@@ -39,7 +56,7 @@ function buildApplicationMenu(): Menu {
     },
     {
       label: t('menu.help'),
-      submenu: [{ role: 'about' as const }],
+      submenu: [{ label: t('menu.about'), role: 'about' }],
     },
   ]);
 }

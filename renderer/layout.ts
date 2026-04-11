@@ -10,6 +10,7 @@ export function renderLayout(root: HTMLElement): void {
           <div class="sidebarHeader" data-i18n="sidebar.connectList">${t('sidebar.connectList')}</div>
           <ul class="connectList" id="connectList" tabindex="0"></ul>
           <div class="sidebarFooter">
+            <button type="button" id="btnSidebarConnect" data-i18n="button.connect">${t('button.connect')}</button>
             <button type="button" id="btnAdd" data-i18n="sidebar.add">${t('sidebar.add')}</button>
           </div>
         </section>
@@ -17,7 +18,6 @@ export function renderLayout(root: HTMLElement): void {
         <section class="sidebarSection explorer" id="sidebarExplorer">
           <div class="explorerPanelHeader">
             <span class="panelHeader" data-i18n="panel.explorer">${t('panel.explorer')}</span>
-            <div class="explorerTabBar" id="explorerTabBar"></div>
             <button type="button" id="btnExplorerUp" class="explorerUpBtn" data-i18n-title="explorer.up" title="${t('explorer.up')}" aria-label="${t('explorer.up')}">↑</button>
             <button type="button" id="btnExplorerReload" class="explorerUpBtn" data-i18n-title="reload" title="${t('reload')}" aria-label="${t('reload')}">↻</button>
           </div>
@@ -30,8 +30,6 @@ export function renderLayout(root: HTMLElement): void {
           <div id="welcomeArea">
             <h1 data-i18n="app.title">${t('app.title')}</h1>
             <p class="mainAreaPlaceholder" id="mainPlaceholder" data-i18n="main.placeholder">${t('main.placeholder')}</p>
-            <p class="mainAreaPlaceholder" style="margin-top: 8px;"><button type="button" id="btnConnect" data-i18n="button.connect">${t('button.connect')}</button></p>
-            <p class="mainAreaPlaceholder" style="margin-top: 4px;"><button type="button" id="btnOpenLocalTerminal" data-i18n="button.local">${t('button.local')}</button></p>
           </div>
           <div class="mainPanel" id="mainPanel" tabindex="0">
             <div class="terminalTabBar" id="terminalTabBar"></div>
@@ -100,6 +98,7 @@ export function renderLayout(root: HTMLElement): void {
             <label id="labelKey" style="display: none;"><span data-i18n="form.privateKeyPath">${t('form.privateKeyPath')}</span> <input type="text" name="privateKeyPath" data-i18n-placeholder="form.placeholderKey" placeholder="${t('form.placeholderKey')}" /></label>
             <label><span data-i18n="form.memo">${t('form.memo')}</span> <input type="text" name="memo" data-i18n-placeholder="form.placeholderName" placeholder="${t('form.placeholderName')}" /></label>
             <div class="formActions">
+              <button type="button" id="btnTestConnection" data-i18n="form.testConnection">${t('form.testConnection')}</button>
               <button type="submit" data-i18n="form.save">${t('form.save')}</button>
               <button type="button" id="btnCancel" data-i18n="form.cancel">${t('form.cancel')}</button>
             </div>

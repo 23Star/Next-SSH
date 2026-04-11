@@ -31,6 +31,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     create: (input: Record<string, unknown>) => ipcRenderer.invoke('environment:create', input),
     update: (id: number, input: Record<string, unknown>) => ipcRenderer.invoke('environment:update', id, input),
     delete: (id: number) => ipcRenderer.invoke('environment:delete', id),
+    testConnection: (host: string, port: number) => ipcRenderer.invoke('environment:testConnection', host, port) as Promise<boolean>,
   },
   chat: {
     complete: (messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>) =>

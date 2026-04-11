@@ -25,6 +25,7 @@ const api: NonNullable<typeof window.electronAPI> = _api;
 
 function bindEvents(): void {
   sidebar.setConnectHandler(() => terminal.doConnect(api));
+  document.getElementById('btnSidebarConnect')?.addEventListener('click', () => sidebar.openConnectModal(api));
   document.getElementById('btnAdd')?.addEventListener('click', () => sidebar.openForm(api));
   document.getElementById('btnCancel')?.addEventListener('click', () => {
     state.editingId = null;
@@ -34,10 +35,7 @@ function bindEvents(): void {
   document.querySelector('[name="authType"]')?.addEventListener('change', (e) => {
     sidebar.toggleAuthFields((e.target as HTMLSelectElement).value);
   });
-  document.getElementById('btnConnect')?.addEventListener('click', () => terminal.doConnect(api));
-  document.getElementById('btnAdd')?.addEventListener('click', () => sidebar.openForm(api));
-  document.getElementById('btnOpenLocalTerminal')?.addEventListener('click', () => terminal.openLocalTerminalTab(api));
-  document.getElementById('btnAddLocalTerminal')?.addEventListener('click', () => terminal.openLocalTerminalTab(api));
+  document.getElementById('btnTestConnection')?.addEventListener('click', () => sidebar.testConnection(api));
   document.getElementById('btnDisconnect')?.addEventListener('click', () => terminal.doDisconnect(api));
   applyPanelSizes();
   applyChatInputHeight();
@@ -301,7 +299,6 @@ async function runApp(): Promise<void> {
   chat.updateChatFormLoginState();
   await sidebar.refreshList(api);
   chat.renderChatMessages();
-  explorer.renderExplorerTabBar(api);
   await explorer.loadExplorerRootForTarget(api, 'local');
   explorer.renderExplorerTree(api);
   document.getElementById('btnExplorerUp')?.addEventListener('click', () => explorer.explorerUp(api));
@@ -322,7 +319,6 @@ async function runApp(): Promise<void> {
       updateI18n();
       await updateSettingsLanguageHighlight();
       await sidebar.refreshList(api);
-      explorer.renderExplorerTabBar(api);
       explorer.renderExplorerTree(api);
       chat.renderChatTabBar();
       chat.renderChatMessages();
