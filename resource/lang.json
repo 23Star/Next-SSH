@@ -128,7 +128,19 @@
     "form.testSuccess": "Connection successful",
     "form.testFail": "Connection failed",
     "sidebar.connecting": "Connecting...",
-    "explorer.loading": "Loading..."
+    "explorer.loading": "Loading...",
+    "panel.serverInfo": "Server Info",
+    "serverInfo.hostname": "Hostname",
+    "serverInfo.os": "OS",
+    "serverInfo.kernel": "Kernel",
+    "serverInfo.cpu": "CPU",
+    "serverInfo.memory": "Memory",
+    "serverInfo.disk": "Disk",
+    "serverInfo.uptime": "Uptime",
+    "serverInfo.refresh": "Refresh",
+    "serverInfo.noConnection": "Connect to a server to view info.",
+    "serverInfo.loadError": "Failed to load",
+    "serverInfo.serverTime": "Server Time"
   },
   "zn": {
     "sidebar.connectList": "连接列表",
@@ -259,7 +271,19 @@
     "form.testSuccess": "连接成功",
     "form.testFail": "连接失败",
     "sidebar.connecting": "连接中...",
-    "explorer.loading": "加载中..."
+    "explorer.loading": "加载中...",
+    "panel.serverInfo": "参数详情",
+    "serverInfo.hostname": "主机名",
+    "serverInfo.os": "操作系统",
+    "serverInfo.kernel": "内核版本",
+    "serverInfo.cpu": "处理器",
+    "serverInfo.memory": "内存",
+    "serverInfo.disk": "磁盘",
+    "serverInfo.uptime": "运行时间",
+    "serverInfo.refresh": "刷新",
+    "serverInfo.noConnection": "连接服务器后查看参数信息。",
+    "serverInfo.loadError": "加载失败",
+    "serverInfo.serverTime": "服务器时间"
   },
   "ru": {
     "sidebar.connectList": "Подключения",
@@ -390,6 +414,18 @@
     "form.testSuccess": "Подключение успешно",
     "form.testFail": "Ошибка подключения",
     "sidebar.connecting": "Подключение...",
-    "explorer.loading": "Загрузка..."
+    "explorer.loading": "Загрузка...",
+    "panel.serverInfo": "Информация",
+    "serverInfo.hostname": "Имя хоста",
+    "serverInfo.os": "ОС",
+    "serverInfo.kernel": "Ядро",
+    "serverInfo.cpu": "ЦП",
+    "serverInfo.memory": "Память",
+    "serverInfo.disk": "Диск",
+    "serverInfo.uptime": "Аптайм",
+    "serverInfo.refresh": "Обновить",
+    "serverInfo.noConnection": "Подключитесь к серверу для просмотра информации.",
+    "serverInfo.loadError": "Ошибка загрузки",
+    "serverInfo.serverTime": "Время сервера"
   }
 }

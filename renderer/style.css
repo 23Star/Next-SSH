@@ -67,6 +67,19 @@
 
   --transition-fast: 150ms ease;
   --transition-normal: 250ms ease;
+
+  --icon-code: #519aba;
+  --icon-config: #6d8086;
+  --icon-image: #a074c4;
+  --icon-doc: #42a5f5;
+  --icon-shell: #4eaa25;
+  --icon-archive: #f9d71c;
+  --icon-log: #999;
+  --icon-db: #e05d44;
+  --icon-style: #563d7c;
+  --icon-exec: #6d8086;
+  --icon-dir: #dcb67a;
+  --icon-default: #888;
 }
 
 /* === CSS Variables: Light === */
@@ -129,6 +142,19 @@
 
   --drop-target-bg: rgba(217, 119, 87, 0.15);
   --drop-target-border: rgba(217, 119, 87, 0.5);
+
+  --icon-code: #4a8ab5;
+  --icon-config: #5a6e74;
+  --icon-image: #8a5ab0;
+  --icon-doc: #2e8bc0;
+  --icon-shell: #3e8a1b;
+  --icon-archive: #c9a810;
+  --icon-log: #777;
+  --icon-db: #c04d34;
+  --icon-style: #462d68;
+  --icon-exec: #5a6e74;
+  --icon-dir: #b8955e;
+  --icon-default: #666;
 }
 
 /* === Reset & Base === */
@@ -210,20 +236,62 @@ body {
 }
 
 .sidebarSection {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-rows: auto 1fr;
   min-height: 0;
+  transition: grid-template-rows 200ms ease;
 }
 
 .sidebarSection.servers {
-  flex: 1;
-  min-height: 120px;
+  flex: 0 0 auto;
+  min-height: 80px;
+  overflow: hidden;
 }
 
 .sidebarSection.explorer {
   flex: 0 0 200px;
   min-height: 80px;
   border-top: 1px solid var(--border-secondary);
+}
+
+.sidebarSection.server-info {
+  flex: 0 0 200px;
+  min-height: 80px;
+  border-top: 1px solid var(--border-secondary);
+}
+
+.serverInfoContainer {
+  flex: 1;
+  overflow-y: auto;
+  padding: 2px 0;
+  font-size: 12px;
+}
+
+.serverInfoTable { padding: 2px 0; }
+
+.serverInfoRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 3px 10px;
+  gap: 8px;
+}
+.serverInfoRow:hover { background: var(--bg-elevated); }
+
+.serverInfoLabel {
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.serverInfoValue {
+  color: var(--text-primary);
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+  font-size: 11px;
 }
 
 .panelHeader {
@@ -233,6 +301,30 @@ body {
   border-bottom: 1px solid var(--border-secondary);
   background: var(--bg-tertiary);
   color: var(--text-secondary);
+}
+
+.sidebarCollapseBtn {
+  background: none;
+  border: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  font-size: 9px;
+  padding: 0 6px 0 2px;
+  transition: transform var(--transition-fast), color var(--transition-fast);
+  flex-shrink: 0;
+  line-height: 1;
+}
+.sidebarCollapseBtn:hover { color: var(--text-primary); }
+.sidebarCollapseBtn.collapsed { transform: rotate(-90deg); }
+
+.sidebarContent {
+  overflow: hidden;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.sidebarSection.collapsed {
+  grid-template-rows: auto 0fr;
 }
 
 .explorerPanelHeader {
@@ -365,6 +457,27 @@ body {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+.explorerItemIcon {
+  width: 16px;
+  font-size: 11px;
+  text-align: center;
+  flex-shrink: 0;
+  line-height: 1.2;
+  font-weight: 600;
+}
+.explorerItemIcon.icon-code { color: var(--icon-code); }
+.explorerItemIcon.icon-config { color: var(--icon-config); }
+.explorerItemIcon.icon-image { color: var(--icon-image); }
+.explorerItemIcon.icon-doc { color: var(--icon-doc); }
+.explorerItemIcon.icon-shell { color: var(--icon-shell); }
+.explorerItemIcon.icon-archive { color: var(--icon-archive); }
+.explorerItemIcon.icon-log { color: var(--icon-log); }
+.explorerItemIcon.icon-db { color: var(--icon-db); }
+.explorerItemIcon.icon-style { color: var(--icon-style); }
+.explorerItemIcon.icon-exec { color: var(--icon-exec); }
+.explorerItemIcon.icon-dir { color: var(--icon-dir); }
+.explorerItemIcon.icon-default { color: var(--icon-default); }
 
 .explorerChildren {
   border-left: 1px solid var(--border-secondary);

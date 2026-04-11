@@ -64,6 +64,8 @@ export const state = {
 
   EXPLORER_HEIGHT_MIN: 80,
   EXPLORER_HEIGHT_MAX: 800,
+  SERVER_INFO_HEIGHT_MIN: 80,
+  SERVER_INFO_HEIGHT_MAX: 600,
   CHAT_INPUT_HEIGHT_MIN: 48,
   CHAT_INPUT_HEIGHT_MAX: 240,
   chatTextareaHeight: 80,
@@ -71,6 +73,11 @@ export const state = {
   sidebarWidth: 280,
   chatPanelWidth: 320,
   sidebarExplorerHeight: 200,
+  sidebarServerInfoHeight: 200,
+  sidebarServersHeight: 0,
+  sidebarCollapsed: { servers: false, explorer: false, serverInfo: false } as Record<string, boolean>,
+  _savedExplorerHeight: 0 as number,
+  _savedServerInfoHeight: 0 as number,
 };
 
 export function getNextConnectionId(): number {

@@ -396,3 +396,68 @@ export function writeRemoteFile(connectionId: number, remotePath: string, conten
     });
   });
 }
+
+function execCommand(connectionId: number, command: string): Promise<string> {
+  const c = connections.get(connectionId);
+  if (!c) return Promise.reject(new Error('Not connected'));
+  return new Promise((resolve, reject) => {
+    c.client.exec(command, (err: Error | undefined, stream: NodeJS.ReadableStream | undefined) => {
+      if (err) return reject(err);
+      if (!stream) return reject(new Error('No exec stream'));
+      let out = '';
+      stream.on('data', (chunk: Buffer) => { out += chunk.toString(); });
+      const stderr = (stream as { stderr?: NodeJS.ReadableStream }).stderr;
+      if (stderr) stderr.on('data', () => {});
+      stream.on('close', (code: number) => {
+        if (code !== 0) return reject(new Error(`exit ${code}`));
+        resolve(out.trim());
+      });
+    });
+  });
+}
+
+export interface ServerInfo {
+  hostname: string;
+  os: string;
+  kernel: string;
+  cpuCores: number;
+  cpuModel: string;
+  memoryTotal: string;
+  memoryUsed: string;
+  diskTotal: string;
+  diskUsed: string;
+  diskPercent: string;
+  uptime: string;
+  serverTime: string;
+}
+
+export async function getServerInfo(connectionId: number): Promise<ServerInfo> {
+  console.log(`[serverInfo] Loading server info for connectionId=${connectionId}`);
+  const [hostname, osRelease, kernel, cpuCores, cpuModel, memory, disk, uptime, serverTime] = await Promise.all([
+    execCommand(connectionId, 'hostname').catch(() => 'N/A'),
+    execCommand(connectionId, 'cat /etc/os-release 2>/dev/null | head -5').catch(() => 'N/A'),
+    execCommand(connectionId, 'uname -sr').catch(() => 'N/A'),
+    execCommand(connectionId, 'nproc').catch(() => '0'),
+    execCommand(connectionId, "cat /proc/cpuinfo 2>/dev/null | grep 'model name' | head -1").catch(() => 'N/A'),
+    execCommand(connectionId, 'free -m 2>/dev/null | head -2').catch(() => ''),
+    execCommand(connectionId, 'df -h / 2>/dev/null | tail -1').catch(() => ''),
+    execCommand(connectionId, 'uptime -p 2>/dev/null || uptime').catch(() => 'N/A'),
+    execCommand(connectionId, "date '+%Y-%m-%d %H:%M:%S %Z'").catch(() => 'N/A'),
+  ]);
+
+  const osLine = osRelease.split('\n').find((l) => l.startsWith('PRETTY_NAME'));
+  const os = osLine ? osLine.split('=').slice(1).join('=').replace(/"/g, '') : osRelease.split('\n')[0] || 'N/A';
+
+  const cpuModelClean = cpuModel.includes(':') ? cpuModel.split(':').slice(1).join(':').trim() : cpuModel || 'N/A';
+
+  const memParts = memory.split('\n').length >= 2 ? memory.split('\n')[1].trim().split(/\s+/) : [];
+  const memoryTotal = memParts.length >= 2 ? `${memParts[1]} MB` : 'N/A';
+  const memoryUsed = memParts.length >= 3 ? `${memParts[2]} MB` : 'N/A';
+
+  const diskParts = disk.split(/\s+/);
+  const diskTotal = diskParts.length >= 2 ? diskParts[1] : 'N/A';
+  const diskUsed = diskParts.length >= 3 ? diskParts[2] : 'N/A';
+  const diskPercent = diskParts.length >= 5 ? diskParts[4] : 'N/A';
+
+  return { hostname, os, kernel, cpuCores: parseInt(cpuCores, 10) || 0, cpuModel: cpuModelClean, memoryTotal, memoryUsed, diskTotal, diskUsed, diskPercent, uptime, serverTime };
+}

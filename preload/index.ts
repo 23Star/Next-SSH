@@ -87,6 +87,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
     copyOnRemote: (connectionId: number, sourcePaths: string[], targetDir: string) =>
       ipcRenderer.invoke('explorer:copyOnRemote', connectionId, sourcePaths, targetDir),
   },
+  serverInfo: {
+    get: (connectionId: number) => ipcRenderer.invoke('serverInfo:get', connectionId),
+  },
   locale: {
     get: () => ipcRenderer.invoke('locale:get') as Promise<'en' | 'zn' | 'ru'>,
     set: (locale: 'en' | 'zn' | 'ru') => ipcRenderer.invoke('locale:set', locale),

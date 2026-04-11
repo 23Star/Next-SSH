@@ -6,6 +6,7 @@ import { registerEnvironmentHandlers } from './ipc/environmentHandler';
 import { registerExplorerHandlers } from './ipc/explorerHandler';
 import { registerLocaleHandlers, loadLangJson, onLocaleChanged } from './ipc/localeHandler';
 import { registerTerminalHandlers } from './ipc/terminalHandler';
+import { registerServerInfoHandlers } from './ipc/serverInfoHandler';
 import { startRendererServer } from './server/rendererServer';
 
 let mainWindow: BrowserWindow | null = null;
@@ -110,6 +111,7 @@ app.whenReady().then(async () => {
   registerAiSettingsHandlers();
   registerExplorerHandlers();
   registerLocaleHandlers();
+  registerServerInfoHandlers();
 
   let rendererUrl: string | null = null;
   if (process.env.NODE_ENV !== 'development') {

@@ -6,22 +6,41 @@ export function renderLayout(root: HTMLElement): void {
   root.innerHTML = `
     <div class="layout">
       <aside class="sidebar" id="sidebar">
-        <section class="sidebarSection servers">
-          <div class="sidebarHeader" data-i18n="sidebar.connectList">${t('sidebar.connectList')}</div>
-          <ul class="connectList" id="connectList" tabindex="0"></ul>
-          <div class="sidebarFooter">
-            <button type="button" id="btnSidebarConnect" data-i18n="button.connect">${t('button.connect')}</button>
-            <button type="button" id="btnAdd" data-i18n="sidebar.add">${t('sidebar.add')}</button>
+        <section class="sidebarSection servers" id="sidebarServers">
+          <div class="sidebarHeader">
+            <button type="button" class="sidebarCollapseBtn" data-section="servers" aria-label="Toggle">\u25BC</button>
+            <span data-i18n="sidebar.connectList">${t('sidebar.connectList')}</span>
+          </div>
+          <div class="sidebarContent" id="serversContent">
+            <ul class="connectList" id="connectList" tabindex="0"></ul>
+            <div class="sidebarFooter">
+              <button type="button" id="btnSidebarConnect" data-i18n="button.connect">${t('button.connect')}</button>
+              <button type="button" id="btnAdd" data-i18n="sidebar.add">${t('sidebar.add')}</button>
+            </div>
           </div>
         </section>
         <div class="layoutResizer layoutResizer--horizontal" id="resizerExplorer" data-i18n-title="resizer.horizontal" title="${t('resizer.horizontal')}"></div>
         <section class="sidebarSection explorer" id="sidebarExplorer">
           <div class="explorerPanelHeader">
+            <button type="button" class="sidebarCollapseBtn" data-section="explorer" aria-label="Toggle">\u25BC</button>
             <span class="panelHeader" data-i18n="panel.explorer">${t('panel.explorer')}</span>
             <button type="button" id="btnExplorerUp" class="explorerUpBtn" data-i18n-title="explorer.up" title="${t('explorer.up')}" aria-label="${t('explorer.up')}">↑</button>
             <button type="button" id="btnExplorerReload" class="explorerUpBtn" data-i18n-title="reload" title="${t('reload')}" aria-label="${t('reload')}">↻</button>
           </div>
-          <div class="explorerTreeContainer" id="explorerTreeContainer" tabindex="0"></div>
+          <div class="sidebarContent" id="explorerContent">
+            <div class="explorerTreeContainer" id="explorerTreeContainer" tabindex="0"></div>
+          </div>
+        </section>
+        <div class="layoutResizer layoutResizer--horizontal" id="resizerServerInfo" data-i18n-title="resizer.horizontal" title="${t('resizer.horizontal')}"></div>
+        <section class="sidebarSection server-info" id="sidebarServerInfo">
+          <div class="explorerPanelHeader">
+            <button type="button" class="sidebarCollapseBtn" data-section="serverInfo" aria-label="Toggle">\u25BC</button>
+            <span class="panelHeader" data-i18n="panel.serverInfo">${t('panel.serverInfo')}</span>
+            <button type="button" id="btnServerInfoReload" class="explorerUpBtn" data-i18n-title="serverInfo.refresh" title="${t('serverInfo.refresh')}" aria-label="${t('serverInfo.refresh')}">↻</button>
+          </div>
+          <div class="sidebarContent" id="serverInfoContent">
+            <div class="serverInfoContainer" id="serverInfoContainer"></div>
+          </div>
         </section>
       </aside>
       <div class="layoutResizer layoutResizer--vertical" id="resizerSidebar" data-i18n-title="resizer.vertical" title="${t('resizer.vertical')}"></div>
@@ -197,28 +216,54 @@ let initialSidebarRatioApplied = false;
 function applyInitialSidebarRatio(): void {
   if (initialSidebarRatioApplied) return;
   const sidebar = document.getElementById('sidebar');
-  const explorerEl = document.getElementById('sidebarExplorer');
-  if (!sidebar || !explorerEl || sidebar.clientHeight <= 0) return;
+  if (!sidebar || sidebar.clientHeight <= 0) return;
   initialSidebarRatioApplied = true;
-  const resizerPx = 8;
+  const resizerPx = 12;
   const h = Math.round(0.6 * (sidebar.clientHeight - resizerPx));
   state.sidebarExplorerHeight = Math.min(
     state.EXPLORER_HEIGHT_MAX,
     Math.max(state.EXPLORER_HEIGHT_MIN, h),
   );
-  explorerEl.style.flexBasis = `${state.sidebarExplorerHeight}px`;
+}
+
+const RESIZER_HEIGHT = 6;
+const SERVERS_HEIGHT_MIN = 80;
+
+/** Recalculate all sidebar panel heights so servers fills remaining space. */
+export function recalcSidebarLayout(): void {
+  const sidebar = document.getElementById('sidebar');
+  const serversEl = document.getElementById('sidebarServers');
+  const explorerEl = document.getElementById('sidebarExplorer');
+  const serverInfoEl = document.getElementById('sidebarServerInfo');
+  if (!sidebar || !serversEl) return;
+
+  const totalH = sidebar.clientHeight;
+  const resizerH = RESIZER_HEIGHT * 2;
+
+  const explorerH = state.sidebarCollapsed.explorer ? 0 : state.sidebarExplorerHeight;
+  const serverInfoH = state.sidebarCollapsed.serverInfo ? 0 : state.sidebarServerInfoHeight;
+  let serversH = totalH - resizerH - explorerH - serverInfoH;
+  serversH = Math.max(SERVERS_HEIGHT_MIN, serversH);
+  state.sidebarServersHeight = serversH;
+
+  serversEl.style.flexBasis = `${serversH}px`;
+  if (explorerEl) {
+    explorerEl.style.flexBasis = state.sidebarCollapsed.explorer ? 'auto' : `${explorerH}px`;
+  }
+  if (serverInfoEl) {
+    serverInfoEl.style.flexBasis = state.sidebarCollapsed.serverInfo ? 'auto' : `${serverInfoH}px`;
+  }
 }
 
 export function applyPanelSizes(): void {
   const sidebarEl = document.getElementById('sidebar');
   const chatEl = document.getElementById('chatPanel');
-  const explorerEl = document.getElementById('sidebarExplorer');
   if (sidebarEl) sidebarEl.style.width = `${state.sidebarWidth}px`;
   if (chatEl) chatEl.style.width = `${state.chatPanelWidth}px`;
-  if (explorerEl) {
-    explorerEl.style.flexBasis = `${state.sidebarExplorerHeight}px`;
-    requestAnimationFrame(() => applyInitialSidebarRatio());
-  }
+  requestAnimationFrame(() => {
+    applyInitialSidebarRatio();
+    recalcSidebarLayout();
+  });
 }
 
 export function applyChatInputHeight(): void {
@@ -289,15 +334,50 @@ export function bindResizers(): void {
   resizerExplorer?.addEventListener('mousedown', (e) => {
     e.preventDefault();
     const startY = e.clientY;
-    const startH = state.sidebarExplorerHeight;
-    dragHorizontal(startY, startH, (dy) => {
-      state.sidebarExplorerHeight = Math.min(
+    const startExplorerH = state.sidebarExplorerHeight;
+    const startServersH = state.sidebarServersHeight;
+    dragHorizontal(startY, startExplorerH, (dy) => {
+      // Drag DOWN (dy > 0) → explorer grows, servers shrinks
+      const newExplorerH = Math.min(
         state.EXPLORER_HEIGHT_MAX,
-        Math.max(state.EXPLORER_HEIGHT_MIN, startH - dy),
+        Math.max(state.EXPLORER_HEIGHT_MIN, startExplorerH + dy),
       );
-      if (sidebarExplorer) sidebarExplorer.style.flexBasis = `${state.sidebarExplorerHeight}px`;
+      const delta = newExplorerH - startExplorerH;
+      const newServersH = Math.max(SERVERS_HEIGHT_MIN, startServersH - delta);
+      state.sidebarExplorerHeight = newExplorerH;
+      state.sidebarServersHeight = newServersH;
+      if (sidebarExplorer) sidebarExplorer.style.flexBasis = `${newExplorerH}px`;
+      const serversEl = document.getElementById('sidebarServers');
+      if (serversEl) serversEl.style.flexBasis = `${newServersH}px`;
     });
   });
+
+  const resizerServerInfo = document.getElementById('resizerServerInfo');
+  const sidebarServerInfo = document.getElementById('sidebarServerInfo');
+  resizerServerInfo?.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    const startY = e.clientY;
+    const startServerInfoH = state.sidebarServerInfoHeight;
+    const startExplorerH = state.sidebarExplorerHeight;
+    dragHorizontal(startY, startServerInfoH, (dy) => {
+      // Drag DOWN (dy > 0) → serverInfo grows, explorer shrinks
+      const newServerInfoH = Math.min(
+        state.SERVER_INFO_HEIGHT_MAX,
+        Math.max(state.SERVER_INFO_HEIGHT_MIN, startServerInfoH + dy),
+      );
+      const delta = newServerInfoH - startServerInfoH;
+      const newExplorerH = Math.max(state.EXPLORER_HEIGHT_MIN, startExplorerH - delta);
+      state.sidebarServerInfoHeight = newServerInfoH;
+      state.sidebarExplorerHeight = newExplorerH;
+      if (sidebarServerInfo) sidebarServerInfo.style.flexBasis = `${newServerInfoH}px`;
+      if (sidebarExplorer) sidebarExplorer.style.flexBasis = `${newExplorerH}px`;
+    });
+  });
+
+  // Recalculate layout when sidebar resizes (e.g. window resize)
+  if (sidebar) {
+    new ResizeObserver(() => recalcSidebarLayout()).observe(sidebar);
+  }
 }
 
 export function bindChatInputResizer(): void {

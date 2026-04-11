@@ -7,6 +7,38 @@ import * as terminal from './terminal';
 
 type Api = NonNullable<typeof window.electronAPI>;
 
+function getFileIcon(name: string, isDir: boolean): { icon: string; colorClass: string } {
+  if (isDir) return { icon: '\u{1F4C1}', colorClass: 'icon-dir' };
+
+  const lowerName = name.toLowerCase();
+  if (lowerName === 'dockerfile' || lowerName === 'makefile' || lowerName === 'jenkinsfile' || lowerName === 'rakefile' || lowerName === 'gemfile') {
+    return { icon: '>_', colorClass: 'icon-shell' };
+  }
+
+  const dot = name.lastIndexOf('.');
+  const ext = dot >= 0 ? name.slice(dot).toLowerCase() : '';
+
+  const map: Array<[string[], string, string]> = [
+    [['.js', '.jsx', '.ts', '.tsx', '.mjs', '.cjs', '.py', '.java', '.go', '.rs', '.c', '.cpp', '.h', '.hpp', '.cs', '.rb', '.php', '.swift', '.kt', '.scala', '.lua', '.r', '.pl', '.ex', '.exs', '.erl', '.hs', '.ml', '.clj', '.dart'], '</>', 'icon-code'],
+    [['.json', '.yaml', '.yml', '.xml', '.ini', '.conf', '.cfg', '.toml', '.env', '.properties', '.reg', '.bat', '.cmd', '.ps1'], '{ }', 'icon-config'],
+    [['.css', '.scss', '.sass', '.less', '.html', '.htm', '.vue', '.svelte'], '#', 'icon-style'],
+    [['.png', '.jpg', '.jpeg', '.gif', '.svg', '.ico', '.bmp', '.webp', '.tiff'], '\u{25A3}', 'icon-image'],
+    [['.md', '.txt', '.pdf', '.doc', '.docx', '.rtf', '.xls', '.xlsx', '.ppt', '.csv'], '\u{25A3}', 'icon-doc'],
+    [['.sh', '.bash', '.zsh', '.fish', '.ksh'], '>_', 'icon-shell'],
+    [['.zip', '.tar', '.gz', '.bz2', '.rar', '.7z', '.xz', '.zst'], '\u{25A3}', 'icon-archive'],
+    [['.log'], '\u{25A3}', 'icon-log'],
+    [['.sql', '.db', '.sqlite', '.sqlite3'], 'DB', 'icon-db'],
+  ];
+
+  for (const [exts, icon, cls] of map) {
+    if (exts.includes(ext)) return { icon, colorClass: cls };
+  }
+
+  if (dot < 0) return { icon: '\u{25C6}', colorClass: 'icon-exec' };
+
+  return { icon: '\u{25A3}', colorClass: 'icon-default' };
+}
+
 function getExplorerLocalLabel(): string {
   return t('explorer.local');
 }
@@ -63,7 +95,8 @@ export async function loadExplorerRootForTarget(api: Api, target: 'local' | numb
       if (el) el.classList.remove('explorerTreeContainer--loading');
       renderExplorerTree(api);
     }
-  } catch {
+  } catch (err) {
+    console.error('[explorer] Failed to load root for target:', target, err);
     es.home = null;
     if (state.activeExplorerTarget === target) {
       const el = document.getElementById('explorerTreeContainer');
@@ -92,7 +125,8 @@ async function loadExplorerDir(api: Api, dirPath: string): Promise<void> {
       es.loadedPaths[dirPath] = entries;
     }
     renderExplorerTree(api);
-  } catch {
+  } catch (err) {
+    console.error('[explorer] Failed to load directory:', dirPath, err);
     es.loadedPaths[dirPath] = [];
     renderExplorerTree(api);
   }
@@ -202,9 +236,11 @@ export function renderExplorerTree(api: Api): void {
         const childrenHtml = e.isDirectory ? renderLevel(fullPath, depth + 1) : '';
         const expandIcon = e.isDirectory ? (isExpanded ? '▼' : '▶') : ' ';
         const selected = state.selectedExplorerPath === fullPath ? ' explorerItem--selected' : '';
+        const fileIcon = getFileIcon(e.name, e.isDirectory);
         return `<div class="explorerItem${selected}" data-path="${escapeHtml(fullPath)}" data-isdir="${e.isDirectory}">
           <span class="explorerItemLabel" style="padding-left: ${depth * 12 + 4}px">
             <span class="explorerItemExpand">${expandIcon}</span>
+            <span class="explorerItemIcon ${fileIcon.colorClass}">${fileIcon.icon}</span>
             <span class="explorerItemName">${escapeHtml(e.name)}</span>
           </span>
           ${isExpanded && childrenHtml ? `<div class="explorerChildren">${childrenHtml}</div>` : ''}
@@ -254,11 +290,17 @@ export function renderExplorerTree(api: Api): void {
       state.selectedExplorerIsDir = true;
       if (es.expanded.has(pathVal)) {
         es.expanded.delete(pathVal);
+        renderExplorerTree(api);
       } else {
-        if (es.loadedPaths[pathVal] === undefined) await loadExplorerDir(api, pathVal);
+        // Show loading indicator on the expand icon
+        const expandIcon = item.querySelector('.explorerItemExpand');
+        if (expandIcon) expandIcon.textContent = '...';
+        if (es.loadedPaths[pathVal] === undefined) {
+          await loadExplorerDir(api, pathVal);
+        }
         es.expanded.add(pathVal);
+        renderExplorerTree(api);
       }
-      renderExplorerTree(api);
       requestAnimationFrame(() => el.focus());
     });
   });

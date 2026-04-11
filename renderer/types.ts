@@ -42,6 +42,21 @@ export interface ExplorerEntry {
   isDirectory: boolean;
 }
 
+export interface ServerInfo {
+  hostname: string;
+  os: string;
+  kernel: string;
+  cpuCores: number;
+  cpuModel: string;
+  memoryTotal: string;
+  memoryUsed: string;
+  diskTotal: string;
+  diskUsed: string;
+  diskPercent: string;
+  uptime: string;
+  serverTime: string;
+}
+
 declare global {
   interface Window {
     electronAPI?: {
@@ -85,6 +100,9 @@ declare global {
       serveroutput?: {
         get: (connectionId: number) => Promise<string>;
         append: (connectionId: number, data: string) => Promise<void>;
+      };
+      serverInfo?: {
+        get: (connectionId: number) => Promise<ServerInfo>;
       };
       explorer?: {
         getHome: (connectionId: number) => Promise<string>;

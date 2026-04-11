@@ -8,6 +8,7 @@ import * as explorer from './explorer';
 import * as editor from './editor';
 import * as explorerContextMenu from './explorerContextMenu';
 import * as sidebar from './sidebar';
+import * as serverInfo from './serverInfo';
 import { showMessage } from './message';
 
 type Api = NonNullable<typeof window.electronAPI>;
@@ -258,8 +259,10 @@ export function switchMainPanelTab(api: Api, tabId: string): void {
   const tab = state.mainPanelTabs.find((t) => t.id === tabId);
   if (tab?.kind === 'terminal') {
     explorer.setActiveExplorerTarget(api, tab.connectionId);
+    serverInfo.loadServerInfo(api, tab.connectionId);
   } else if (tab?.kind === 'local-terminal') {
     explorer.setActiveExplorerTarget(api, 'local');
+    serverInfo.loadServerInfo(api, null);
   }
   window.dispatchEvent(new Event('main-panel-tabs-changed'));
 }
@@ -443,6 +446,7 @@ export async function doConnectWithPassphrase(api: Api, passphrase: string | nul
     updateTerminalPanelVisibility(api);
     renderMainPanelTabBar(api);
     explorer.setActiveExplorerTarget(api, connectionId);
+    serverInfo.loadServerInfo(api, connectionId);
     focusActiveTerminal();
     window.dispatchEvent(new Event('main-panel-tabs-changed'));
   } catch (err) {

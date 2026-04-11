@@ -4,13 +4,14 @@ import './types';
 import { state } from './state';
 import { setCurrentLang, updateI18n, t } from './i18n';
 import { setTheme } from './theme';
-import { renderLayout, applyPanelSizes, applyChatInputHeight, bindResizers, bindChatInputResizer, setupTerminalResizeObserver } from './layout';
+import { renderLayout, applyPanelSizes, applyChatInputHeight, bindResizers, bindChatInputResizer, setupTerminalResizeObserver, recalcSidebarLayout } from './layout';
 import * as sidebar from './sidebar';
 import * as terminal from './terminal';
 import * as explorer from './explorer';
 import * as chat from './chat';
 import * as editor from './editor';
 import * as shortcuts from './shortcuts';
+import * as serverInfo from './serverInfo';
 
 const rootEl = document.getElementById('root');
 if (!rootEl) throw new Error('root not found');
@@ -22,6 +23,38 @@ if (!_api?.environment) {
   throw new Error('electronAPI.environment not available');
 }
 const api: NonNullable<typeof window.electronAPI> = _api;
+
+function bindSidebarCollapseButtons(): void {
+  document.querySelectorAll('.sidebarCollapseBtn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const section = (btn as HTMLElement).dataset.section;
+      if (!section) return;
+      const wasCollapsed = state.sidebarCollapsed[section];
+      state.sidebarCollapsed[section] = !wasCollapsed;
+      const collapsed = state.sidebarCollapsed[section];
+
+      btn.classList.toggle('collapsed', collapsed);
+
+      const sectionEl = document.getElementById(section === 'servers' ? 'sidebarServers' : section === 'explorer' ? 'sidebarExplorer' : 'sidebarServerInfo');
+      if (sectionEl) sectionEl.classList.toggle('collapsed', collapsed);
+
+      // Save/restore panel height so uncollapse returns to original size
+      if (collapsed && section === 'explorer') {
+        state._savedExplorerHeight = state.sidebarExplorerHeight;
+      } else if (!collapsed && section === 'explorer' && state._savedExplorerHeight) {
+        state.sidebarExplorerHeight = state._savedExplorerHeight;
+      }
+      if (collapsed && section === 'serverInfo') {
+        state._savedServerInfoHeight = state.sidebarServerInfoHeight;
+      } else if (!collapsed && section === 'serverInfo' && state._savedServerInfoHeight) {
+        state.sidebarServerInfoHeight = state._savedServerInfoHeight;
+      }
+
+      // Wait for CSS transition, then recalc layout
+      setTimeout(() => recalcSidebarLayout(), 210);
+    });
+  });
+}
 
 function bindEvents(): void {
   sidebar.setConnectHandler(() => terminal.doConnect(api));
@@ -46,6 +79,8 @@ function bindEvents(): void {
   terminal.bindPassphraseDialog(api);
   chat.bindChatEvents(api);
   chat.bindThinkToggle();
+  bindSidebarCollapseButtons();
+  serverInfo.bindServerInfoReload(api);
   document.getElementById('btnDiffApply')?.addEventListener('click', () => editor.applyPendingDiff(api));
   document.getElementById('btnDiffCancel')?.addEventListener('click', () => editor.cancelPendingDiff());
   const diffWrap = document.getElementById('diffPreviewWrap');
@@ -319,6 +354,7 @@ async function runApp(): Promise<void> {
       await updateSettingsLanguageHighlight();
       await sidebar.refreshList(api);
       explorer.renderExplorerTree(api);
+      serverInfo.rerenderServerInfo();
       chat.renderChatTabBar();
       chat.renderChatMessages();
       const formTitle = document.getElementById('formTitle');
