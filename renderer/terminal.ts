@@ -7,6 +7,7 @@ import { getXtermTheme } from './theme';
 import * as explorer from './explorer';
 import * as editor from './editor';
 import * as explorerContextMenu from './explorerContextMenu';
+import * as sidebar from './sidebar';
 import { showMessage } from './message';
 
 type Api = NonNullable<typeof window.electronAPI>;
@@ -305,11 +306,23 @@ function closeMainPanelTab(api: Api, tabId: string): void {
   syncTerminalStateFromMainPanel();
   updateTerminalPanelVisibility(api);
   renderMainPanelTabBar(api);
-  // If closed tab was the explorer target, switch to local
+  // If closed tab was the explorer target, switch explorer
   const remainingTerminal = state.mainPanelTabs.find((t) => t.kind === 'terminal');
+  const hasLocal = state.mainPanelTabs.some((t) => t.kind === 'local-terminal');
+  const hasAnyConnection = remainingTerminal || hasLocal;
   if (state.activeExplorerTarget === tab.connectionId) {
-    const hasLocal = state.mainPanelTabs.some((t) => t.kind === 'local-terminal');
-    explorer.setActiveExplorerTarget(api, hasLocal ? 'local' : (remainingTerminal ? remainingTerminal.connectionId : 'local'));
+    if (!hasAnyConnection) {
+      // No tabs left: clear explorer to empty
+      explorer.clearExplorerStateForTarget(api, 'local');
+      state.activeExplorerTarget = 'local';
+      explorer.renderExplorerTree(api);
+    } else {
+      explorer.setActiveExplorerTarget(api, hasLocal ? 'local' : (remainingTerminal ? remainingTerminal.connectionId : 'local'));
+    }
+  } else if (!hasAnyConnection) {
+    explorer.clearExplorerStateForTarget(api, 'local');
+    state.activeExplorerTarget = 'local';
+    explorer.renderExplorerTree(api);
   } else {
     explorer.renderExplorerTree(api);
   }
@@ -414,6 +427,8 @@ export async function doConnectWithPassphrase(api: Api, passphrase: string | nul
   const env = state.envList.find((e) => e.id === state.selectedId);
   if (!env) return;
   showPassphraseDialog(false);
+  state.connectingId = state.selectedId;
+  sidebar.refreshConnectListDisplay(api);
   const connectionId = getNextConnectionId();
   try {
     await api.terminal.connect(connectionId, state.selectedId, passphrase);
@@ -431,12 +446,14 @@ export async function doConnectWithPassphrase(api: Api, passphrase: string | nul
     focusActiveTerminal();
     window.dispatchEvent(new Event('main-panel-tabs-changed'));
   } catch (err) {
-    showPassphraseDialog(false);
     void showMessage({
       title: t('alert.connectFail'),
       message: err instanceof Error ? err.message : String(err),
     });
     await api.refocusWindow?.();
+  } finally {
+    state.connectingId = null;
+    sidebar.refreshConnectListDisplay(api);
   }
 }
 

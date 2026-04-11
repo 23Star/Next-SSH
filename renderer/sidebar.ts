@@ -48,14 +48,18 @@ export function renderList(api: Api, items: ConnectListItem[]): void {
   if (!listEl) return;
   listEl.innerHTML = items
     .map((item) => {
+      const connecting = item.kind === 'env' && state.connectingId === item.envId;
       const dot = item.isConnected
         ? '<span class="connectDot" aria-hidden="true">●</span>'
-        : '';
+        : connecting
+          ? '<span class="connectDot" aria-hidden="true">⟳</span>'
+          : '';
       const selected = item.kind === 'env' && state.selectedId === item.envId ? 'selected' : '';
       const isLocal = item.kind === 'local';
-      return `<li class="serverItem ${isLocal ? 'serverItem--local' : ''} ${selected}" data-kind="${item.kind}" data-env-id="${item.envId ?? ''}">
+      const connectingClass = connecting ? 'serverItem--connecting' : '';
+      return `<li class="serverItem ${isLocal ? 'serverItem--local' : ''} ${selected} ${connectingClass}" data-kind="${item.kind}" data-env-id="${item.envId ?? ''}">
         ${dot}
-        <span class="serverItemName" title="${escapeHtml(item.label)}">${escapeHtml(item.label)}</span>
+        <span class="serverItemName" title="${escapeHtml(item.label)}">${escapeHtml(connecting ? t('sidebar.connecting') : item.label)}</span>
       </li>`;
     })
     .join('');
@@ -65,8 +69,10 @@ export function renderList(api: Api, items: ConnectListItem[]): void {
     const envIdStr = (el as HTMLElement).dataset.envId;
     const envId = envIdStr ? Number(envIdStr) : null;
 
+    // Single click: select only
     el.addEventListener('click', () => {
       if (kind === 'local') {
+        // Local terminal: single click switches or opens
         const existing = state.mainPanelTabs.find((tab) => tab.kind === 'local-terminal');
         if (existing) {
           terminal.switchMainPanelTab(api, existing.id);
@@ -74,6 +80,14 @@ export function renderList(api: Api, items: ConnectListItem[]): void {
           void terminal.openLocalTerminalTab(api);
         }
       } else if (envId != null) {
+        state.selectedId = envId;
+        refreshConnectListDisplay(api);
+      }
+    });
+
+    // Double click: connect (env items only)
+    if (kind === 'env' && envId != null) {
+      el.addEventListener('dblclick', () => {
         const connectedTab = state.mainPanelTabs.find(
           (tab) => tab.kind === 'terminal' && tab.envId === envId,
         );
@@ -81,14 +95,11 @@ export function renderList(api: Api, items: ConnectListItem[]): void {
           terminal.switchMainPanelTab(api, connectedTab.id);
         } else {
           state.selectedId = envId;
-          refreshConnectListDisplay(api);
           terminal.doConnect(api);
         }
-      }
-    });
+      });
 
-    // Right-click: only env items get edit/delete
-    if (kind === 'env' && envId != null) {
+      // Right-click: edit/delete
       el.addEventListener('contextmenu', (e: Event) => {
         const ev = e as MouseEvent;
         ev.preventDefault();

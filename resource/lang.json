@@ -126,7 +126,9 @@
     "ai.thinkMode": "Think",
     "form.testConnection": "Test Connection",
     "form.testSuccess": "Connection successful",
-    "form.testFail": "Connection failed"
+    "form.testFail": "Connection failed",
+    "sidebar.connecting": "Connecting...",
+    "explorer.loading": "Loading..."
   },
   "zn": {
     "sidebar.connectList": "连接列表",
@@ -255,7 +257,9 @@
     "ai.thinkMode": "思考",
     "form.testConnection": "测试连接",
     "form.testSuccess": "连接成功",
-    "form.testFail": "连接失败"
+    "form.testFail": "连接失败",
+    "sidebar.connecting": "连接中...",
+    "explorer.loading": "加载中..."
   },
   "ru": {
     "sidebar.connectList": "Подключения",
@@ -384,6 +388,8 @@
     "ai.thinkMode": "Размышления",
     "form.testConnection": "Проверить",
     "form.testSuccess": "Подключение успешно",
-    "form.testFail": "Ошибка подключения"
+    "form.testFail": "Ошибка подключения",
+    "sidebar.connecting": "Подключение...",
+    "explorer.loading": "Загрузка..."
   }
 }

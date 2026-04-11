@@ -1816,6 +1816,38 @@ body {
   align-items: center;
 }
 
+/* === Connecting spinner on sidebar list item === */
+@keyframes connectSpin {
+  to { transform: rotate(360deg); }
+}
+
+.serverItem--connecting {
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+.serverItem--connecting .connectDot {
+  animation: connectSpin 1s linear infinite;
+  font-size: 10px;
+}
+
+/* === Explorer loading state === */
+.explorerTreeContainer--loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.explorerTreeContainer--loading::after {
+  content: '';
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--border-primary);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: connectSpin 0.8s linear infinite;
+}
+
 /* === Think toggle button === */
 .chatThinkToggle {
   background: var(--bg-tertiary);

@@ -34,6 +34,13 @@ export function clearExplorerState(api: Api): void {
 
 export async function loadExplorerRootForTarget(api: Api, target: 'local' | number): Promise<void> {
   const es = getExplorerState(target);
+  if (state.activeExplorerTarget === target) {
+    const el = document.getElementById('explorerTreeContainer');
+    if (el) {
+      el.innerHTML = '';
+      el.classList.add('explorerTreeContainer--loading');
+    }
+  }
   try {
     if (target === 'local') {
       if (!api.explorer?.getLocalHome || !api.explorer?.listLocalDirectory) return;
@@ -51,10 +58,18 @@ export async function loadExplorerRootForTarget(api: Api, target: 'local' | numb
       es.loadedPaths[home] = entries;
       es.expanded.add(home);
     }
-    if (state.activeExplorerTarget === target) renderExplorerTree(api);
+    if (state.activeExplorerTarget === target) {
+      const el = document.getElementById('explorerTreeContainer');
+      if (el) el.classList.remove('explorerTreeContainer--loading');
+      renderExplorerTree(api);
+    }
   } catch {
     es.home = null;
-    if (state.activeExplorerTarget === target) renderExplorerTree(api);
+    if (state.activeExplorerTarget === target) {
+      const el = document.getElementById('explorerTreeContainer');
+      if (el) el.classList.remove('explorerTreeContainer--loading');
+      renderExplorerTree(api);
+    }
   }
 }
 
@@ -113,9 +128,7 @@ function updateExplorerUpButton(_api: Api): void {
     (btn as HTMLButtonElement).disabled = state.localHomeDir !== null && es.home === state.localHomeDir;
     return;
   }
-  const parent = pathJoin(es.home, '..');
-  const atRoot = parent === es.home || parent === '.' || parent === '..';
-  (btn as HTMLButtonElement).disabled = atRoot;
+  (btn as HTMLButtonElement).disabled = es.home === '/';
 }
 
 /** 現在表示中のフォルダを再読み込み。 */
@@ -146,8 +159,10 @@ export async function explorerUp(api: Api): Promise<void> {
     parent = await api.explorer.getLocalParent(es.home);
     if (parent === es.home) return;
   } else {
-    parent = pathJoin(es.home, '..');
-    if (parent === es.home || parent === '.' || parent === '..') return;
+    // Remote: resolve .. properly, stop at root /
+    if (es.home === '/') return;
+    parent = getParentDir(es.home);
+    if (!parent || parent === es.home) return;
   }
   es.home = parent;
   if (es.loadedPaths[parent] === undefined) {

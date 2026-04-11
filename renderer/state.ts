@@ -5,6 +5,8 @@ import type { Environment, TerminalTab, ChatMessage, ChatSession, ExplorerEntry,
 export const state = {
   selectedId: null as number | null,
   editingId: null as number | null,
+  /** envId being connected (non-null = connecting spinner active). */
+  connectingId: null as number | null,
   envList: [] as Environment[],
 
   /** メインパネルのタブ一覧（ターミナル／エディタ／DB などを同列で並べる）。 */

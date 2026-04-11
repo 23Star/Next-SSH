@@ -40,8 +40,8 @@ function isDriveRoot(p: string): boolean {
 }
 
 export function registerExplorerHandlers(): void {
-  ipcMain.handle('explorer:getHome', async (_event, connectionId: number) => {
-    return sshConnection.getHome(connectionId);
+  ipcMain.handle('explorer:getHome', async (_event, _connectionId: number) => {
+    return '/';
   });
 
   ipcMain.handle('explorer:listDirectory', async (_event, connectionId: number, dirPath: string) => {

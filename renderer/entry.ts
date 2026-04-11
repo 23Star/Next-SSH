@@ -299,7 +299,6 @@ async function runApp(): Promise<void> {
   chat.updateChatFormLoginState();
   await sidebar.refreshList(api);
   chat.renderChatMessages();
-  await explorer.loadExplorerRootForTarget(api, 'local');
   explorer.renderExplorerTree(api);
   document.getElementById('btnExplorerUp')?.addEventListener('click', () => explorer.explorerUp(api));
   document.getElementById('btnExplorerReload')?.addEventListener('click', () => explorer.reloadExplorerCurrent(api));
