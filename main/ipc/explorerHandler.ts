@@ -73,7 +73,18 @@ export function registerExplorerHandlers(): void {
     const entries = fs.readdirSync(resolved, { withFileTypes: true });
     return entries
       .filter((e) => e.name !== '.' && e.name !== '..')
-      .map((e) => ({ name: e.name, isDirectory: e.isDirectory() }))
+      .map((e) => {
+        try {
+          const fullPath = path.join(resolved, e.name);
+          const stat = fs.statSync(fullPath);
+          const size = stat.isDirectory() ? '' : formatLocalSize(stat.size);
+          const mtime = stat.mtime.toISOString().slice(0, 16).replace('T', ' ');
+          const perms = formatPermissions(stat.mode);
+          return { name: e.name, isDirectory: e.isDirectory(), size, mtime, permissions: perms };
+        } catch {
+          return { name: e.name, isDirectory: e.isDirectory() };
+        }
+      })
       .sort((a, b) => {
         if (a.isDirectory !== b.isDirectory) return a.isDirectory ? -1 : 1;
         return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
@@ -245,4 +256,24 @@ export function registerExplorerHandlers(): void {
       throw err;
     }
   });
+}
+
+function formatLocalSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes}B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)}K`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)}M`;
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)}G`;
+}
+
+function formatPermissions(mode: number): string {
+  const perms = ['r', 'w', 'x'];
+  const result: string[] = [];
+  const typeChar = (mode & 0o170000) === 0o040000 ? 'd' : '-';
+  result.push(typeChar);
+  for (let shift = 6; shift >= 0; shift -= 3) {
+    for (let i = 0; i < 3; i++) {
+      result.push((mode >> (shift + (2 - i))) & 1 ? perms[i] : '-');
+    }
+  }
+  return result.join('');
 }

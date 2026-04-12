@@ -141,15 +141,22 @@ export function getHome(connectionId: number): Promise<string> {
 export interface DirEntry {
   name: string;
   isDirectory: boolean;
+  size?: string;
+  mtime?: string;
+  permissions?: string;
 }
 
-/** 指定パスのディレクトリ一覧を ls で取得する（SFTP チャンネル不要）。 */
+/** 指定パスのディレクトリ一覧を ls -l で取得（SFTP 不要）。 */
 export function listDirectory(connectionId: number, dirPath: string): Promise<DirEntry[]> {
   const c = connections.get(connectionId);
   if (!c) return Promise.reject(new Error('Not connected'));
-  // Use ls -1pA to list entries; -p appends / to directories
   const safePath = dirPath.replace(/'/g, "'\\''");
-  const cmd = `ls -1pA --group-directories-first '${safePath}' 2>/dev/null || ls -1pA '${safePath}'`;
+  // ls -lA --time-style=long-iso --group-directories-first
+  // -l: long format (perms, links, owner, group, size, date, name)
+  // -A: all except . and ..
+  // --time-style=long-iso: YYYY-MM-DD HH:MM
+  // --group-directories-first: dirs first
+  const cmd = `ls -lA --time-style=long-iso --group-directories-first '${safePath}' 2>/dev/null || ls -lA '${safePath}'`;
   return new Promise((resolve, reject) => {
     c.client.exec(cmd, (err: Error | undefined, stream: NodeJS.ReadableStream | undefined) => {
       if (err) return reject(err);
@@ -159,12 +166,38 @@ export function listDirectory(connectionId: number, dirPath: string): Promise<Di
       const stderr = (stream as { stderr?: NodeJS.ReadableStream }).stderr;
       if (stderr) stderr.on('data', () => {});
       stream.on('close', () => {
-        const lines = out.split(/\r?\n/).filter((l) => l.length > 0 && l !== '.' && l !== '..');
-        const result: DirEntry[] = lines.map((line) => {
-          const isDir = line.endsWith('/');
-          const name = isDir ? line.slice(0, -1) : line;
-          return { name, isDirectory: isDir };
-        });
+        const lines = out.split(/\r?\n/).filter((l) => l.trim().length > 0 && l !== '.' && l !== '..' && !l.startsWith('total'));
+        const result: DirEntry[] = [];
+        for (const line of lines) {
+          // ls -l format: perms links owner group size YYYY-MM-DD HH:MM name
+          // e.g.: drwxr-xr-x  2 root root 4096 2024-01-15 10:30 dirname
+          // e.g.: -rw-r--r--  1 root root  256 2024-01-15 10:30 file.txt
+          const match = line.match(/^([dlcbps-][-rwxsStT]{9})\s+\d+\s+\S+\s+\S+\s+(\d+)\s+(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2})\s+(.+)$/);
+          if (match) {
+            const perms = match[1];
+            const sizeNum = parseInt(match[2], 10);
+            const mtime = match[3];
+            const name = match[4];
+            if (name === '.' || name === '..') continue;
+            const isDir = perms[0] === 'd';
+            result.push({
+              name,
+              isDirectory: isDir,
+              size: isDir ? '' : formatSize(sizeNum),
+              mtime,
+              permissions: perms,
+            });
+          } else if (line.length > 0) {
+            // Fallback for non-standard ls output (e.g. symlinks with ->)
+            const parts = line.split(/\s+/);
+            const nameIdx = parts.findIndex((_, i) => i > 5 && /^\d{4}-\d{2}-\d{2}$/.test(parts[i]));
+            if (nameIdx >= 0 && nameIdx + 2 < parts.length) {
+              const name = parts.slice(nameIdx + 2).join(' ');
+              if (name === '.' || name === '..') continue;
+              result.push({ name, isDirectory: parts[0][0] === 'd' });
+            }
+          }
+        }
         // Ensure directories first, then alphabetical
         result.sort((a, b) => {
           if (a.isDirectory !== b.isDirectory) return a.isDirectory ? -1 : 1;
@@ -174,6 +207,13 @@ export function listDirectory(connectionId: number, dirPath: string): Promise<Di
       });
     });
   });
+}
+
+function formatSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes}B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)}K`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)}M`;
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)}G`;
 }
 
 function isDirMode(mode: number): boolean {

@@ -246,12 +246,18 @@ export function renderExplorerTree(api: Api): void {
         const expandIcon = e.isDirectory ? (isExpanded ? '▼' : '▶') : ' ';
         const selected = state.selectedExplorerPath === fullPath ? ' explorerItem--selected' : '';
         const fileIcon = getFileIcon(e.name, e.isDirectory);
+        const detailParts: string[] = [];
+        if (e.permissions) detailParts.push(e.permissions);
+        if (e.size) detailParts.push(e.size);
+        if (e.mtime) detailParts.push(e.mtime);
+        const detailHtml = detailParts.length > 0 ? `<span class="explorerItemDetail">${escapeHtml(detailParts.join('  '))}</span>` : '';
         return `<div class="explorerItem${selected}" data-path="${escapeHtml(fullPath)}" data-isdir="${e.isDirectory}">
           <span class="explorerItemLabel" style="padding-left: ${depth * 12 + 4}px">
             <span class="explorerItemExpand">${expandIcon}</span>
             <span class="explorerItemIcon ${fileIcon.colorClass}">${fileIcon.icon}</span>
             <span class="explorerItemName">${escapeHtml(e.name)}</span>
           </span>
+          ${detailHtml}
           ${isExpanded && childrenHtml ? `<div class="explorerChildren">${childrenHtml}</div>` : ''}
         </div>`;
       })

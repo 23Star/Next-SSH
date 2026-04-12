@@ -404,12 +404,23 @@ export function saveEditorTab(api: Api, tabId: string): void {
 
 export function disposeEditorForTab(tabId: string): void {
   const inst = state.editorInstances.get(tabId);
-  if (!inst) return;
-  inst.editor.dispose();
-  inst.container.remove();
-  state.editorInstances.delete(tabId);
+  if (inst) {
+    inst.editor.dispose();
+    inst.container.remove();
+    state.editorInstances.delete(tabId);
+  }
+  // Also clean up any leftover loading placeholder
+  const editorContainerEl = document.getElementById('editorContainer');
+  if (editorContainerEl) {
+    const loader = editorContainerEl.querySelector(`[data-tab-id="${tabId}"]`);
+    if (loader) loader.remove();
+  }
   delete state.editorDirtyByTabId[tabId];
   delete state.editorLastSavedContentByTabId[tabId];
+  // Cancel pending diff if it belongs to this tab
+  if (state.pendingDiff?.tabId === tabId) {
+    cancelPendingDiff();
+  }
 }
 
 /**
@@ -423,12 +434,29 @@ export function focusActiveEditor(): void {
 }
 
 /**
- * ファイルをエディタで開く。target が 'local' ならローカル、number ならその接続のリモート。
- * 既に同じ path+target で開いていればそのタブに切り替える。タブ追加・表示の更新は呼び出し元で行う。
+ * ファイルをエディタで開く。ローディング表示付き。既に同じ path+target があればそれに切り替える。
  */
 export async function openFileInEditor(api: Api, filePath: string, target: EditorTarget): Promise<string | null> {
   const existingId = findEditorTabByPath(filePath, target);
   if (existingId) return existingId;
+
+  const label = filePath.replace(/^.*[/\\]/, '') || filePath;
+  const tabId = `editor-${Date.now()}`;
+  state.mainPanelTabs.push({ id: tabId, kind: 'editor', filePath, label, target });
+  state.activeMainPanelTabId = tabId;
+
+  // Show loading placeholder immediately
+  const editorContainerEl = document.getElementById('editorContainer');
+  if (editorContainerEl) {
+    const loader = document.createElement('div');
+    loader.className = 'editorTabContent editorLoading';
+    loader.dataset.tabId = tabId;
+    loader.innerHTML = `<div class="editorLoadingSpinner"></div><span class="editorLoadingText">${t('explorer.loading')}</span>`;
+    editorContainerEl.appendChild(loader);
+  }
+
+  // Update tab bar so user sees the tab + loading state
+  terminal.renderMainPanelTabBar(api);
 
   let content: string;
   try {
@@ -440,6 +468,13 @@ export async function openFileInEditor(api: Api, filePath: string, target: Edito
       content = await api.explorer.readRemoteFile(target, filePath);
     }
   } catch (err) {
+    // Remove loading placeholder and the tab
+    const loader = editorContainerEl?.querySelector(`[data-tab-id="${tabId}"]`);
+    if (loader) loader.remove();
+    const idx = state.mainPanelTabs.findIndex((t) => t.id === tabId);
+    if (idx !== -1) state.mainPanelTabs.splice(idx, 1);
+    state.activeMainPanelTabId = state.mainPanelTabs.length > 0 ? state.mainPanelTabs[0].id : null;
+    terminal.renderMainPanelTabBar(api);
     await showMessage({
       title: t('editor.openFailed'),
       message: `${t('editor.openFailed')}: ${err instanceof Error ? err.message : String(err)}`,
@@ -447,10 +482,10 @@ export async function openFileInEditor(api: Api, filePath: string, target: Edito
     return null;
   }
 
-  const label = filePath.replace(/^.*[/\\]/, '') || filePath;
-  const tabId = `editor-${Date.now()}`;
-  state.mainPanelTabs.push({ id: tabId, kind: 'editor', filePath, label, target });
-  state.activeMainPanelTabId = tabId;
+  // Remove loading placeholder, create real editor
+  const loader = editorContainerEl?.querySelector(`.editorLoading[data-tab-id="${tabId}"]`);
+  if (loader) loader.remove();
   await createEditorForTab(api, tabId, filePath, content);
+  terminal.renderMainPanelTabBar(api);
   return tabId;
 }

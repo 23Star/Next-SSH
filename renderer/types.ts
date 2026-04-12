@@ -40,6 +40,9 @@ export interface ChatSession {
 export interface ExplorerEntry {
   name: string;
   isDirectory: boolean;
+  size?: string;
+  mtime?: string;
+  permissions?: string;
 }
 
 export interface ServerInfo {
