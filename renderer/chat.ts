@@ -141,6 +141,45 @@ function truncateForAi(text: string, maxChars: number): string {
   return text.slice(-maxChars);
 }
 
+/** Display command + result in xterm.js terminal (visual only, NOT sent to bash). */
+function displayInTerminal(cmd: string, result: { stdout: string; stderr: string; exitCode: number | null } | null, error?: string): void {
+  const activeTab = state.mainPanelTabs.find((t) => t.id === state.activeMainPanelTabId);
+  if (!activeTab) return;
+
+  let term: { write(data: string): void } | undefined;
+  if (activeTab.kind === 'terminal') {
+    term = state.terminalInstances.get(activeTab.connectionId)?.term;
+  } else if (activeTab.kind === 'local-terminal') {
+    term = state.localTerminalInstances.get(activeTab.id)?.term;
+  }
+  if (!term) return;
+
+  const MAX_DISPLAY = 600;
+  let display = `\r\n\x1b[1;33m$ ${cmd}\x1b[0m\r\n`;
+
+  if (error) {
+    display += `\x1b[31m[ERROR] ${error}\x1b[0m\r\n`;
+  } else if (result) {
+    if (result.stdout) {
+      const s = result.stdout.length > MAX_DISPLAY ? result.stdout.slice(0, MAX_DISPLAY) + '\r\n...(truncated)' : result.stdout;
+      display += s + '\r\n';
+    }
+    if (result.stderr) {
+      const s = result.stderr.length > 300 ? result.stderr.slice(0, 300) + '\r\n...(truncated)' : result.stderr;
+      display += `\x1b[31m${s}\x1b[0m\r\n`;
+    }
+    if (result.exitCode !== 0 && result.exitCode !== null) {
+      display += `\x1b[31m[exit code: ${result.exitCode}]\x1b[0m\r\n`;
+    }
+    if (!result.stdout && !result.stderr) {
+      display += '(no output)\r\n';
+    }
+  }
+  display += '\r\n';
+
+  term.write(display);
+}
+
 /** Check if the AI response indicates the task is complete (no more commands to run). */
 function isTaskComplete(aiContent: string): boolean {
   // If no bash code blocks, the AI is just explaining — task is done
@@ -254,6 +293,9 @@ async function runAgenticLoop(
           result = await api.terminal.localExec(cmd, 120000);
         }
 
+        // Display result in terminal (visual only, not sent to bash)
+        displayInTerminal(cmd, result);
+
         const outputParts: string[] = [];
         if (result.stdout) {
           outputParts.push(truncateForAi(result.stdout, state.AGENT_OUTPUT_MAX_CHARS));
@@ -272,6 +314,7 @@ async function runAgenticLoop(
         const errMsg = err instanceof Error ? err.message : String(err);
         feedbackMsg = `$ ${cmd}\n[ERROR] ${errMsg}`;
         agentLog(`EXEC ERROR: ${errMsg}`);
+        displayInTerminal(cmd, null, errMsg);
       }
 
       if (state.agentLoopAbort) break;
