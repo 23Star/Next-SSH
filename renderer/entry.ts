@@ -38,20 +38,25 @@ function bindSidebarCollapseButtons(): void {
       const sectionEl = document.getElementById(section === 'servers' ? 'sidebarServers' : section === 'explorer' ? 'sidebarExplorer' : 'sidebarServerInfo');
       if (sectionEl) sectionEl.classList.toggle('collapsed', collapsed);
 
-      // Save/restore panel height so uncollapse returns to original size
-      if (collapsed && section === 'explorer') {
-        state._savedExplorerHeight = state.sidebarExplorerHeight;
-      } else if (!collapsed && section === 'explorer' && state._savedExplorerHeight) {
-        state.sidebarExplorerHeight = state._savedExplorerHeight;
+      // Save height before first collapse, restore on uncollapse
+      if (section === 'explorer') {
+        if (collapsed && !state._savedExplorerHeight) {
+          state._savedExplorerHeight = state.sidebarExplorerHeight;
+        } else if (!collapsed && state._savedExplorerHeight) {
+          state.sidebarExplorerHeight = state._savedExplorerHeight;
+          state._savedExplorerHeight = 0;
+        }
       }
-      if (collapsed && section === 'serverInfo') {
-        state._savedServerInfoHeight = state.sidebarServerInfoHeight;
-      } else if (!collapsed && section === 'serverInfo' && state._savedServerInfoHeight) {
-        state.sidebarServerInfoHeight = state._savedServerInfoHeight;
+      if (section === 'serverInfo') {
+        if (collapsed && !state._savedServerInfoHeight) {
+          state._savedServerInfoHeight = state.sidebarServerInfoHeight;
+        } else if (!collapsed && state._savedServerInfoHeight) {
+          state.sidebarServerInfoHeight = state._savedServerInfoHeight;
+          state._savedServerInfoHeight = 0;
+        }
       }
 
-      // Wait for CSS transition, then recalc layout
-      setTimeout(() => recalcSidebarLayout(), 210);
+      recalcSidebarLayout();
     });
   });
 }
@@ -188,6 +193,7 @@ function bindAiSettingsEvents(): void {
       const modelInput = document.getElementById('aiModel') as HTMLInputElement | null;
       if (urlInput) urlInput.value = preset.apiUrl;
       if (modelInput) modelInput.value = preset.model;
+      chat.refreshThinkToggle();
     });
   });
 
@@ -230,6 +236,7 @@ function bindAiSettingsEvents(): void {
         item.addEventListener('click', () => {
           const modelInput = document.getElementById('aiModel') as HTMLInputElement | null;
           if (modelInput) modelInput.value = (item as HTMLElement).dataset.model ?? '';
+          chat.refreshThinkToggle();
         });
       });
     }
@@ -279,6 +286,7 @@ function bindAiSettingsEvents(): void {
       systemPrompt: systemPromptInput?.value ?? '',
     });
     chat.setCustomSystemPrompt(systemPromptInput?.value ?? '');
+    chat.refreshThinkToggle();
     if (resultEl) {
       resultEl.style.display = 'block';
       resultEl.textContent = t('ai.saved');
@@ -295,7 +303,7 @@ function bindSettingsModal(): void {
     if (el) el.style.display = 'flex';
     void updateSettingsLanguageHighlight();
     void updateSettingsThemeHighlight();
-    void loadAiSettingsToForm();
+    void loadAiSettingsToForm().then(() => chat.refreshThinkToggle());
   });
 
   document.getElementById('settingsModalBackdrop')?.addEventListener('click', () => {
@@ -332,6 +340,7 @@ async function runApp(): Promise<void> {
   bindSettingsModal();
   bindAiSettingsEvents();
   chat.updateChatFormLoginState();
+  chat.refreshThinkToggle();
   await sidebar.refreshList(api);
   chat.renderChatMessages();
   explorer.renderExplorerTree(api);

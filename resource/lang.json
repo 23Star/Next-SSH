@@ -140,7 +140,9 @@
     "serverInfo.refresh": "Refresh",
     "serverInfo.noConnection": "Connect to a server to view info.",
     "serverInfo.loadError": "Failed to load",
-    "serverInfo.serverTime": "Server Time"
+    "serverInfo.serverTime": "Server Time",
+    "ai.noThinkSupport": "Model does not support thinking",
+    "ai.noModel": "No model configured"
   },
   "zn": {
     "sidebar.connectList": "连接列表",
@@ -283,7 +285,9 @@
     "serverInfo.refresh": "刷新",
     "serverInfo.noConnection": "连接服务器后查看参数信息。",
     "serverInfo.loadError": "加载失败",
-    "serverInfo.serverTime": "服务器时间"
+    "serverInfo.serverTime": "服务器时间",
+    "ai.noThinkSupport": "当前模型不支持思考",
+    "ai.noModel": "未配置模型"
   },
   "ru": {
     "sidebar.connectList": "Подключения",
@@ -426,6 +430,8 @@
     "serverInfo.refresh": "Обновить",
     "serverInfo.noConnection": "Подключитесь к серверу для просмотра информации.",
     "serverInfo.loadError": "Ошибка загрузки",
-    "serverInfo.serverTime": "Время сервера"
+    "serverInfo.serverTime": "Время сервера",
+    "ai.noThinkSupport": "Модель не поддерживает размышления",
+    "ai.noModel": "Модель не настроена"
   }
 }

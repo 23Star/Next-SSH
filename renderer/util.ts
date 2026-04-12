@@ -10,7 +10,8 @@ export function pathJoin(parent: string, name: string): string {
   if (/^[A-Za-z]:[/\\]/.test(name) || name.startsWith('/')) return name;
   const p = parent.replace(/[/\\]+$/, '');
   const sep = parent.includes('\\') ? '\\' : '/';
-  return p ? p + sep + name : name;
+  if (!p) return sep + name;  // parent was '/' → result is '/name'
+  return p + sep + name;
 }
 
 /** パスから親ディレクトリを取得（/ と \ 両対応）。 */

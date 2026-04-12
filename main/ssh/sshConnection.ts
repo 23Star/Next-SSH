@@ -129,9 +129,10 @@ export function getHome(connectionId: number): Promise<string> {
       });
       const stderr = (stream as { stderr?: NodeJS.ReadableStream }).stderr;
       if (stderr) stderr.on('data', () => {});
-      stream.on('close', (code: number) => {
-        if (code !== 0) return reject(new Error(`exit ${code}`));
-        resolve(out.trim());
+      stream.on('close', () => {
+        const result = out.trim();
+        console.log('[ssh] getHome result:', JSON.stringify(result));
+        resolve(result);
       });
     });
   });
@@ -142,28 +143,33 @@ export interface DirEntry {
   isDirectory: boolean;
 }
 
-/** 接続中で指定パスのディレクトリ一覧を SFTP で取得する。 */
+/** 指定パスのディレクトリ一覧を ls で取得する（SFTP チャンネル不要）。 */
 export function listDirectory(connectionId: number, dirPath: string): Promise<DirEntry[]> {
   const c = connections.get(connectionId);
   if (!c) return Promise.reject(new Error('Not connected'));
+  // Use ls -1pA to list entries; -p appends / to directories
+  const safePath = dirPath.replace(/'/g, "'\\''");
+  const cmd = `ls -1pA --group-directories-first '${safePath}' 2>/dev/null || ls -1pA '${safePath}'`;
   return new Promise((resolve, reject) => {
-    c.client.sftp((err: Error | undefined, sftp: { readdir: (p: string, cb: (e: Error | undefined, list: unknown) => void) => void; end: () => void } | undefined) => {
+    c.client.exec(cmd, (err: Error | undefined, stream: NodeJS.ReadableStream | undefined) => {
       if (err) return reject(err);
-      if (!sftp) return reject(new Error('No SFTP'));
-      sftp.readdir(dirPath, (errRead: Error | undefined, list: unknown) => {
-        sftp.end();
-        if (errRead) return reject(errRead);
-        const arr = Array.isArray(list) ? list as Array<{ filename: string; attrs?: { mode?: number } }> : [];
-        const result: DirEntry[] = arr
-          .filter((e) => e.filename !== '.' && e.filename !== '..')
-          .map((e) => ({
-            name: e.filename,
-            isDirectory: ((e.attrs?.mode ?? 0) & 0o170000) === 0o040000,
-          }))
-          .sort((a, b) => {
-            if (a.isDirectory !== b.isDirectory) return a.isDirectory ? -1 : 1;
-            return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
-          });
+      if (!stream) return reject(new Error('No exec stream'));
+      let out = '';
+      stream.on('data', (chunk: Buffer) => { out += chunk.toString(); });
+      const stderr = (stream as { stderr?: NodeJS.ReadableStream }).stderr;
+      if (stderr) stderr.on('data', () => {});
+      stream.on('close', () => {
+        const lines = out.split(/\r?\n/).filter((l) => l.length > 0 && l !== '.' && l !== '..');
+        const result: DirEntry[] = lines.map((line) => {
+          const isDir = line.endsWith('/');
+          const name = isDir ? line.slice(0, -1) : line;
+          return { name, isDirectory: isDir };
+        });
+        // Ensure directories first, then alphabetical
+        result.sort((a, b) => {
+          if (a.isDirectory !== b.isDirectory) return a.isDirectory ? -1 : 1;
+          return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+        });
         resolve(result);
       });
     });
@@ -408,8 +414,7 @@ function execCommand(connectionId: number, command: string): Promise<string> {
       stream.on('data', (chunk: Buffer) => { out += chunk.toString(); });
       const stderr = (stream as { stderr?: NodeJS.ReadableStream }).stderr;
       if (stderr) stderr.on('data', () => {});
-      stream.on('close', (code: number) => {
-        if (code !== 0) return reject(new Error(`exit ${code}`));
+      stream.on('close', () => {
         resolve(out.trim());
       });
     });

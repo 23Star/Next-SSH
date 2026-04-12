@@ -554,16 +554,79 @@ export function closeChatTab(api: Api, sessionId: number): void {
 }
 
 export function bindThinkToggle(): void {
-  const btn = document.getElementById('btnThinkToggle');
-  if (!btn) return;
-  btn.classList.toggle('active', state.showThinking);
-  btn.addEventListener('click', () => {
-    state.showThinking = !state.showThinking;
-    btn.classList.toggle('active', state.showThinking);
+  const checkbox = document.getElementById('thinkSwitchInput') as HTMLInputElement | null;
+  if (!checkbox) return;
+  checkbox.checked = state.showThinking;
+  updateThinkSwitchState();
+
+  checkbox.addEventListener('change', () => {
+    state.showThinking = checkbox.checked;
     document.querySelectorAll('.chatThinking').forEach((el) => {
       (el as HTMLElement).style.display = state.showThinking ? '' : 'none';
     });
   });
+}
+
+/** Known model name patterns that support thinking/reasoning. */
+const THINKING_MODEL_PATTERNS = [
+  /claude-.*3[.-]5/i,
+  /claude-.*4/i,
+  /claude-opus/i,
+  /claude-sonnet/i,
+  /o1-/i,
+  /o3-/i,
+  /o4-/i,
+  /deepseek-r/i,
+  /deepseek-reasoner/i,
+  /gemini.*thinking/i,
+  /gemini.*flash.*thinking/i,
+  /qwen.*qwq/i,
+  /qwq/i,
+];
+
+function modelSupportsThinking(model: string): boolean {
+  if (!model) return false;
+  return THINKING_MODEL_PATTERNS.some((p) => p.test(model));
+}
+
+function updateThinkSwitchState(): void {
+  const checkbox = document.getElementById('thinkSwitchInput') as HTMLInputElement | null;
+  const wrap = document.getElementById('thinkSwitchWrap');
+  const control = document.getElementById('thinkSwitchControl');
+  const modelSpan = document.getElementById('thinkSwitchModel');
+  if (!checkbox || !wrap) return;
+
+  const modelInput = document.getElementById('aiModel') as HTMLInputElement | null;
+  const model = modelInput?.value?.trim() ?? '';
+
+  const supported = modelSupportsThinking(model);
+  if (supported) {
+    wrap.classList.remove('chatThinkWrap--disabled');
+    checkbox.disabled = false;
+  } else {
+    wrap.classList.add('chatThinkWrap--disabled');
+    checkbox.disabled = true;
+    checkbox.checked = false;
+    state.showThinking = false;
+  }
+
+  // Show model name
+  if (modelSpan) {
+    modelSpan.textContent = model || '';
+    modelSpan.title = model
+      ? (supported ? model : `${model} — ${t('ai.noThinkSupport')}`)
+      : t('ai.noModel');
+  }
+
+  if (control) {
+    control.title = supported
+      ? t('ai.thinkMode')
+      : `${t('ai.thinkMode')} (${t('ai.noThinkSupport')})`;
+  }
+}
+
+export function refreshThinkToggle(): void {
+  updateThinkSwitchState();
 }
 
 export async function updateChatFormLoginState(): Promise<void> {

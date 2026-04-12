@@ -73,8 +73,9 @@ export function registerChatHandlers(): void {
     return content;
   });
 
-  // Streaming: renderer sends messages, main pushes chunks back
-  ipcMain.on('chat:streamStart', async (event, messages: ChatMessagePayload[]) => {
+  // Streaming: renderer sends messages via invoke (avoids ByteString encoding issues)
+  ipcMain.handle('chat:streamStart', async (event, messagesJson: string) => {
+    const messages: ChatMessagePayload[] = JSON.parse(messagesJson);
     const send = (chunk: StreamChunkPayload) => {
       try { event.sender.send('chat:streamChunk', chunk); } catch { /* window closed */ }
     };

@@ -236,10 +236,10 @@ body {
 }
 
 .sidebarSection {
-  display: grid;
-  grid-template-rows: auto 1fr;
+  display: flex;
+  flex-direction: column;
   min-height: 0;
-  transition: grid-template-rows 200ms ease;
+  overflow: hidden;
 }
 
 .sidebarSection.servers {
@@ -322,9 +322,10 @@ body {
   min-height: 0;
   display: flex;
   flex-direction: column;
+  flex: 1;
 }
-.sidebarSection.collapsed {
-  grid-template-rows: auto 0fr;
+.sidebarSection.collapsed .sidebarContent {
+  display: none;
 }
 
 .explorerPanelHeader {
@@ -1961,30 +1962,88 @@ body {
   animation: connectSpin 0.8s linear infinite;
 }
 
-/* === Think toggle button === */
-.chatThinkToggle {
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border-secondary);
-  color: var(--text-tertiary);
-  border-radius: var(--radius-sm);
-  padding: 0 10px;
-  height: 32px;
-  cursor: pointer;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  transition: all var(--transition-fast);
+/* === Think toggle (iOS-style switch) === */
+.chatThinkWrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   flex-shrink: 0;
   align-self: flex-end;
+  height: 32px;
 }
 
-.chatThinkToggle:hover {
-  border-color: var(--border-hover);
-  color: var(--text-secondary);
+.chatThinkLabel {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  white-space: nowrap;
 }
 
-.chatThinkToggle.active {
-  background: var(--accent-muted);
-  border-color: var(--accent);
-  color: var(--accent);
+.chatThinkModel {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  white-space: nowrap;
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chatThinkWrap.chatThinkWrap--disabled .chatThinkLabel,
+.chatThinkWrap.chatThinkWrap--disabled .chatThinkModel {
+  opacity: 0.4;
+}
+
+.chatThinkSwitch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+  transition: opacity var(--transition-fast);
+}
+
+.chatThinkWrap.chatThinkWrap--disabled .chatThinkSwitch {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.chatThinkSwitch input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.chatThinkSlider {
+  position: relative;
+  width: 36px;
+  height: 20px;
+  background: var(--border-primary);
+  border-radius: 10px;
+  transition: background var(--transition-fast);
+}
+
+.chatThinkSlider::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  background: var(--text-primary);
+  border-radius: 50%;
+  transition: transform var(--transition-fast), background var(--transition-fast);
+}
+
+.chatThinkSwitch input:checked + .chatThinkSlider {
+  background: var(--accent);
+}
+
+.chatThinkSwitch input:checked + .chatThinkSlider::after {
+  transform: translateX(16px);
+  background: #fff;
+}
+
+.chatThinkSwitch input:focus-visible + .chatThinkSlider {
+  box-shadow: 0 0 0 2px var(--focus-ring);
 }

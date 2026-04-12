@@ -75,7 +75,10 @@ export async function loadExplorerRootForTarget(api: Api, target: 'local' | numb
   }
   try {
     if (target === 'local') {
-      if (!api.explorer?.getLocalHome || !api.explorer?.listLocalDirectory) return;
+      if (!api.explorer?.getLocalHome || !api.explorer?.listLocalDirectory) {
+        console.warn('[explorer] local API not available');
+        return;
+      }
       const home = await api.explorer.getLocalHome();
       state.localHomeDir = home;
       es.home = home;
@@ -83,8 +86,12 @@ export async function loadExplorerRootForTarget(api: Api, target: 'local' | numb
       es.loadedPaths[home] = entries;
       es.expanded.add(home);
     } else {
-      if (!api.explorer?.getHome || !api.explorer?.listDirectory) return;
-      const home = await api.explorer.getHome(target);
+      if (!api.explorer?.getHome || !api.explorer?.listDirectory) {
+        console.warn('[explorer] remote API not available');
+        return;
+      }
+      // Always start from root / for remote connections
+      const home = '/';
       es.home = home;
       const entries = await api.explorer.listDirectory(target, home);
       es.loadedPaths[home] = entries;
@@ -101,7 +108,7 @@ export async function loadExplorerRootForTarget(api: Api, target: 'local' | numb
     if (state.activeExplorerTarget === target) {
       const el = document.getElementById('explorerTreeContainer');
       if (el) el.classList.remove('explorerTreeContainer--loading');
-      renderExplorerTree(api);
+      el.innerHTML = `<p class="panelPlaceholder">${t('serverInfo.loadError')}: ${escapeHtml(err instanceof Error ? err.message : String(err))}</p>`;
     }
   }
 }
@@ -121,7 +128,9 @@ async function loadExplorerDir(api: Api, dirPath: string): Promise<void> {
       es.loadedPaths[dirPath] = entries;
     } else {
       if (!api.explorer?.listDirectory) return;
+      console.log('[explorer] loadExplorerDir:', dirPath, 'target:', target);
       const entries = await api.explorer.listDirectory(target, dirPath);
+      console.log('[explorer] loadExplorerDir result:', entries.length, 'entries');
       es.loadedPaths[dirPath] = entries;
     }
     renderExplorerTree(api);

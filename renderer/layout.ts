@@ -88,7 +88,14 @@ export function renderLayout(root: HTMLElement): void {
           <form class="chatInputForm" id="chatInputForm">
             <div class="chatInputResizer" id="chatInputResizer" data-i18n-title="resizer.horizontal" title="${t('resizer.horizontal')}"></div>
             <textarea id="chatInput" data-i18n-placeholder="chat.placeholder" placeholder="${t('chat.placeholder')}" autocomplete="off"></textarea>
-            <button type="button" id="btnThinkToggle" class="chatThinkToggle" data-i18n-title="ai.thinkMode" title="${t('ai.thinkMode')}">T</button>
+            <div class="chatThinkWrap" id="thinkSwitchWrap">
+              <span class="chatThinkLabel" id="thinkSwitchLabel">${t('ai.thinkMode')}</span>
+              <label class="chatThinkSwitch" id="thinkSwitchControl" title="${t('ai.thinkMode')}">
+                <input type="checkbox" id="thinkSwitchInput" />
+                <span class="chatThinkSlider"></span>
+              </label>
+              <span class="chatThinkModel" id="thinkSwitchModel"></span>
+            </div>
             <button type="submit" id="btnChatSend" data-i18n="chat.send">${t('chat.send')}</button>
           </form>
         </aside>
@@ -218,16 +225,22 @@ function applyInitialSidebarRatio(): void {
   const sidebar = document.getElementById('sidebar');
   if (!sidebar || sidebar.clientHeight <= 0) return;
   initialSidebarRatioApplied = true;
-  const resizerPx = 12;
-  const h = Math.round(0.6 * (sidebar.clientHeight - resizerPx));
+  const resizerPx = RESIZER_HEIGHT * 2;
+  const available = sidebar.clientHeight - resizerPx;
+  // Split: servers ~40%, explorer ~35%, serverInfo ~25%
   state.sidebarExplorerHeight = Math.min(
     state.EXPLORER_HEIGHT_MAX,
-    Math.max(state.EXPLORER_HEIGHT_MIN, h),
+    Math.max(state.EXPLORER_HEIGHT_MIN, Math.round(0.35 * available)),
+  );
+  state.sidebarServerInfoHeight = Math.min(
+    state.SERVER_INFO_HEIGHT_MAX,
+    Math.max(state.SERVER_INFO_HEIGHT_MIN, Math.round(0.25 * available)),
   );
 }
 
 const RESIZER_HEIGHT = 6;
 const SERVERS_HEIGHT_MIN = 80;
+const HEADER_HEIGHT = 36;
 
 /** Recalculate all sidebar panel heights so servers fills remaining space. */
 export function recalcSidebarLayout(): void {
@@ -239,19 +252,50 @@ export function recalcSidebarLayout(): void {
 
   const totalH = sidebar.clientHeight;
   const resizerH = RESIZER_HEIGHT * 2;
+  const availableH = totalH - resizerH;
 
-  const explorerH = state.sidebarCollapsed.explorer ? 0 : state.sidebarExplorerHeight;
-  const serverInfoH = state.sidebarCollapsed.serverInfo ? 0 : state.sidebarServerInfoHeight;
-  let serversH = totalH - resizerH - explorerH - serverInfoH;
-  serversH = Math.max(SERVERS_HEIGHT_MIN, serversH);
-  state.sidebarServersHeight = serversH;
+  // Collapsed panels use HEADER_HEIGHT; expanded panels use their saved height
+  let explorerH = state.sidebarCollapsed.explorer ? HEADER_HEIGHT : state.sidebarExplorerHeight;
+  let serverInfoH = state.sidebarCollapsed.serverInfo ? HEADER_HEIGHT : state.sidebarServerInfoHeight;
 
-  serversEl.style.flexBasis = `${serversH}px`;
+  // Servers fills remaining space
+  let serversCalcH: number;
+  if (state.sidebarCollapsed.servers) {
+    serversCalcH = HEADER_HEIGHT;
+  } else {
+    serversCalcH = availableH - explorerH - serverInfoH;
+    // If servers would be too small, shrink other expanded panels proportionally
+    if (serversCalcH < SERVERS_HEIGHT_MIN) {
+      const excess = SERVERS_HEIGHT_MIN - serversCalcH;
+      const explorerExpanded = !state.sidebarCollapsed.explorer;
+      const serverInfoExpanded = !state.sidebarCollapsed.serverInfo;
+      if (explorerExpanded && serverInfoExpanded) {
+        const totalOther = explorerH + serverInfoH;
+        if (totalOther > 0) {
+          const scale = Math.max(0, totalOther - excess) / totalOther;
+          explorerH = Math.max(HEADER_HEIGHT, Math.round(explorerH * scale));
+          serverInfoH = Math.max(HEADER_HEIGHT, Math.round(serverInfoH * scale));
+        }
+      } else if (explorerExpanded) {
+        explorerH = Math.max(HEADER_HEIGHT, explorerH - excess);
+      } else if (serverInfoExpanded) {
+        serverInfoH = Math.max(HEADER_HEIGHT, serverInfoH - excess);
+      }
+      serversCalcH = Math.max(SERVERS_HEIGHT_MIN, availableH - explorerH - serverInfoH);
+    }
+  }
+
+  // Sync state back so drag logic uses clamped values
+  if (!state.sidebarCollapsed.explorer) state.sidebarExplorerHeight = explorerH;
+  if (!state.sidebarCollapsed.serverInfo) state.sidebarServerInfoHeight = serverInfoH;
+  state.sidebarServersHeight = serversCalcH;
+
+  serversEl.style.flexBasis = state.sidebarCollapsed.servers ? `${HEADER_HEIGHT}px` : `${serversCalcH}px`;
   if (explorerEl) {
-    explorerEl.style.flexBasis = state.sidebarCollapsed.explorer ? 'auto' : `${explorerH}px`;
+    explorerEl.style.flexBasis = `${explorerH}px`;
   }
   if (serverInfoEl) {
-    serverInfoEl.style.flexBasis = state.sidebarCollapsed.serverInfo ? 'auto' : `${serverInfoH}px`;
+    serverInfoEl.style.flexBasis = `${serverInfoH}px`;
   }
 }
 
@@ -332,18 +376,18 @@ export function bindResizers(): void {
   });
 
   resizerExplorer?.addEventListener('mousedown', (e) => {
+    if (state.sidebarCollapsed.explorer || state.sidebarCollapsed.servers) return;
     e.preventDefault();
     const startY = e.clientY;
     const startExplorerH = state.sidebarExplorerHeight;
     const startServersH = state.sidebarServersHeight;
     dragHorizontal(startY, startExplorerH, (dy) => {
-      // Drag DOWN (dy > 0) → explorer grows, servers shrinks
-      const newExplorerH = Math.min(
-        state.EXPLORER_HEIGHT_MAX,
-        Math.max(state.EXPLORER_HEIGHT_MIN, startExplorerH + dy),
+      const newServersH = Math.min(
+        state.sidebarExplorerHeight + state.sidebarServersHeight - state.EXPLORER_HEIGHT_MIN,
+        Math.max(SERVERS_HEIGHT_MIN, startServersH + dy),
       );
-      const delta = newExplorerH - startExplorerH;
-      const newServersH = Math.max(SERVERS_HEIGHT_MIN, startServersH - delta);
+      const delta = newServersH - startServersH;
+      const newExplorerH = startExplorerH - delta;
       state.sidebarExplorerHeight = newExplorerH;
       state.sidebarServersHeight = newServersH;
       if (sidebarExplorer) sidebarExplorer.style.flexBasis = `${newExplorerH}px`;
@@ -355,18 +399,18 @@ export function bindResizers(): void {
   const resizerServerInfo = document.getElementById('resizerServerInfo');
   const sidebarServerInfo = document.getElementById('sidebarServerInfo');
   resizerServerInfo?.addEventListener('mousedown', (e) => {
+    if (state.sidebarCollapsed.serverInfo || state.sidebarCollapsed.explorer) return;
     e.preventDefault();
     const startY = e.clientY;
     const startServerInfoH = state.sidebarServerInfoHeight;
     const startExplorerH = state.sidebarExplorerHeight;
     dragHorizontal(startY, startServerInfoH, (dy) => {
-      // Drag DOWN (dy > 0) → serverInfo grows, explorer shrinks
-      const newServerInfoH = Math.min(
-        state.SERVER_INFO_HEIGHT_MAX,
-        Math.max(state.SERVER_INFO_HEIGHT_MIN, startServerInfoH + dy),
+      const newExplorerH = Math.min(
+        state.sidebarExplorerHeight + state.sidebarServerInfoHeight - state.SERVER_INFO_HEIGHT_MIN,
+        Math.max(state.EXPLORER_HEIGHT_MIN, startExplorerH + dy),
       );
-      const delta = newServerInfoH - startServerInfoH;
-      const newExplorerH = Math.max(state.EXPLORER_HEIGHT_MIN, startExplorerH - delta);
+      const delta = newExplorerH - startExplorerH;
+      const newServerInfoH = startServerInfoH - delta;
       state.sidebarServerInfoHeight = newServerInfoH;
       state.sidebarExplorerHeight = newExplorerH;
       if (sidebarServerInfo) sidebarServerInfo.style.flexBasis = `${newServerInfoH}px`;
