@@ -89,6 +89,108 @@ function renderMarkdown(text: string): string {
   }
 }
 
+/** Patterns that should never be auto-executed. */
+const DANGEROUS_PATTERNS = [
+  /\brm\s+(-\w*r\w*f\w*\s+|rf\s+)\/(?!tmp\/)/i,
+  /\bmkfs\b/i,
+  /\bdd\s+if=/i,
+  /:\(\)\{.*;\};/,
+  /\bshutdown\b/i,
+  /\breboot\b/i,
+  /\binit\s+[06]\b/i,
+  /\b(>|>>)\s*\/dev\//i,
+];
+
+function isDangerousCommand(cmd: string): boolean {
+  return DANGEROUS_PATTERNS.some((p) => p.test(cmd));
+}
+
+/** Extract bash/sh code blocks from markdown text. Returns individual commands. */
+function extractBashCommands(text: string): string[] {
+  const commands: string[] = [];
+  const regex = /```(?:bash|sh)\s*\n?([\s\S]*?)```/g;
+  let match: RegExpExecArray | null;
+  while ((match = regex.exec(text)) !== null) {
+    const block = match[1].trim();
+    block.split('\n').forEach((line) => {
+      const l = line.trim();
+      if (l && !l.startsWith('#') && !l.startsWith('//')) commands.push(l);
+    });
+  }
+  return commands;
+}
+
+/** Send a command to the active terminal tab. */
+function runCommandInTerminal(cmd: string): void {
+  const activeTab = state.mainPanelTabs.find((t) => t.id === state.activeMainPanelTabId);
+  const api = apiRef;
+  if (!api || !activeTab) return;
+  if (activeTab.kind === 'terminal') {
+    api.terminal.write(activeTab.connectionId, cmd + '\n');
+  } else if (activeTab.kind === 'local-terminal') {
+    api.terminal.localWrite(activeTab.id, cmd + '\n');
+  }
+}
+
+/** Inject copy buttons (and optionally run buttons) into code blocks within a container. */
+function injectCodeBlockButtons(container: HTMLElement): void {
+  container.querySelectorAll('pre').forEach((pre) => {
+    // Skip already-processed blocks
+    if (pre.parentElement?.classList.contains('chatCodeBlock')) return;
+
+    const codeEl = pre.querySelector('code');
+    const langClass = codeEl?.className?.match(/language-(\w+)/)?.[1] ?? '';
+    const isShell = ['bash', 'sh', 'shell', 'zsh'].includes(langClass);
+    const codeText = codeEl?.textContent ?? pre.textContent ?? '';
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'chatCodeBlock';
+
+    const header = document.createElement('div');
+    header.className = 'chatCodeBlockHeader';
+
+    const langSpan = document.createElement('span');
+    langSpan.className = 'chatCodeBlockLang';
+    langSpan.textContent = langClass;
+
+    const actionsDiv = document.createElement('div');
+    actionsDiv.className = 'chatCodeBlockActions';
+
+    // Copy button (always present)
+    const copyBtn = document.createElement('button');
+    copyBtn.className = 'chatCodeBlockCopy';
+    copyBtn.textContent = t('common.copy');
+    copyBtn.addEventListener('click', () => {
+      navigator.clipboard.writeText(codeText).then(() => {
+        copyBtn.textContent = t('common.copied');
+        setTimeout(() => { copyBtn.textContent = t('common.copy'); }, 1500);
+      });
+    });
+    actionsDiv.appendChild(copyBtn);
+
+    // Run button for shell blocks in confirm mode
+    if (isShell && state.aiPermissionMode === 'confirm') {
+      const runBtn = document.createElement('button');
+      runBtn.className = 'chatCodeBlockRun';
+      runBtn.textContent = t('chat.runCommand');
+      runBtn.addEventListener('click', () => {
+        const commands = codeText.split('\n').map((l) => l.trim()).filter((l) => l && !l.startsWith('#'));
+        commands.forEach((cmd) => runCommandInTerminal(cmd));
+        runBtn.textContent = '✓';
+        setTimeout(() => { runBtn.textContent = t('chat.runCommand'); }, 1500);
+      });
+      actionsDiv.appendChild(runBtn);
+    }
+
+    header.appendChild(langSpan);
+    header.appendChild(actionsDiv);
+
+    pre.parentNode?.insertBefore(wrapper, pre);
+    wrapper.appendChild(header);
+    wrapper.appendChild(pre);
+  });
+}
+
 export function renderChatMessages(): void {
   const el = document.getElementById('chatMessages');
   if (!el) return;
@@ -125,6 +227,7 @@ export function renderChatMessages(): void {
       </div>`;
     })
     .join('');
+  injectCodeBlockButtons(el);
   el.scrollTop = el.scrollHeight;
 }
 
@@ -219,6 +322,7 @@ function finishStreamingMessage(
   const contentEl = msgDiv.querySelector('.chatMessageContent') as HTMLElement | null;
   if (contentEl) {
     contentEl.innerHTML = renderMarkdown(contentText);
+    injectCodeBlockButtons(contentEl);
   }
 }
 
@@ -484,6 +588,19 @@ export async function sendChatMessage(api: Api, userContent: string): Promise<vo
             suggestedCommands: row.suggestedCommands ?? undefined,
           });
           renderChatMessages();
+          // Auto-execute commands in auto mode
+          if (state.aiPermissionMode === 'auto') {
+            const commands = extractBashCommands(contentText);
+            if (commands.length > 0) {
+              let delay = 300;
+              for (const cmd of commands) {
+                if (isDangerousCommand(cmd)) continue;
+                const capturedCmd = cmd;
+                setTimeout(() => runCommandInTerminal(capturedCmd), delay);
+                delay += 600;
+              }
+            }
+          }
           void tryOpenDiffPreviewForLastMessage(sessionId);
         });
       } else if (chunk.type === 'error') {
@@ -720,6 +837,16 @@ export function bindChatEvents(api: Api): void {
   const form = document.getElementById('chatInputForm');
   const input = document.getElementById('chatInput') as HTMLTextAreaElement;
   if (!form || !input) return;
+
+  // Bind permission mode selector
+  const modeSelect = document.getElementById('chatModeSelect') as HTMLSelectElement | null;
+  if (modeSelect) {
+    modeSelect.value = state.aiPermissionMode;
+    modeSelect.addEventListener('change', () => {
+      state.aiPermissionMode = modeSelect.value as 'ask' | 'confirm' | 'auto';
+    });
+  }
+
   form.addEventListener('submit', (e) => {
     e.preventDefault();
     const text = input.value;

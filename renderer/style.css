@@ -1824,11 +1824,76 @@ body {
   color: var(--text-tertiary);
 }
 
-.chatMessageContent pre {
+/* === Code block wrapper with copy/run buttons === */
+.chatCodeBlock {
   margin: 6px 0;
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.chatCodeBlockHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 2px 10px;
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border-secondary);
+}
+
+.chatCodeBlockLang {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.chatCodeBlockActions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.chatCodeBlockCopy,
+.chatCodeBlockRun {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 3px;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.chatCodeBlockCopy:hover,
+.chatCodeBlockRun:hover {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+}
+
+.chatCodeBlockRun {
+  color: var(--accent);
+}
+
+.chatCodeBlockRun:hover {
+  color: var(--accent);
+  background: var(--bg-elevated);
+}
+
+.chatCodeBlockTag {
+  font-size: 9px;
+  color: var(--text-tertiary);
+  font-style: italic;
+  opacity: 0.7;
+}
+
+.chatCodeBlock pre {
+  margin: 0;
+  border: none;
+  border-radius: 0;
   padding: 10px 12px;
   background: var(--chat-code-bg);
-  border: 1px solid var(--border-secondary);
   border-radius: var(--radius-sm);
   overflow-x: auto;
   font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
@@ -2179,5 +2244,34 @@ body {
 }
 
 .chatThinkSwitch input:focus-visible + .chatThinkSlider {
+  box-shadow: 0 0 0 2px var(--focus-ring);
+}
+
+/* === AI Permission Mode selector === */
+.chatModeWrap {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  align-self: flex-end;
+  height: 32px;
+}
+
+.chatModeSelect {
+  font-size: 11px;
+  color: var(--text-secondary);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-sm);
+  padding: 2px 6px;
+  cursor: pointer;
+  outline: none;
+  height: 24px;
+}
+
+.chatModeSelect:hover {
+  border-color: var(--border-hover);
+}
+
+.chatModeSelect:focus-visible {
   box-shadow: 0 0 0 2px var(--focus-ring);
 }

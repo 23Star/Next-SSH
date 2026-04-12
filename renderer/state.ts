@@ -46,6 +46,7 @@ export const state = {
   chatMessagesBySession: {} as Record<number, ChatMessage[]>,
   chatLoading: false,
   showThinking: true,
+  aiPermissionMode: 'ask' as 'ask' | 'confirm' | 'auto',
 
   /** Explorer で今表示しているターゲット。'local' または connectionId。ターミナルの activeTab とは独立。 */
   activeExplorerTarget: 'local' as 'local' | number,

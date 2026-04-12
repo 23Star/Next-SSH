@@ -97,6 +97,13 @@ export function renderLayout(root: HTMLElement): void {
               </label>
               <span class="chatThinkModel" id="thinkSwitchModel"></span>
             </div>
+            <div class="chatModeWrap" id="chatModeWrap">
+              <select id="chatModeSelect" class="chatModeSelect" title="${t('ai.modeAsk')}">
+                <option value="ask">${t('ai.modeAsk')}</option>
+                <option value="confirm">${t('ai.modeConfirm')}</option>
+                <option value="auto">${t('ai.modeAuto')}</option>
+              </select>
+            </div>
             <button type="submit" id="btnChatSend" data-i18n="chat.send">${t('chat.send')}</button>
           </form>
         </aside>
