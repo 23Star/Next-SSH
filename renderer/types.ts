@@ -117,6 +117,8 @@ declare global {
         writeLocalFile: (filePath: string, content: string) => Promise<void>;
         readRemoteFile: (connectionId: number, remotePath: string) => Promise<string>;
         writeRemoteFile: (connectionId: number, remotePath: string, content: string) => Promise<void>;
+        getRemoteFileSize: (connectionId: number, remotePath: string) => Promise<number>;
+        getLocalFileSize: (filePath: string) => Promise<number>;
         startDrag: (filePath: string) => Promise<void>;
         copyToFolder: (sourcePaths: string[], targetDir: string) => Promise<void>;
         renamePath: (oldPath: string, newName: string) => Promise<void>;

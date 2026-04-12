@@ -25,6 +25,7 @@ export function renderLayout(root: HTMLElement): void {
             <button type="button" class="sidebarCollapseBtn" data-section="explorer" aria-label="Toggle">\u25BC</button>
             <span class="panelHeader" data-i18n="panel.explorer">${t('panel.explorer')}</span>
             <button type="button" id="btnExplorerUp" class="explorerUpBtn" data-i18n-title="explorer.up" title="${t('explorer.up')}" aria-label="${t('explorer.up')}">↑</button>
+            <button type="button" id="btnExplorerDetail" class="explorerUpBtn" data-i18n-title="explorer.toggleDetail" title="${t('explorer.toggleDetail')}" aria-label="${t('explorer.toggleDetail')}">≡</button>
             <button type="button" id="btnExplorerReload" class="explorerUpBtn" data-i18n-title="reload" title="${t('reload')}" aria-label="${t('reload')}">↻</button>
           </div>
           <div class="sidebarContent" id="explorerContent">

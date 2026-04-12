@@ -41,10 +41,11 @@ export function registerLocaleHandlers(): void {
     BrowserWindow.getAllWindows().forEach((win) => win.webContents.send('locale-changed', locale));
     if (_localeChangedCallback) _localeChangedCallback(locale);
   });
-  ipcMain.handle('locale:getLangPack', (_event, locale: Locale) => {
+  ipcMain.handle('locale:getLangPack', (_event, localeJson: string) => {
+    const locale: Locale = JSON.parse(localeJson);
     const all = loadLangJson();
     const pack = all[locale] ?? all.en ?? {};
-    return pack as LangPack;
+    return JSON.stringify(pack);
   });
 
   ipcMain.handle('theme:get', () => getStoredTheme());

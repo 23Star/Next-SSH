@@ -433,8 +433,28 @@ export function focusActiveEditor(): void {
   if (inst) inst.editor.focus();
 }
 
+const LARGE_FILE_THRESHOLD = 512 * 1024; // 512KB
+
+/** Track loading tab IDs so closeMainPanelTab can abort them. */
+const loadingTabs = new Set<string>();
+
+export function isLoadingTab(tabId: string): boolean {
+  return loadingTabs.has(tabId);
+}
+
+function removeLoadingTab(tabId: string, editorContainerEl: HTMLElement | null): void {
+  loadingTabs.delete(tabId);
+  const loader = editorContainerEl?.querySelector(`[data-tab-id="${tabId}"]`);
+  if (loader) loader.remove();
+  const idx = state.mainPanelTabs.findIndex((t) => t.id === tabId);
+  if (idx !== -1) state.mainPanelTabs.splice(idx, 1);
+  state.activeMainPanelTabId = state.mainPanelTabs.length > 0
+    ? state.mainPanelTabs[Math.min(idx, state.mainPanelTabs.length - 1)].id
+    : null;
+}
+
 /**
- * ファイルをエディタで開く。ローディング表示付き。既に同じ path+target があればそれに切り替える。
+ * ファイルをエディタで開く。ローディング表示、中止ボタン、大ファイル警告付き。
  */
 export async function openFileInEditor(api: Api, filePath: string, target: EditorTarget): Promise<string | null> {
   const existingId = findEditorTabByPath(filePath, target);
@@ -442,21 +462,56 @@ export async function openFileInEditor(api: Api, filePath: string, target: Edito
 
   const label = filePath.replace(/^.*[/\\]/, '') || filePath;
   const tabId = `editor-${Date.now()}`;
+
+  // --- Large file check ---
+  try {
+    let fileSize = 0;
+    if (target === 'local' && api.explorer?.getLocalFileSize) {
+      fileSize = await api.explorer.getLocalFileSize(filePath);
+    } else if (target !== 'local' && api.explorer?.getRemoteFileSize) {
+      fileSize = await api.explorer.getRemoteFileSize(target, filePath);
+    }
+    if (fileSize > LARGE_FILE_THRESHOLD) {
+      const sizeStr = fileSize > 1024 * 1024
+        ? `${(fileSize / (1024 * 1024)).toFixed(1)}MB`
+        : `${(fileSize / 1024).toFixed(0)}KB`;
+      const msg = t('editor.largeFileWarning').replace('%s', sizeStr);
+      const confirmed = window.confirm(msg);
+      if (!confirmed) return null;
+    }
+  } catch {
+    // If size check fails, proceed anyway
+  }
+
   state.mainPanelTabs.push({ id: tabId, kind: 'editor', filePath, label, target });
   state.activeMainPanelTabId = tabId;
+  loadingTabs.add(tabId);
 
-  // Show loading placeholder immediately
+  // Show loading placeholder with cancel button
   const editorContainerEl = document.getElementById('editorContainer');
   if (editorContainerEl) {
     const loader = document.createElement('div');
     loader.className = 'editorTabContent editorLoading';
     loader.dataset.tabId = tabId;
-    loader.innerHTML = `<div class="editorLoadingSpinner"></div><span class="editorLoadingText">${t('explorer.loading')}</span>`;
+    loader.innerHTML = `<div class="editorLoadingSpinner"></div>
+      <span class="editorLoadingText">${t('explorer.loading')}</span>
+      <button type="button" class="editorLoadingCancel" id="editorCancel-${tabId}">${t('editor.cancelLoad')}</button>`;
     editorContainerEl.appendChild(loader);
   }
 
-  // Update tab bar so user sees the tab + loading state
   terminal.renderMainPanelTabBar(api);
+
+  // Cancel button handler
+  const cancelBtn = document.getElementById(`editorCancel-${tabId}`);
+  cancelBtn?.addEventListener('click', () => {
+    if (loadingTabs.has(tabId)) {
+      removeLoadingTab(tabId, editorContainerEl);
+      terminal.renderMainPanelTabBar(api);
+    }
+  });
+
+  // Check if already cancelled during await
+  if (!loadingTabs.has(tabId)) return null;
 
   let content: string;
   try {
@@ -468,19 +523,20 @@ export async function openFileInEditor(api: Api, filePath: string, target: Edito
       content = await api.explorer.readRemoteFile(target, filePath);
     }
   } catch (err) {
-    // Remove loading placeholder and the tab
-    const loader = editorContainerEl?.querySelector(`[data-tab-id="${tabId}"]`);
-    if (loader) loader.remove();
-    const idx = state.mainPanelTabs.findIndex((t) => t.id === tabId);
-    if (idx !== -1) state.mainPanelTabs.splice(idx, 1);
-    state.activeMainPanelTabId = state.mainPanelTabs.length > 0 ? state.mainPanelTabs[0].id : null;
-    terminal.renderMainPanelTabBar(api);
-    await showMessage({
-      title: t('editor.openFailed'),
-      message: `${t('editor.openFailed')}: ${err instanceof Error ? err.message : String(err)}`,
-    });
+    if (loadingTabs.has(tabId)) {
+      removeLoadingTab(tabId, editorContainerEl);
+      terminal.renderMainPanelTabBar(api);
+      await showMessage({
+        title: t('editor.openFailed'),
+        message: `${t('editor.openFailed')}: ${err instanceof Error ? err.message : String(err)}`,
+      });
+    }
     return null;
   }
+
+  // Check again if cancelled while reading
+  if (!loadingTabs.has(tabId)) return null;
+  loadingTabs.delete(tabId);
 
   // Remove loading placeholder, create real editor
   const loader = editorContainerEl?.querySelector(`.editorLoading[data-tab-id="${tabId}"]`);

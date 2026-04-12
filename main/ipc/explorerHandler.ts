@@ -40,38 +40,40 @@ function isDriveRoot(p: string): boolean {
 }
 
 export function registerExplorerHandlers(): void {
-  ipcMain.handle('explorer:getHome', async (_event, connectionId: number) => {
-    return sshConnection.getHome(connectionId);
+  ipcMain.handle('explorer:getHome', async (_event, connectionIdJson: string) => {
+    return JSON.stringify(await sshConnection.getHome(JSON.parse(connectionIdJson)));
   });
 
-  ipcMain.handle('explorer:listDirectory', async (_event, connectionId: number, dirPath: string) => {
-    return sshConnection.listDirectory(connectionId, dirPath);
+  ipcMain.handle('explorer:listDirectory', async (_event, connectionIdJson: string, dirPathJson: string) => {
+    return JSON.stringify(await sshConnection.listDirectory(JSON.parse(connectionIdJson), JSON.parse(dirPathJson)));
   });
 
   ipcMain.handle('explorer:getLocalHome', async () => {
-    return PC_ROOT;
+    return JSON.stringify(PC_ROOT);
   });
 
-  ipcMain.handle('explorer:getLocalParent', async (_event, dirPath: string) => {
-    if (dirPath === PC_ROOT) return PC_ROOT;
+  ipcMain.handle('explorer:getLocalParent', async (_event, dirPathJson: string) => {
+    const dirPath: string = JSON.parse(dirPathJson);
+    if (dirPath === PC_ROOT) return JSON.stringify(PC_ROOT);
     const resolved = path.resolve(dirPath);
-    if (isDriveRoot(resolved)) return PC_ROOT;
+    if (isDriveRoot(resolved)) return JSON.stringify(PC_ROOT);
     const parent = path.resolve(resolved, '..');
-    if (parent === resolved) return resolved;
-    if (isDriveRoot(parent)) return PC_ROOT;
-    return parent;
+    if (parent === resolved) return JSON.stringify(resolved);
+    if (isDriveRoot(parent)) return JSON.stringify(PC_ROOT);
+    return JSON.stringify(parent);
   });
 
-  ipcMain.handle('explorer:listLocalDirectory', async (_event, dirPath: string) => {
+  ipcMain.handle('explorer:listLocalDirectory', async (_event, dirPathJson: string) => {
+    const dirPath: string = JSON.parse(dirPathJson);
     if (dirPath === PC_ROOT) {
-      return getLocalDrives();
+      return JSON.stringify(getLocalDrives());
     }
     const resolved = path.resolve(dirPath);
     if (!fs.existsSync(resolved) || !fs.statSync(resolved).isDirectory()) {
       throw new Error('Not a directory');
     }
     const entries = fs.readdirSync(resolved, { withFileTypes: true });
-    return entries
+    const result = entries
       .filter((e) => e.name !== '.' && e.name !== '..')
       .map((e) => {
         try {
@@ -89,26 +91,29 @@ export function registerExplorerHandlers(): void {
         if (a.isDirectory !== b.isDirectory) return a.isDirectory ? -1 : 1;
         return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
       });
+    return JSON.stringify(result);
   });
 
-  /** ローカルファイルを UTF-8 で読み取り（エディタ用）。 */
-  ipcMain.handle('explorer:readLocalFile', async (_event, filePath: string) => {
+  ipcMain.handle('explorer:readLocalFile', async (_event, filePathJson: string) => {
+    const filePath: string = JSON.parse(filePathJson);
     const resolved = path.resolve(filePath);
     if (!fs.existsSync(resolved)) throw new Error('File not found');
     if (!fs.statSync(resolved).isFile()) throw new Error('Not a file');
-    return fs.readFileSync(resolved, 'utf8');
+    return JSON.stringify(fs.readFileSync(resolved, 'utf8'));
   });
 
-  /** ローカルファイルを UTF-8 で書き込み（エディタ保存用）。 */
-  ipcMain.handle('explorer:writeLocalFile', async (_event, filePath: string, content: string) => {
+  ipcMain.handle('explorer:writeLocalFile', async (_event, filePathJson: string, contentJson: string) => {
+    const filePath: string = JSON.parse(filePathJson);
+    const content: string = JSON.parse(contentJson);
     const resolved = path.resolve(filePath);
     const dir = path.dirname(resolved);
     if (!fs.existsSync(dir) || !fs.statSync(dir).isDirectory()) throw new Error('Directory not found');
     fs.writeFileSync(resolved, content, 'utf8');
   });
 
-  /** ローカルでリネーム（ファイル・フォルダ）。 */
-  ipcMain.handle('explorer:renamePath', (_event, oldPath: string, newName: string) => {
+  ipcMain.handle('explorer:renamePath', (_event, oldPathJson: string, newNameJson: string) => {
+    const oldPath: string = JSON.parse(oldPathJson);
+    const newName: string = JSON.parse(newNameJson);
     const normalized = path.normalize(oldPath.replace(/\//g, path.sep));
     const resolvedOld = path.resolve(normalized);
     const parent = path.dirname(resolvedOld);
@@ -117,8 +122,8 @@ export function registerExplorerHandlers(): void {
     fs.renameSync(resolvedOld, resolvedNew);
   });
 
-  /** ローカルで削除（ファイルは unlink、フォルダは再帰削除）。 */
-  ipcMain.handle('explorer:deletePath', (_event, filePath: string) => {
+  ipcMain.handle('explorer:deletePath', (_event, filePathJson: string) => {
+    const filePath: string = JSON.parse(filePathJson);
     const normalized = path.normalize(filePath.replace(/\//g, path.sep));
     const resolved = path.resolve(normalized);
     if (!fs.existsSync(resolved)) throw new Error('Not found');
@@ -130,14 +135,24 @@ export function registerExplorerHandlers(): void {
     }
   });
 
-  /** リモート（SSH）のテキストファイルを読み取り（エディタ用）。 */
-  ipcMain.handle('explorer:readRemoteFile', async (_event, connectionId: number, remotePath: string) => {
-    return sshConnection.readRemoteFile(connectionId, remotePath);
+  ipcMain.handle('explorer:readRemoteFile', async (_event, connectionIdJson: string, remotePathJson: string) => {
+    return JSON.stringify(await sshConnection.readRemoteFile(JSON.parse(connectionIdJson), JSON.parse(remotePathJson)));
   });
 
-  /** リモート（SSH）にテキストファイルを書き込み（エディタ保存用）。 */
-  ipcMain.handle('explorer:writeRemoteFile', async (_event, connectionId: number, remotePath: string, content: string) => {
-    return sshConnection.writeRemoteFile(connectionId, remotePath, content);
+  ipcMain.handle('explorer:getRemoteFileSize', async (_event, connectionIdJson: string, remotePathJson: string) => {
+    return JSON.stringify(await sshConnection.getFileSize(JSON.parse(connectionIdJson), JSON.parse(remotePathJson)));
+  });
+
+  ipcMain.handle('explorer:getLocalFileSize', async (_event, filePathJson: string) => {
+    const filePath: string = JSON.parse(filePathJson);
+    const resolved = path.resolve(filePath);
+    if (!fs.existsSync(resolved)) return JSON.stringify(0);
+    const stat = fs.statSync(resolved);
+    return JSON.stringify(stat.isFile() ? stat.size : 0);
+  });
+
+  ipcMain.handle('explorer:writeRemoteFile', async (_event, connectionIdJson: string, remotePathJson: string, contentJson: string) => {
+    return sshConnection.writeRemoteFile(JSON.parse(connectionIdJson), JSON.parse(remotePathJson), JSON.parse(contentJson));
   });
 
   /** ドラッグ用の小さなアイコン（1x1 PNG）。icon にファイルパスを渡すとフォルダ等で "Failed to load image" になるため。 */
@@ -189,17 +204,18 @@ export function registerExplorerHandlers(): void {
     }
   }
 
-  /** Phase1: 他アプリ（Explorer等）からドロップしたファイルを指定フォルダにコピー。 */
-  ipcMain.handle('explorer:copyToFolder', (_event, sourcePaths: string[], targetDir: string) => {
+  ipcMain.handle('explorer:copyToFolder', (_event, sourcePathsJson: string, targetDirJson: string) => {
+    const sourcePaths: string[] = JSON.parse(sourcePathsJson);
+    const targetDir: string = JSON.parse(targetDirJson);
     console.log('[explorer] copyToFolder called, sources:', sourcePaths.length, 'target:', targetDir);
     copyToFolderInternal(sourcePaths, targetDir);
     console.log('[explorer] copyToFolder done');
   });
 
-  /** 右クリック「ダウンロード」: 保存先フォルダを選んでコピー。Phase1 はローカル（PC）のみ。 */
-  ipcMain.handle('explorer:downloadToDestination', async (event, sourcePaths: string[]) => {
+  ipcMain.handle('explorer:downloadToDestination', async (event, sourcePathsJson: string) => {
+    const sourcePaths: string[] = JSON.parse(sourcePathsJson);
     const win = BrowserWindow.fromWebContents(event.sender);
-    if (!win) return { ok: false as const };
+    if (!win) return JSON.stringify({ ok: false });
     console.log('[explorer] downloadToDestination sources:', sourcePaths);
     const result = await dialog.showOpenDialog(win, {
       properties: ['openDirectory'],
@@ -207,24 +223,25 @@ export function registerExplorerHandlers(): void {
     });
     if (result.canceled || !result.filePaths.length) {
       console.log('[explorer] downloadToDestination canceled or no path');
-      return { ok: false as const };
+      return JSON.stringify({ ok: false });
     }
     const targetDir = result.filePaths[0];
     console.log('[explorer] downloadToDestination target:', targetDir);
     try {
       copyToFolderInternal(sourcePaths, targetDir);
       console.log('[explorer] downloadToDestination done');
-      return { ok: true as const };
+      return JSON.stringify({ ok: true });
     } catch (err) {
       console.log('[explorer] downloadToDestination error:', err);
-      return { ok: false as const };
+      return JSON.stringify({ ok: false });
     }
   });
 
-  /** リモート（SSH）のファイルを右クリック「ダウンロード」: 保存先を選んで SFTP で取得。 */
-  ipcMain.handle('explorer:downloadFromRemote', async (event, connectionId: number, remotePaths: string[]) => {
+  ipcMain.handle('explorer:downloadFromRemote', async (event, connectionIdJson: string, remotePathsJson: string) => {
+    const connectionId: number = JSON.parse(connectionIdJson);
+    const remotePaths: string[] = JSON.parse(remotePathsJson);
     const win = BrowserWindow.fromWebContents(event.sender);
-    if (!win) return { ok: false as const };
+    if (!win) return JSON.stringify({ ok: false });
     console.log('[explorer] downloadFromRemote connectionId:', connectionId, 'sources:', remotePaths);
     const result = await dialog.showOpenDialog(win, {
       properties: ['openDirectory'],
@@ -232,21 +249,23 @@ export function registerExplorerHandlers(): void {
     });
     if (result.canceled || !result.filePaths.length) {
       console.log('[explorer] downloadFromRemote canceled');
-      return { ok: false as const };
+      return JSON.stringify({ ok: false });
     }
     const localDir = result.filePaths[0];
     try {
       await sshConnection.downloadToLocal(connectionId, remotePaths, localDir);
       console.log('[explorer] downloadFromRemote done');
-      return { ok: true as const };
+      return JSON.stringify({ ok: true });
     } catch (err) {
       console.log('[explorer] downloadFromRemote error:', err);
-      return { ok: false as const };
+      return JSON.stringify({ ok: false });
     }
   });
 
-  /** Explorer 等からリモート（SSH）パネルへドロップ: ローカルファイルを SFTP でアップロード。 */
-  ipcMain.handle('explorer:uploadToRemote', async (_event, connectionId: number, localPaths: string[], remoteDir: string) => {
+  ipcMain.handle('explorer:uploadToRemote', async (_event, connectionIdJson: string, localPathsJson: string, remoteDirJson: string) => {
+    const connectionId: number = JSON.parse(connectionIdJson);
+    const localPaths: string[] = JSON.parse(localPathsJson);
+    const remoteDir: string = JSON.parse(remoteDirJson);
     console.log('[explorer] uploadToRemote connectionId:', connectionId, 'sources:', localPaths.length, 'target:', remoteDir);
     try {
       await sshConnection.uploadToRemote(connectionId, localPaths, remoteDir);

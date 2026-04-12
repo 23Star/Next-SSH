@@ -57,7 +57,8 @@ async function callOpenAiCompatibleApi(
 
 export function registerChatHandlers(): void {
   // Non-streaming fallback (kept for compatibility)
-  ipcMain.handle('chat:complete', async (_event, messages: ChatMessagePayload[]) => {
+  ipcMain.handle('chat:complete', async (_event, messagesJson: string) => {
+    const messages: ChatMessagePayload[] = JSON.parse(messagesJson);
     const response = await callOpenAiCompatibleApi(messages, false);
     const data = (await response.json()) as {
       choices?: Array<{ message?: { content?: string } }>;
@@ -70,14 +71,14 @@ export function registerChatHandlers(): void {
     if (typeof content !== 'string' || content.length === 0) {
       throw new Error('API 返回为空。');
     }
-    return content;
+    return JSON.stringify(content);
   });
 
   // Streaming: renderer sends messages via invoke (avoids ByteString encoding issues)
   ipcMain.handle('chat:streamStart', async (event, messagesJson: string) => {
     const messages: ChatMessagePayload[] = JSON.parse(messagesJson);
     const send = (chunk: StreamChunkPayload) => {
-      try { event.sender.send('chat:streamChunk', chunk); } catch { /* window closed */ }
+      try { event.sender.send('chat:streamChunk', JSON.stringify(chunk)); } catch { /* window closed */ }
     };
 
     try {
@@ -145,48 +146,47 @@ export function registerChatHandlers(): void {
     }
   });
 
-  ipcMain.handle('chatSession:list', async () => chatSessionRepo.listChatSessions());
-  ipcMain.handle('chatSession:create', async (_event, title?: string | null) =>
-    chatSessionRepo.createChatSession(title),
+  ipcMain.handle('chatSession:list', async () => JSON.stringify(await chatSessionRepo.listChatSessions()));
+  ipcMain.handle('chatSession:create', async (_event, titleJson: string) =>
+    JSON.stringify(await chatSessionRepo.createChatSession(JSON.parse(titleJson))),
   );
-  ipcMain.handle('chatSession:update', async (_event, id: number, input: { title?: string }) =>
-    chatSessionRepo.updateChatSession(id, input),
+  ipcMain.handle('chatSession:update', async (_event, idJson: string, inputJson: string) =>
+    chatSessionRepo.updateChatSession(JSON.parse(idJson), JSON.parse(inputJson)),
   );
-  ipcMain.handle('chatSession:delete', async (_event, id: number) =>
-    chatSessionRepo.deleteChatSession(id),
+  ipcMain.handle('chatSession:delete', async (_event, idJson: string) =>
+    chatSessionRepo.deleteChatSession(JSON.parse(idJson)),
   );
 
-  ipcMain.handle('chatContext:listBySession', async (_event, sessionId: number) =>
-    chatContextRepo.listChatContextBySessionId(sessionId),
+  ipcMain.handle('chatContext:listBySession', async (_event, sessionIdJson: string) =>
+    JSON.stringify(await chatContextRepo.listChatContextBySessionId(JSON.parse(sessionIdJson))),
   );
   ipcMain.handle(
     'chatContext:add',
-    async (
-      _event,
-      sessionId: number,
-      role: string,
-      content: string,
-      suggestedCommands?: string[] | null,
-    ) => chatContextRepo.addChatContext(sessionId, role, content, suggestedCommands),
+    async (_event, sessionIdJson: string, roleJson: string, contentJson: string, suggestedCommandsJson?: string) =>
+      JSON.stringify(await chatContextRepo.addChatContext(
+        JSON.parse(sessionIdJson), JSON.parse(roleJson), JSON.parse(contentJson),
+        suggestedCommandsJson ? JSON.parse(suggestedCommandsJson) : null,
+      )),
   );
-  ipcMain.handle('chatContext:deleteByIds', async (_event, ids: number[]) =>
-    chatContextRepo.deleteChatContextByIds(ids),
+  ipcMain.handle('chatContext:deleteByIds', async (_event, idsJson: string) =>
+    chatContextRepo.deleteChatContextByIds(JSON.parse(idsJson)),
   );
 
-  ipcMain.handle('serveroutput:get', async (_event, connectionId: number) => {
-    return serveroutputContextRepo.getServeroutputContextByConnectionId(connectionId);
+  ipcMain.handle('serveroutput:get', async (_event, connectionIdJson: string) => {
+    return JSON.stringify(serveroutputContextRepo.getServeroutputContextByConnectionId(JSON.parse(connectionIdJson)));
   });
-  ipcMain.handle('serveroutput:append', async (_event, connectionId: number, data: string) => {
-    serveroutputContextRepo.appendServeroutputContextByConnectionId(connectionId, data);
+  ipcMain.handle('serveroutput:append', async (_event, connectionIdJson: string, dataJson: string) => {
+    serveroutputContextRepo.appendServeroutputContextByConnectionId(JSON.parse(connectionIdJson), JSON.parse(dataJson));
   });
 }
 
 export function registerAiSettingsHandlers(): void {
   ipcMain.handle('aiSettings:get', async () => {
-    return aiSettings.getAiSettingsDisplay();
+    return JSON.stringify(aiSettings.getAiSettingsDisplay());
   });
 
-  ipcMain.handle('aiSettings:set', async (_event, input: aiSettings.AiSettingsInput) => {
+  ipcMain.handle('aiSettings:set', async (_event, inputJson: string) => {
+    const input: aiSettings.AiSettingsInput = JSON.parse(inputJson);
     aiSettings.setAiSettings(input);
   });
 
@@ -194,18 +194,18 @@ export function registerAiSettingsHandlers(): void {
     try {
       const settings = aiSettings.getAiSettings();
       if (!settings.apiUrl || !settings.apiKey || !settings.model) {
-        return { ok: false, message: '请填写 API URL、API Key 和 Model。' };
+        return JSON.stringify({ ok: false, message: '请填写 API URL、API Key 和 Model。' });
       }
       await callOpenAiCompatibleApi(
         [{ role: 'user', content: 'Hi' }],
         false,
       );
-      return { ok: true, message: '模型正常' };
+      return JSON.stringify({ ok: true, message: '模型正常' });
     } catch (err) {
-      return {
+      return JSON.stringify({
         ok: false,
         message: err instanceof Error ? err.message : String(err),
-      };
+      });
     }
   });
 
@@ -216,7 +216,7 @@ export function registerAiSettingsHandlers(): void {
   ipcMain.handle('aiSettings:getModels', async () => {
     const settings = aiSettings.getAiSettings();
     if (!settings.apiUrl || !settings.apiKey) {
-      return { ok: false, models: [], error: '请先填写 API URL 和 API Key' };
+      return JSON.stringify({ ok: false, models: [], error: '请先填写 API URL 和 API Key' });
     }
     try {
       const baseUrl = settings.apiUrl.replace(/\/+$/, '');
@@ -227,7 +227,7 @@ export function registerAiSettingsHandlers(): void {
       });
       if (!response.ok) {
         const text = await response.text().catch(() => '');
-        return { ok: false, models: [], error: `HTTP ${response.status}: ${text || response.statusText}` };
+        return JSON.stringify({ ok: false, models: [], error: `HTTP ${response.status}: ${text || response.statusText}` });
       }
       const data = (await response.json()) as {
         data?: Array<{ id: string; owned_by?: string; object?: string }>;
@@ -236,13 +236,13 @@ export function registerAiSettingsHandlers(): void {
         id: m.id,
         owned_by: m.owned_by ?? '',
       }));
-      return { ok: true, models };
+      return JSON.stringify({ ok: true, models });
     } catch (err) {
-      return { ok: false, models: [], error: err instanceof Error ? err.message : String(err) };
+      return JSON.stringify({ ok: false, models: [], error: err instanceof Error ? err.message : String(err) });
     }
   });
 
   ipcMain.handle('aiSettings:getPresets', async () => {
-    return aiSettings.AI_MODEL_PRESETS;
+    return JSON.stringify(aiSettings.AI_MODEL_PRESETS);
   });
 }

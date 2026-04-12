@@ -345,6 +345,7 @@ async function runApp(): Promise<void> {
   chat.renderChatMessages();
   explorer.renderExplorerTree(api);
   document.getElementById('btnExplorerUp')?.addEventListener('click', () => explorer.explorerUp(api));
+  document.getElementById('btnExplorerDetail')?.addEventListener('click', () => explorer.toggleExplorerDetails(api));
   document.getElementById('btnExplorerReload')?.addEventListener('click', () => explorer.reloadExplorerCurrent(api));
   explorer.bindExplorerDropTarget(api);
   explorer.setupExplorerContextMenu(api);

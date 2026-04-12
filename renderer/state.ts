@@ -78,6 +78,7 @@ export const state = {
   sidebarCollapsed: { servers: false, explorer: false, serverInfo: false } as Record<string, boolean>,
   _savedExplorerHeight: 0 as number,
   _savedServerInfoHeight: 0 as number,
+  showExplorerDetails: true,
 };
 
 export function getNextConnectionId(): number {

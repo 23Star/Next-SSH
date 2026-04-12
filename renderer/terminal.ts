@@ -298,7 +298,15 @@ function closeMainPanelTab(api: Api, tabId: string): void {
     api.terminal.localDisconnect(tabId);
     disposeLocalTerminalTab(tabId);
   } else if (tab.kind === 'editor') {
-    editor.disposeEditorForTab(tabId);
+    if (editor.isLoadingTab(tabId)) {
+      // Loading tab: cancel loading then remove
+      const editorContainerEl = document.getElementById('editorContainer');
+      const loader = editorContainerEl?.querySelector(`[data-tab-id="${tabId}"]`);
+      if (loader) loader.remove();
+      editor.disposeEditorForTab(tabId);
+    } else {
+      editor.disposeEditorForTab(tabId);
+    }
   }
   const idx = state.mainPanelTabs.findIndex((t) => t.id === tabId);
   if (idx !== -1) state.mainPanelTabs.splice(idx, 1);

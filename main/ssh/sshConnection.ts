@@ -209,6 +209,25 @@ export function listDirectory(connectionId: number, dirPath: string): Promise<Di
   });
 }
 
+/** 指定パスのファイルサイズを取得（exec で stat を使用）。大きいファイル判定に利用。 */
+export function getFileSize(connectionId: number, remotePath: string): Promise<number> {
+  const c = connections.get(connectionId);
+  if (!c) return Promise.reject(new Error('Not connected'));
+  const safePath = remotePath.replace(/'/g, "'\\''");
+  return new Promise((resolve, reject) => {
+    c.client.exec(`stat -c '%s' '${safePath}' 2>/dev/null || wc -c < '${safePath}'`, (err: Error | undefined, stream: NodeJS.ReadableStream | undefined) => {
+      if (err) return reject(err);
+      if (!stream) return reject(new Error('No exec stream'));
+      let out = '';
+      stream.on('data', (chunk: Buffer) => { out += chunk.toString(); });
+      stream.on('close', () => {
+        const size = parseInt(out.trim(), 10);
+        resolve(isNaN(size) ? 0 : size);
+      });
+    });
+  });
+}
+
 function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes}B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)}K`;

@@ -1,5 +1,13 @@
 import { contextBridge, ipcRenderer } from 'electron';
 
+/**
+ * Wrapper: send arg as JSON string, receive JSON string back.
+ * Avoids Electron 28 contextBridge ByteString encoding errors for chars > 255 (e.g. •, Chinese).
+ */
+function jj(channel: string, ...args: unknown[]): Promise<string> {
+  return ipcRenderer.invoke(channel, ...args.map((a) => JSON.stringify(a))) as Promise<string>;
+}
+
 contextBridge.exposeInMainWorld('electronAPI', {
   ping: () => ipcRenderer.invoke('ping'),
   logToMain: (...args: unknown[]) => ipcRenderer.invoke('log:toMain', ...args),
@@ -11,9 +19,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
     resize: (connectionId: number, rows: number, cols: number, height?: number, width?: number) =>
       ipcRenderer.invoke('terminal:resize', connectionId, rows, cols, height, width),
     onData: (callback: (payload: { connectionId: number; data: string }) => void) => {
-      ipcRenderer.on('terminal:data', (_event, payload: { connectionId: number; data: string }) =>
-        callback(payload),
-      );
+      ipcRenderer.on('terminal:data', (_event, payloadJson: string) => {
+        try { callback(JSON.parse(payloadJson)); } catch { /* ignore */ }
+      });
     },
     localConnect: (tabId: string) => ipcRenderer.invoke('terminal:localConnect', tabId),
     localWrite: (tabId: string, data: string) => ipcRenderer.invoke('terminal:localWrite', tabId, data),
@@ -21,9 +29,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.invoke('terminal:localResize', tabId, cols, rows),
     localDisconnect: (tabId: string) => ipcRenderer.invoke('terminal:localDisconnect', tabId),
     onLocalData: (callback: (payload: { tabId: string; data: string }) => void) => {
-      ipcRenderer.on('terminal:localData', (_event, payload: { tabId: string; data: string }) =>
-        callback(payload),
-      );
+      ipcRenderer.on('terminal:localData', (_event, payloadJson: string) => {
+        try { callback(JSON.parse(payloadJson)); } catch { /* ignore */ }
+      });
     },
   },
   environment: {
@@ -35,65 +43,70 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   chat: {
     complete: (messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>) =>
-      ipcRenderer.invoke('chat:complete', messages),
+      jj('chat:complete', messages).then((r) => JSON.parse(r)),
     streamStart: (messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>) =>
       ipcRenderer.invoke('chat:streamStart', JSON.stringify(messages)),
     onStreamChunk: (callback: (chunk: { type: 'content' | 'thinking' | 'done' | 'error'; text: string }) => void) => {
       ipcRenderer.removeAllListeners('chat:streamChunk');
-      ipcRenderer.on('chat:streamChunk', (_event, chunk) => callback(chunk));
+      ipcRenderer.on('chat:streamChunk', (_event, chunkJson: string) => callback(JSON.parse(chunkJson)));
     },
   },
   chatSession: {
-    list: () => ipcRenderer.invoke('chatSession:list'),
-    create: (title?: string | null) => ipcRenderer.invoke('chatSession:create', title),
-    update: (id: number, input: { title?: string }) => ipcRenderer.invoke('chatSession:update', id, input),
-    delete: (id: number) => ipcRenderer.invoke('chatSession:delete', id),
+    list: () => jj('chatSession:list').then((r) => JSON.parse(r)),
+    create: (title?: string | null) => jj('chatSession:create', title).then((r) => JSON.parse(r)),
+    update: (id: number, input: { title?: string }) => jj('chatSession:update', id, input),
+    delete: (id: number) => jj('chatSession:delete', id),
   },
   chatContext: {
-    listBySession: (sessionId: number) => ipcRenderer.invoke('chatContext:listBySession', sessionId),
+    listBySession: (sessionId: number) => jj('chatContext:listBySession', sessionId).then((r) => JSON.parse(r)),
     add: (sessionId: number, role: string, content: string, suggestedCommands?: string[] | null) =>
-      ipcRenderer.invoke('chatContext:add', sessionId, role, content, suggestedCommands),
-    deleteByIds: (ids: number[]) => ipcRenderer.invoke('chatContext:deleteByIds', ids),
+      jj('chatContext:add', sessionId, role, content, suggestedCommands).then((r) => JSON.parse(r)),
+    deleteByIds: (ids: number[]) => jj('chatContext:deleteByIds', ids),
   },
   serveroutput: {
-    get: (connectionId: number) => ipcRenderer.invoke('serveroutput:get', connectionId),
-    append: (connectionId: number, data: string) => ipcRenderer.invoke('serveroutput:append', connectionId, data),
+    get: (connectionId: number) => jj('serveroutput:get', connectionId).then((r) => JSON.parse(r)),
+    append: (connectionId: number, data: string) => jj('serveroutput:append', connectionId, data),
   },
   explorer: {
-    getHome: (connectionId: number) => ipcRenderer.invoke('explorer:getHome', connectionId),
+    getHome: (connectionId: number) => jj('explorer:getHome', connectionId).then((r) => JSON.parse(r)),
     listDirectory: (connectionId: number, dirPath: string) =>
-      ipcRenderer.invoke('explorer:listDirectory', connectionId, dirPath),
-    getLocalHome: () => ipcRenderer.invoke('explorer:getLocalHome') as Promise<string>,
+      jj('explorer:listDirectory', connectionId, dirPath).then((r) => JSON.parse(r)),
+    getLocalHome: () => jj('explorer:getLocalHome').then((r) => JSON.parse(r)) as Promise<string>,
     listLocalDirectory: (dirPath: string) =>
-      ipcRenderer.invoke('explorer:listLocalDirectory', dirPath) as Promise<Array<{ name: string; isDirectory: boolean }>>,
-    getLocalParent: (dirPath: string) => ipcRenderer.invoke('explorer:getLocalParent', dirPath) as Promise<string>,
-    readLocalFile: (filePath: string) => ipcRenderer.invoke('explorer:readLocalFile', filePath) as Promise<string>,
-    writeLocalFile: (filePath: string, content: string) => ipcRenderer.invoke('explorer:writeLocalFile', filePath, content),
+      jj('explorer:listLocalDirectory', dirPath).then((r) => JSON.parse(r)) as Promise<Array<{ name: string; isDirectory: boolean }>>,
+    getLocalParent: (dirPath: string) => jj('explorer:getLocalParent', dirPath).then((r) => JSON.parse(r)) as Promise<string>,
+    readLocalFile: (filePath: string) => jj('explorer:readLocalFile', filePath).then((r) => JSON.parse(r)) as Promise<string>,
+    writeLocalFile: (filePath: string, content: string) => jj('explorer:writeLocalFile', filePath, content),
     readRemoteFile: (connectionId: number, remotePath: string) =>
-      ipcRenderer.invoke('explorer:readRemoteFile', connectionId, remotePath) as Promise<string>,
+      jj('explorer:readRemoteFile', connectionId, remotePath).then((r) => JSON.parse(r)) as Promise<string>,
     writeRemoteFile: (connectionId: number, remotePath: string, content: string) =>
-      ipcRenderer.invoke('explorer:writeRemoteFile', connectionId, remotePath, content),
+      jj('explorer:writeRemoteFile', connectionId, remotePath, content),
+    getRemoteFileSize: (connectionId: number, remotePath: string) =>
+      jj('explorer:getRemoteFileSize', connectionId, remotePath).then((r) => JSON.parse(r)) as Promise<number>,
+    getLocalFileSize: (filePath: string) =>
+      jj('explorer:getLocalFileSize', filePath).then((r) => JSON.parse(r)) as Promise<number>,
     startDrag: (filePath: string) => ipcRenderer.sendSync('explorer:startDrag', filePath),
     copyToFolder: (sourcePaths: string[], targetDir: string) =>
-      ipcRenderer.invoke('explorer:copyToFolder', sourcePaths, targetDir),
-    renamePath: (oldPath: string, newName: string) => ipcRenderer.invoke('explorer:renamePath', oldPath, newName),
-    deletePath: (filePath: string) => ipcRenderer.invoke('explorer:deletePath', filePath),
+      jj('explorer:copyToFolder', sourcePaths, targetDir),
+    renamePath: (oldPath: string, newName: string) => jj('explorer:renamePath', oldPath, newName),
+    deletePath: (filePath: string) => jj('explorer:deletePath', filePath),
     downloadToDestination: (sourcePaths: string[]) =>
-      ipcRenderer.invoke('explorer:downloadToDestination', sourcePaths) as Promise<{ ok: boolean }>,
+      jj('explorer:downloadToDestination', sourcePaths).then((r) => JSON.parse(r)) as Promise<{ ok: boolean }>,
     downloadFromRemote: (connectionId: number, remotePaths: string[]) =>
-      ipcRenderer.invoke('explorer:downloadFromRemote', connectionId, remotePaths) as Promise<{ ok: boolean }>,
+      jj('explorer:downloadFromRemote', connectionId, remotePaths).then((r) => JSON.parse(r)) as Promise<{ ok: boolean }>,
     uploadToRemote: (connectionId: number, localPaths: string[], remoteDir: string) =>
-      ipcRenderer.invoke('explorer:uploadToRemote', connectionId, localPaths, remoteDir),
+      jj('explorer:uploadToRemote', connectionId, localPaths, remoteDir),
     copyOnRemote: (connectionId: number, sourcePaths: string[], targetDir: string) =>
-      ipcRenderer.invoke('explorer:copyOnRemote', connectionId, sourcePaths, targetDir),
+      jj('explorer:copyOnRemote', connectionId, sourcePaths, targetDir),
   },
   serverInfo: {
-    get: (connectionId: number) => ipcRenderer.invoke('serverInfo:get', connectionId),
+    get: (connectionId: number) => jj('serverInfo:get', connectionId).then((r) => JSON.parse(r)),
   },
   locale: {
     get: () => ipcRenderer.invoke('locale:get') as Promise<'en' | 'zn' | 'ru'>,
     set: (locale: 'en' | 'zn' | 'ru') => ipcRenderer.invoke('locale:set', locale),
-    getLangPack: (locale: 'en' | 'zn' | 'ru') => ipcRenderer.invoke('locale:getLangPack', locale) as Promise<Record<string, string>>,
+    getLangPack: (locale: 'en' | 'zn' | 'ru') =>
+      jj('locale:getLangPack', locale).then((r) => JSON.parse(r)) as Promise<Record<string, string>>,
     onChanged: (callback: (locale: 'en' | 'zn' | 'ru') => void) => {
       ipcRenderer.on('locale-changed', (_event, locale: 'en' | 'zn' | 'ru') => callback(locale));
     },
@@ -113,12 +126,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     },
   },
   aiSettings: {
-    get: () => ipcRenderer.invoke('aiSettings:get'),
+    get: () => ipcRenderer.invoke('aiSettings:get').then((r: string) => JSON.parse(r)),
     set: (input: { apiUrl: string; apiKey: string; model: string; temperature: number; maxTokens: number; systemPrompt: string }) =>
-      ipcRenderer.invoke('aiSettings:set', input),
-    test: () => ipcRenderer.invoke('aiSettings:test') as Promise<{ ok: boolean; message: string }>,
+      ipcRenderer.invoke('aiSettings:set', JSON.stringify(input)),
+    test: () => ipcRenderer.invoke('aiSettings:test').then((r: string) => JSON.parse(r)) as Promise<{ ok: boolean; message: string }>,
     isConfigured: () => ipcRenderer.invoke('aiSettings:isConfigured') as Promise<boolean>,
-    getModels: () => ipcRenderer.invoke('aiSettings:getModels') as Promise<{ ok: boolean; models: Array<{ id: string; owned_by: string }>; error: string }>,
-    getPresets: () => ipcRenderer.invoke('aiSettings:getPresets') as Promise<Array<{ name: string; apiUrl: string; model: string }>>,
+    getModels: () => ipcRenderer.invoke('aiSettings:getModels').then((r: string) => JSON.parse(r)) as Promise<{ ok: boolean; models: Array<{ id: string; owned_by: string }>; error: string }>,
+    getPresets: () => ipcRenderer.invoke('aiSettings:getPresets').then((r: string) => JSON.parse(r)) as Promise<Array<{ name: string; apiUrl: string; model: string }>>,
   },
 });

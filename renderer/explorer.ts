@@ -224,6 +224,13 @@ export async function explorerUp(api: Api): Promise<void> {
   updateExplorerUpButton(api);
 }
 
+export function toggleExplorerDetails(api: Api): void {
+  state.showExplorerDetails = !state.showExplorerDetails;
+  const btn = document.getElementById('btnExplorerDetail');
+  if (btn) btn.classList.toggle('active', state.showExplorerDetails);
+  renderExplorerTree(api);
+}
+
 export function renderExplorerTree(api: Api): void {
   const el = document.getElementById('explorerTreeContainer');
   if (!el) return;
@@ -247,9 +254,11 @@ export function renderExplorerTree(api: Api): void {
         const selected = state.selectedExplorerPath === fullPath ? ' explorerItem--selected' : '';
         const fileIcon = getFileIcon(e.name, e.isDirectory);
         const detailParts: string[] = [];
-        if (e.permissions) detailParts.push(e.permissions);
-        if (e.size) detailParts.push(e.size);
-        if (e.mtime) detailParts.push(e.mtime);
+        if (state.showExplorerDetails) {
+          if (e.permissions) detailParts.push(e.permissions);
+          if (e.size) detailParts.push(e.size);
+          if (e.mtime) detailParts.push(e.mtime);
+        }
         const detailHtml = detailParts.length > 0 ? `<span class="explorerItemDetail">${escapeHtml(detailParts.join('  '))}</span>` : '';
         return `<div class="explorerItem${selected}" data-path="${escapeHtml(fullPath)}" data-isdir="${e.isDirectory}">
           <span class="explorerItemLabel" style="padding-left: ${depth * 12 + 4}px">
