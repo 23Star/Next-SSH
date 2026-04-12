@@ -134,6 +134,9 @@ async function updateSettingsThemeHighlight(): Promise<void> {
   });
 }
 
+/** Cached masked key from the last load — used to detect whether the user changed the key. */
+let cachedMaskedKey = '';
+
 async function loadAiSettingsToForm(): Promise<void> {
   const settings = await api.aiSettings?.get();
   if (!settings) return;
@@ -145,7 +148,8 @@ async function loadAiSettingsToForm(): Promise<void> {
   const maxTokensInput = document.getElementById('aiMaxTokens') as HTMLInputElement | null;
   const systemPromptInput = document.getElementById('aiSystemPrompt') as HTMLTextAreaElement | null;
   if (urlInput) urlInput.value = settings.apiUrl ?? '';
-  if (keyInput) keyInput.value = settings.apiKeyMasked ?? '';
+  cachedMaskedKey = settings.apiKeyMasked ?? '';
+  if (keyInput) keyInput.value = cachedMaskedKey;
   if (modelInput) modelInput.value = settings.model ?? '';
   if (tempInput) {
     tempInput.value = String(settings.temperature ?? 0.7);
@@ -153,6 +157,23 @@ async function loadAiSettingsToForm(): Promise<void> {
   }
   if (maxTokensInput) maxTokensInput.value = String(settings.maxTokens ?? 4096);
   if (systemPromptInput) systemPromptInput.value = settings.systemPrompt ?? '';
+}
+
+/**
+ * Read the API key input. Returns undefined if the user didn't change it
+ * (still shows the masked value), so the backend preserves the real key.
+ * Returns the new key value only when the user actually typed a new one.
+ */
+function resolveApiKeyInput(): string | undefined {
+  const keyInput = document.getElementById('aiApiKey') as HTMLInputElement | null;
+  if (!keyInput) return undefined;
+  const val = keyInput.value;
+  // User didn't touch the key field — keep existing
+  if (val === cachedMaskedKey) return undefined;
+  // User cleared the key
+  if (!val) return '';
+  // User entered a new key
+  return val;
 }
 
 function bindAiSettingsEvents(): void {
@@ -211,7 +232,7 @@ function bindAiSettingsEvents(): void {
     // Save first so backend has the latest URL/key
     await api.aiSettings?.set({
       apiUrl: urlInput?.value ?? '',
-      apiKey: keyInput?.value ?? '',
+      apiKey: resolveApiKeyInput(),
       model: (document.getElementById('aiModel') as HTMLInputElement | null)?.value ?? '',
       temperature: parseFloat((document.getElementById('aiTemperature') as HTMLInputElement | null)?.value ?? '0.7'),
       maxTokens: parseInt((document.getElementById('aiMaxTokens') as HTMLInputElement | null)?.value ?? '4096', 10),
@@ -247,14 +268,13 @@ function bindAiSettingsEvents(): void {
     const resultEl = document.getElementById('aiSettingsTestResult');
     if (resultEl) resultEl.style.display = 'none';
     const urlInput = document.getElementById('aiApiUrl') as HTMLInputElement | null;
-    const keyInput = document.getElementById('aiApiKey') as HTMLInputElement | null;
     const modelInput = document.getElementById('aiModel') as HTMLInputElement | null;
     const tempInput2 = document.getElementById('aiTemperature') as HTMLInputElement | null;
     const maxTokensInput = document.getElementById('aiMaxTokens') as HTMLInputElement | null;
     const systemPromptInput = document.getElementById('aiSystemPrompt') as HTMLTextAreaElement | null;
     await api.aiSettings?.set({
       apiUrl: urlInput?.value ?? '',
-      apiKey: keyInput?.value ?? '',
+      apiKey: resolveApiKeyInput(),
       model: modelInput?.value ?? '',
       temperature: parseFloat(tempInput2?.value ?? '0.7'),
       maxTokens: parseInt(maxTokensInput?.value ?? '4096', 10),
@@ -271,7 +291,6 @@ function bindAiSettingsEvents(): void {
   // Save
   document.getElementById('btnAiSave')?.addEventListener('click', async () => {
     const urlInput = document.getElementById('aiApiUrl') as HTMLInputElement | null;
-    const keyInput = document.getElementById('aiApiKey') as HTMLInputElement | null;
     const modelInput = document.getElementById('aiModel') as HTMLInputElement | null;
     const tempInput2 = document.getElementById('aiTemperature') as HTMLInputElement | null;
     const maxTokensInput = document.getElementById('aiMaxTokens') as HTMLInputElement | null;
@@ -279,7 +298,7 @@ function bindAiSettingsEvents(): void {
     const resultEl = document.getElementById('aiSettingsTestResult');
     await api.aiSettings?.set({
       apiUrl: urlInput?.value ?? '',
-      apiKey: keyInput?.value ?? '',
+      apiKey: resolveApiKeyInput(),
       model: modelInput?.value ?? '',
       temperature: parseFloat(tempInput2?.value ?? '0.7'),
       maxTokens: parseInt(maxTokensInput?.value ?? '4096', 10),

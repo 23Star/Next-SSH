@@ -63,6 +63,16 @@ function runMigration(): void {
       `);
     }
   }
+  // thinking columns for chat_context (idempotent)
+  const hasThinking = db.prepare("SELECT 1 FROM pragma_table_info('chat_context') WHERE name='thinking'").get();
+  if (!hasThinking) {
+    db.exec('ALTER TABLE chat_context ADD COLUMN thinking TEXT');
+  }
+  const hasDuration = db.prepare("SELECT 1 FROM pragma_table_info('chat_context') WHERE name='thinking_duration_ms'").get();
+  if (!hasDuration) {
+    db.exec('ALTER TABLE chat_context ADD COLUMN thinking_duration_ms INTEGER');
+  }
+
   db.exec(`
     CREATE TABLE IF NOT EXISTS serveroutput_context (
       id INTEGER PRIMARY KEY AUTOINCREMENT,

@@ -2,7 +2,7 @@ import { ipcMain } from 'electron';
 import * as sshConnection from '../ssh/sshConnection';
 
 export function registerServerInfoHandlers(): void {
-  ipcMain.handle('serverInfo:get', async (_event, connectionIdJson: string) => {
-    return JSON.stringify(await sshConnection.getServerInfo(JSON.parse(connectionIdJson)));
+  ipcMain.handle('serverInfo:get', async (_event, connectionId: number) => {
+    return await sshConnection.getServerInfo(connectionId);
   });
 }

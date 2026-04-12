@@ -7,12 +7,12 @@ let sendToRenderer: ((connectionId: number, data: string) => void) | null = null
 
 export function registerTerminalHandlers(webContents: WebContents): void {
   sendToRenderer = (connectionId: number, data: string) => {
-    webContents.send('terminal:data', JSON.stringify({ connectionId, data }));
+    webContents.send('terminal:data', { connectionId, data });
   };
 
   ipcMain.handle('terminal:localConnect', (_event, tabId: string) => {
     localTerminal.spawnLocal(tabId, (id, data) => {
-      webContents.send('terminal:localData', JSON.stringify({ tabId: id, data }));
+      webContents.send('terminal:localData', { tabId: id, data });
     });
   });
 

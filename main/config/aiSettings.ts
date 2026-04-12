@@ -23,7 +23,7 @@ export interface AiSettingsDisplay {
 
 export interface AiSettingsInput {
   apiUrl: string;
-  apiKey: string;
+  apiKey?: string;
   model: string;
   temperature: number;
   maxTokens: number;
@@ -61,8 +61,8 @@ function getSettingsPath(): string {
 }
 
 function maskApiKey(key: string): string {
-  if (!key || key.length <= 8) return '••••••••';
-  return key.slice(0, 4) + '••••' + key.slice(-4);
+  if (!key || key.length <= 8) return '********';
+  return key.slice(0, 4) + '****' + key.slice(-4);
 }
 
 export function getAiSettings(): AiSettings {
@@ -93,11 +93,22 @@ export function getAiSettingsDisplay(): AiSettingsDisplay {
 }
 
 export function setAiSettings(input: AiSettingsInput): void {
+  const current = getAiSettings();
+
+  // Resolve API key: only update if a new key is provided
+  // Empty/falsy → clear the key. No key field → keep existing.
+  let apiKey: string;
+  if (input.apiKey === undefined || input.apiKey === '') {
+    apiKey = current.apiKey;
+  } else {
+    apiKey = input.apiKey;
+  }
+
   const dir = path.dirname(getSettingsPath());
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
   const data = {
     apiUrl: input.apiUrl,
-    apiKey: input.apiKey ? encryptCredential(input.apiKey) : '',
+    apiKey: apiKey ? encryptCredential(apiKey) : '',
     model: input.model,
     temperature: input.temperature,
     maxTokens: input.maxTokens,

@@ -103,8 +103,24 @@ export function renderChatMessages(): void {
       const contentHtml = isUser
         ? escapeHtml(m.content).replace(/\n/g, '<br>')
         : renderMarkdown(m.content);
+
+      let thinkingHtml = '';
+      if (!isUser && m.thinking && m.thinking.trim()) {
+        const durationLabel = m.thinkingDurationMs
+          ? ` (${(m.thinkingDurationMs / 1000).toFixed(1)}s)`
+          : '';
+        thinkingHtml = `<details class="chatThinking">
+          <summary class="chatThinkingSummary">
+            <span class="chatThinkingSpinner chatThinkingSpinner--done"></span>
+            <span class="chatThinkingSummaryText">${t('ai.thoughtComplete')}${durationLabel}</span>
+          </summary>
+          <div class="chatThinkingContent">${renderMarkdown(m.thinking)}</div>
+        </details>`;
+      }
+
       return `<div class="chatMessage chatMessage--${m.role}" data-msg-index="${msgIndex}">
         <span class="chatMessageRole">${isUser ? t('chat.roleUser') : t('chat.roleAi')}</span>
+        ${thinkingHtml}
         <div class="chatMessageContent">${contentHtml}</div>
       </div>`;
     })
@@ -112,10 +128,16 @@ export function renderChatMessages(): void {
   el.scrollTop = el.scrollHeight;
 }
 
-/** Render streaming AI message with optional thinking block */
-function createStreamingMessage(): { thinkingEl: HTMLElement | null; contentEl: HTMLElement } {
+/** Render streaming AI message with thinking block and streaming indicator */
+function createStreamingMessage(): {
+  msgDiv: HTMLElement;
+  thinkingContentEl: HTMLElement;
+  thinkingSummaryEl: HTMLElement;
+  contentEl: HTMLElement;
+  indicatorEl: HTMLElement;
+} {
   const el = document.getElementById('chatMessages');
-  if (!el) return { thinkingEl: null, contentEl: document.createElement('div') };
+  if (!el) throw new Error('chatMessages not found');
 
   const msgDiv = document.createElement('div');
   msgDiv.className = 'chatMessage chatMessage--assistant chatMessage--streaming';
@@ -125,6 +147,31 @@ function createStreamingMessage(): { thinkingEl: HTMLElement | null; contentEl: 
   roleSpan.textContent = t('chat.roleAi');
   msgDiv.appendChild(roleSpan);
 
+  // Thinking block (initially hidden, shown on first thinking chunk)
+  const details = document.createElement('details');
+  details.className = 'chatThinking chatThinking--hidden';
+  details.open = true;
+  const summary = document.createElement('summary');
+  summary.className = 'chatThinkingSummary';
+  const spinner = document.createElement('span');
+  spinner.className = 'chatThinkingSpinner';
+  const summaryText = document.createElement('span');
+  summaryText.className = 'chatThinkingSummaryText';
+  summaryText.textContent = t('ai.thinking');
+  summary.appendChild(spinner);
+  summary.appendChild(summaryText);
+  details.appendChild(summary);
+  const thinkingContent = document.createElement('div');
+  thinkingContent.className = 'chatThinkingContent';
+  details.appendChild(thinkingContent);
+  msgDiv.appendChild(details);
+
+  // Streaming indicator (three bouncing dots shown while content area is empty)
+  const indicator = document.createElement('div');
+  indicator.className = 'chatStreamingIndicator';
+  indicator.innerHTML = '<span class="chatStreamingDot"></span><span class="chatStreamingDot"></span><span class="chatStreamingDot"></span>';
+  msgDiv.appendChild(indicator);
+
   const contentDiv = document.createElement('div');
   contentDiv.className = 'chatMessageContent';
   msgDiv.appendChild(contentDiv);
@@ -132,34 +179,21 @@ function createStreamingMessage(): { thinkingEl: HTMLElement | null; contentEl: 
   el.appendChild(msgDiv);
   el.scrollTop = el.scrollHeight;
 
-  return { thinkingEl: null, contentEl: contentDiv };
+  return {
+    msgDiv,
+    thinkingContentEl: thinkingContent,
+    thinkingSummaryEl: summaryText,
+    contentEl: contentDiv,
+    indicatorEl: indicator,
+  };
 }
 
-function ensureThinkingBlock(msgDiv: Element): HTMLElement {
-  let thinking = msgDiv.querySelector('.chatThinking');
-  if (thinking) return thinking as HTMLElement;
-  const details = document.createElement('details');
-  details.className = 'chatThinking';
-  const summary = document.createElement('summary');
-  summary.className = 'chatThinkingSummary';
-  summary.textContent = t('ai.thinking');
-  details.appendChild(summary);
-  const content = document.createElement('div');
-  content.className = 'chatThinkingContent';
-  details.appendChild(content);
-  const roleSpan = msgDiv.querySelector('.chatMessageRole');
-  const contentEl = msgDiv.querySelector('.chatMessageContent');
-  if (roleSpan && contentEl) {
-    msgDiv.insertBefore(details, contentEl);
-  }
-  return content;
-}
-
-function finishStreamingMessage(thinkingText: string, contentText: string): void {
-  const el = document.getElementById('chatMessages');
-  if (!el) return;
-  const msgDiv = el.querySelector('.chatMessage--streaming');
-  if (!msgDiv) return;
+function finishStreamingMessage(
+  msgDiv: Element,
+  thinkingText: string,
+  contentText: string,
+  _thinkingDurationMs: number | null,
+): void {
   msgDiv.classList.remove('chatMessage--streaming');
 
   const thinkingBlock = msgDiv.querySelector('.chatThinking');
@@ -167,10 +201,20 @@ function finishStreamingMessage(thinkingText: string, contentText: string): void
     if (!thinkingText.trim() || !state.showThinking) {
       thinkingBlock.remove();
     } else {
+      // Render thinking as markdown
       const thinkingContent = thinkingBlock.querySelector('.chatThinkingContent') as HTMLElement | null;
-      if (thinkingContent) thinkingContent.textContent = thinkingText;
+      if (thinkingContent) {
+        thinkingContent.innerHTML = renderMarkdown(thinkingText);
+      }
+      // Stop spinner
+      const spinner = thinkingBlock.querySelector('.chatThinkingSpinner');
+      if (spinner) spinner.classList.add('chatThinkingSpinner--done');
     }
   }
+
+  // Remove streaming indicator if still present
+  const indicator = msgDiv.querySelector('.chatStreamingIndicator');
+  if (indicator) indicator.remove();
 
   const contentEl = msgDiv.querySelector('.chatMessageContent') as HTMLElement | null;
   if (contentEl) {
@@ -392,34 +436,51 @@ export async function sendChatMessage(api: Api, userContent: string): Promise<vo
     ];
 
     // Streaming mode
-    const { thinkingEl, contentEl } = createStreamingMessage();
+    const { msgDiv, thinkingContentEl, thinkingSummaryEl, contentEl, indicatorEl } = createStreamingMessage();
     let thinkingText = '';
     let contentText = '';
+    let thinkingDurationMs: number | null = null;
     let done = false;
 
     api.chat.onStreamChunk((chunk) => {
       if (done) return;
+
       if (chunk.type === 'thinking') {
         thinkingText += chunk.text;
         if (state.showThinking) {
-          const msgDiv = document.querySelector('.chatMessage--streaming');
-          if (msgDiv) {
-            const thinkingContent = ensureThinkingBlock(msgDiv);
-            thinkingContent.textContent = thinkingText;
+          const details = msgDiv.querySelector('.chatThinking');
+          if (details) {
+            details.classList.remove('chatThinking--hidden');
           }
+          thinkingContentEl.innerHTML = renderMarkdown(thinkingText);
+        }
+      } else if (chunk.type === 'thinking_end') {
+        thinkingDurationMs = chunk.durationMs ?? null;
+        const spinnerEl = msgDiv.querySelector('.chatThinkingSpinner');
+        if (spinnerEl) spinnerEl.classList.add('chatThinkingSpinner--done');
+        if (thinkingDurationMs !== null) {
+          thinkingSummaryEl.textContent = t('ai.thoughtComplete') + ` (${(thinkingDurationMs / 1000).toFixed(1)}s)`;
+        } else {
+          thinkingSummaryEl.textContent = t('ai.thoughtComplete');
         }
       } else if (chunk.type === 'content') {
+        // Hide streaming indicator on first content chunk
+        if (!contentText && indicatorEl.parentNode) {
+          indicatorEl.remove();
+        }
         contentText += chunk.text;
         contentEl.textContent = contentText;
       } else if (chunk.type === 'done') {
         done = true;
-        finishStreamingMessage(thinkingText, contentText);
+        finishStreamingMessage(msgDiv, thinkingText, contentText, thinkingDurationMs);
         const suggestedCommands = extractSuggestedCommands(contentText);
-        api.chatContext!.add(sessionId, 'assistant', contentText, suggestedCommands).then((row) => {
+        api.chatContext!.add(sessionId, 'assistant', contentText, suggestedCommands, thinkingText || null, thinkingDurationMs).then((row) => {
           state.chatMessagesBySession[sessionId].push({
             id: row.id,
             role: 'assistant',
             content: row.content,
+            thinking: row.thinking ?? undefined,
+            thinkingDurationMs: row.thinkingDurationMs ?? undefined,
             suggestedCommands: row.suggestedCommands ?? undefined,
           });
           renderChatMessages();
@@ -428,7 +489,7 @@ export async function sendChatMessage(api: Api, userContent: string): Promise<vo
       } else if (chunk.type === 'error') {
         done = true;
         contentText += `\n\n**Error:** ${chunk.text}`;
-        finishStreamingMessage(thinkingText, contentText);
+        finishStreamingMessage(msgDiv, thinkingText, contentText, thinkingDurationMs);
       }
 
       if (!done) {
@@ -437,7 +498,7 @@ export async function sendChatMessage(api: Api, userContent: string): Promise<vo
       }
     });
 
-    api.chat.streamStart(payload);
+    api.chat.streamStart(payload, state.showThinking);
   } catch (err) {
     const errContent = `Error: ${err instanceof Error ? err.message : String(err)}`;
     api.chatContext!.add(sessionId, 'assistant', errContent).then((row) => {
@@ -503,6 +564,8 @@ export async function loadChatSessions(api: Api): Promise<void> {
       id: m.id,
       role: m.role as 'user' | 'assistant',
       content: m.content,
+      thinking: m.thinking ?? undefined,
+      thinkingDurationMs: m.thinkingDurationMs ?? undefined,
       suggestedCommands: m.suggestedCommands ?? undefined,
     }));
   }
@@ -520,6 +583,8 @@ export function switchChatTab(api: Api, sessionId: number): void {
         id: m.id,
         role: m.role as 'user' | 'assistant',
         content: m.content,
+        thinking: m.thinking ?? undefined,
+        thinkingDurationMs: m.thinkingDurationMs ?? undefined,
         suggestedCommands: m.suggestedCommands ?? undefined,
       }));
       renderChatMessages();
@@ -561,30 +626,45 @@ export function bindThinkToggle(): void {
 
   checkbox.addEventListener('change', () => {
     state.showThinking = checkbox.checked;
-    document.querySelectorAll('.chatThinking').forEach((el) => {
-      (el as HTMLElement).style.display = state.showThinking ? '' : 'none';
-    });
+    // Toggle only affects future API calls, not historical display
   });
 }
 
-/** Known model name patterns that support thinking/reasoning. */
+/**
+ * Known model name patterns that typically support thinking/reasoning.
+ * Used ONLY for display hints — the toggle is always available.
+ * Detection happens at runtime: if the stream returns reasoning_content, thinking is shown.
+ */
 const THINKING_MODEL_PATTERNS = [
+  // OpenAI
+  /\bo[1-4]\b/i,
+  /\bo1-/i,
+  /\bo3/i,
+  /\bo4/i,
+  // Claude
   /claude-.*3[.-]5/i,
   /claude-.*4/i,
   /claude-opus/i,
   /claude-sonnet/i,
-  /o1-/i,
-  /o3-/i,
-  /o4-/i,
+  // DeepSeek
   /deepseek-r/i,
   /deepseek-reasoner/i,
+  /deepseek.*think/i,
+  // Qwen
+  /qwq/i,
+  /qwen3/i,
+  /qwen.*think/i,
+  // GLM / Zhipu
+  /glm-z1/i,
+  /glm.*think/i,
+  // Gemini
   /gemini.*thinking/i,
   /gemini.*flash.*thinking/i,
-  /qwen.*qwq/i,
-  /qwq/i,
+  // Grok
+  /grok.*think/i,
 ];
 
-function modelSupportsThinking(model: string): boolean {
+function isKnownThinkingModel(model: string): boolean {
   if (!model) return false;
   return THINKING_MODEL_PATTERNS.some((p) => p.test(model));
 }
@@ -599,29 +679,24 @@ function updateThinkSwitchState(): void {
   const modelInput = document.getElementById('aiModel') as HTMLInputElement | null;
   const model = modelInput?.value?.trim() ?? '';
 
-  const supported = modelSupportsThinking(model);
-  if (supported) {
-    wrap.classList.remove('chatThinkWrap--disabled');
-    checkbox.disabled = false;
-  } else {
-    wrap.classList.add('chatThinkWrap--disabled');
-    checkbox.disabled = true;
-    checkbox.checked = false;
-    state.showThinking = false;
-  }
+  // Always allow the toggle — thinking is auto-detected from the stream response
+  wrap.classList.remove('chatThinkWrap--disabled');
+  checkbox.disabled = false;
 
-  // Show model name
+  // Show model name with hint
   if (modelSpan) {
     modelSpan.textContent = model || '';
-    modelSpan.title = model
-      ? (supported ? model : `${model} — ${t('ai.noThinkSupport')}`)
-      : t('ai.noModel');
+    if (!model) {
+      modelSpan.title = t('ai.noModel');
+    } else if (isKnownThinkingModel(model)) {
+      modelSpan.title = `${model} ★`;
+    } else {
+      modelSpan.title = model;
+    }
   }
 
   if (control) {
-    control.title = supported
-      ? t('ai.thinkMode')
-      : `${t('ai.thinkMode')} (${t('ai.noThinkSupport')})`;
+    control.title = t('ai.thinkMode');
   }
 }
 

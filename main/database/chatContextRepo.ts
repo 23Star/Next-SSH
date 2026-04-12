@@ -37,6 +37,8 @@ export interface ChatContextRow {
   sessionId: number;
   role: string;
   content: string;
+  thinking: string | null;
+  thinkingDurationMs: number | null;
   suggestedCommands: string[] | null;
   createdAt: string;
 }
@@ -56,6 +58,8 @@ function rowToCamel(row: Record<string, unknown>): ChatContextRow {
     sessionId: row.session_id as number,
     role: row.role as string,
     content: row.content as string,
+    thinking: (row.thinking as string) ?? null,
+    thinkingDurationMs: (row.thinking_duration_ms as number) ?? null,
     suggestedCommands,
     createdAt: row.created_at as string,
   };
@@ -74,14 +78,16 @@ export function addChatContext(
   role: string,
   content: string,
   suggestedCommands?: string[] | null,
+  thinking?: string | null,
+  thinkingDurationMs?: number | null,
 ): ChatContextRow {
   const db = getDb();
   const suggestedJson = suggestedCommands != null ? JSON.stringify(suggestedCommands) : null;
   const result = db
     .prepare(
-      'INSERT INTO chat_context (session_id, role, content, suggested_commands) VALUES (?, ?, ?, ?)',
+      'INSERT INTO chat_context (session_id, role, content, suggested_commands, thinking, thinking_duration_ms) VALUES (?, ?, ?, ?, ?, ?)',
     )
-    .run(sessionId, role, content, suggestedJson);
+    .run(sessionId, role, content, suggestedJson, thinking ?? null, thinkingDurationMs ?? null);
   db.prepare('UPDATE chat_session SET updated_at = datetime(\'now\') WHERE id = ?').run(sessionId);
   trimChatContextToTotalMax(sessionId);
   const row = db.prepare('SELECT * FROM chat_context WHERE id = ?').get(result.lastInsertRowid) as Record<string, unknown>;

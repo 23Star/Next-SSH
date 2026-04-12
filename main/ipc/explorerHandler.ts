@@ -39,41 +39,51 @@ function isDriveRoot(p: string): boolean {
   return /^[A-Za-z]:\\?$/.test(resolved) && resolved.length <= 3;
 }
 
+/** Wrap a string return in { v } to avoid ByteString conversion in Electron 28 contextBridge */
+function sv(s: string): { v: string } {
+  return { v: s };
+}
+
+/** Wrap a number return in { v } to avoid ByteString issues */
+function nv(n: number): { v: number } {
+  return { v: n };
+}
+
 export function registerExplorerHandlers(): void {
-  ipcMain.handle('explorer:getHome', async (_event, connectionIdJson: string) => {
-    return JSON.stringify(await sshConnection.getHome(JSON.parse(connectionIdJson)));
+  ipcMain.handle('explorer:getHome', async (_event, connectionId: number) => {
+    return sv(await sshConnection.getHome(connectionId));
   });
 
-  ipcMain.handle('explorer:listDirectory', async (_event, connectionIdJson: string, dirPathJson: string) => {
-    return JSON.stringify(await sshConnection.listDirectory(JSON.parse(connectionIdJson), JSON.parse(dirPathJson)));
+  ipcMain.handle('explorer:listDirectory', async (_event, connectionId: number, dirPathObj: { v: string }) => {
+    return sshConnection.listDirectory(connectionId, dirPathObj.v);
   });
 
   ipcMain.handle('explorer:getLocalHome', async () => {
-    return JSON.stringify(PC_ROOT);
+    return sv(PC_ROOT);
   });
 
-  ipcMain.handle('explorer:getLocalParent', async (_event, dirPathJson: string) => {
-    const dirPath: string = JSON.parse(dirPathJson);
-    if (dirPath === PC_ROOT) return JSON.stringify(PC_ROOT);
+  ipcMain.handle('explorer:getLocalParent', async (_event, dirPathObj: { v: string }) => {
+    const dirPath = dirPathObj.v;
+    if (dirPath === PC_ROOT) return sv(PC_ROOT);
     const resolved = path.resolve(dirPath);
-    if (isDriveRoot(resolved)) return JSON.stringify(PC_ROOT);
+    if (isDriveRoot(resolved)) return sv(PC_ROOT);
     const parent = path.resolve(resolved, '..');
-    if (parent === resolved) return JSON.stringify(resolved);
-    if (isDriveRoot(parent)) return JSON.stringify(PC_ROOT);
-    return JSON.stringify(parent);
+    if (parent === resolved) return sv(resolved);
+    if (isDriveRoot(parent)) return sv(PC_ROOT);
+    return sv(parent);
   });
 
-  ipcMain.handle('explorer:listLocalDirectory', async (_event, dirPathJson: string) => {
-    const dirPath: string = JSON.parse(dirPathJson);
+  ipcMain.handle('explorer:listLocalDirectory', async (_event, dirPathObj: { v: string }) => {
+    const dirPath = dirPathObj.v;
     if (dirPath === PC_ROOT) {
-      return JSON.stringify(getLocalDrives());
+      return getLocalDrives();
     }
     const resolved = path.resolve(dirPath);
     if (!fs.existsSync(resolved) || !fs.statSync(resolved).isDirectory()) {
       throw new Error('Not a directory');
     }
     const entries = fs.readdirSync(resolved, { withFileTypes: true });
-    const result = entries
+    return entries
       .filter((e) => e.name !== '.' && e.name !== '..')
       .map((e) => {
         try {
@@ -91,29 +101,28 @@ export function registerExplorerHandlers(): void {
         if (a.isDirectory !== b.isDirectory) return a.isDirectory ? -1 : 1;
         return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
       });
-    return JSON.stringify(result);
   });
 
-  ipcMain.handle('explorer:readLocalFile', async (_event, filePathJson: string) => {
-    const filePath: string = JSON.parse(filePathJson);
+  ipcMain.handle('explorer:readLocalFile', async (_event, filePathObj: { v: string }) => {
+    const filePath = filePathObj.v;
     const resolved = path.resolve(filePath);
     if (!fs.existsSync(resolved)) throw new Error('File not found');
     if (!fs.statSync(resolved).isFile()) throw new Error('Not a file');
-    return JSON.stringify(fs.readFileSync(resolved, 'utf8'));
+    return sv(fs.readFileSync(resolved, 'utf8'));
   });
 
-  ipcMain.handle('explorer:writeLocalFile', async (_event, filePathJson: string, contentJson: string) => {
-    const filePath: string = JSON.parse(filePathJson);
-    const content: string = JSON.parse(contentJson);
+  ipcMain.handle('explorer:writeLocalFile', async (_event, filePathObj: { v: string }, contentObj: { v: string }) => {
+    const filePath = filePathObj.v;
+    const content = contentObj.v;
     const resolved = path.resolve(filePath);
     const dir = path.dirname(resolved);
     if (!fs.existsSync(dir) || !fs.statSync(dir).isDirectory()) throw new Error('Directory not found');
     fs.writeFileSync(resolved, content, 'utf8');
   });
 
-  ipcMain.handle('explorer:renamePath', (_event, oldPathJson: string, newNameJson: string) => {
-    const oldPath: string = JSON.parse(oldPathJson);
-    const newName: string = JSON.parse(newNameJson);
+  ipcMain.handle('explorer:renamePath', (_event, oldPathObj: { v: string }, newNameObj: { v: string }) => {
+    const oldPath = oldPathObj.v;
+    const newName = newNameObj.v;
     const normalized = path.normalize(oldPath.replace(/\//g, path.sep));
     const resolvedOld = path.resolve(normalized);
     const parent = path.dirname(resolvedOld);
@@ -122,8 +131,8 @@ export function registerExplorerHandlers(): void {
     fs.renameSync(resolvedOld, resolvedNew);
   });
 
-  ipcMain.handle('explorer:deletePath', (_event, filePathJson: string) => {
-    const filePath: string = JSON.parse(filePathJson);
+  ipcMain.handle('explorer:deletePath', (_event, filePathObj: { v: string }) => {
+    const filePath = filePathObj.v;
     const normalized = path.normalize(filePath.replace(/\//g, path.sep));
     const resolved = path.resolve(normalized);
     if (!fs.existsSync(resolved)) throw new Error('Not found');
@@ -135,24 +144,24 @@ export function registerExplorerHandlers(): void {
     }
   });
 
-  ipcMain.handle('explorer:readRemoteFile', async (_event, connectionIdJson: string, remotePathJson: string) => {
-    return JSON.stringify(await sshConnection.readRemoteFile(JSON.parse(connectionIdJson), JSON.parse(remotePathJson)));
+  ipcMain.handle('explorer:readRemoteFile', async (_event, connectionId: number, remotePathObj: { v: string }) => {
+    return sv(await sshConnection.readRemoteFile(connectionId, remotePathObj.v));
   });
 
-  ipcMain.handle('explorer:getRemoteFileSize', async (_event, connectionIdJson: string, remotePathJson: string) => {
-    return JSON.stringify(await sshConnection.getFileSize(JSON.parse(connectionIdJson), JSON.parse(remotePathJson)));
+  ipcMain.handle('explorer:getRemoteFileSize', async (_event, connectionId: number, remotePathObj: { v: string }) => {
+    return nv(await sshConnection.getFileSize(connectionId, remotePathObj.v));
   });
 
-  ipcMain.handle('explorer:getLocalFileSize', async (_event, filePathJson: string) => {
-    const filePath: string = JSON.parse(filePathJson);
+  ipcMain.handle('explorer:getLocalFileSize', async (_event, filePathObj: { v: string }) => {
+    const filePath = filePathObj.v;
     const resolved = path.resolve(filePath);
-    if (!fs.existsSync(resolved)) return JSON.stringify(0);
+    if (!fs.existsSync(resolved)) return nv(0);
     const stat = fs.statSync(resolved);
-    return JSON.stringify(stat.isFile() ? stat.size : 0);
+    return nv(stat.isFile() ? stat.size : 0);
   });
 
-  ipcMain.handle('explorer:writeRemoteFile', async (_event, connectionIdJson: string, remotePathJson: string, contentJson: string) => {
-    return sshConnection.writeRemoteFile(JSON.parse(connectionIdJson), JSON.parse(remotePathJson), JSON.parse(contentJson));
+  ipcMain.handle('explorer:writeRemoteFile', async (_event, connectionId: number, remotePathObj: { v: string }, contentObj: { v: string }) => {
+    return sshConnection.writeRemoteFile(connectionId, remotePathObj.v, contentObj.v);
   });
 
   /** ドラッグ用の小さなアイコン（1x1 PNG）。icon にファイルパスを渡すとフォルダ等で "Failed to load image" になるため。 */
@@ -204,18 +213,16 @@ export function registerExplorerHandlers(): void {
     }
   }
 
-  ipcMain.handle('explorer:copyToFolder', (_event, sourcePathsJson: string, targetDirJson: string) => {
-    const sourcePaths: string[] = JSON.parse(sourcePathsJson);
-    const targetDir: string = JSON.parse(targetDirJson);
+  ipcMain.handle('explorer:copyToFolder', (_event, sourcePaths: string[], targetDirObj: { v: string }) => {
+    const targetDir = targetDirObj.v;
     console.log('[explorer] copyToFolder called, sources:', sourcePaths.length, 'target:', targetDir);
     copyToFolderInternal(sourcePaths, targetDir);
     console.log('[explorer] copyToFolder done');
   });
 
-  ipcMain.handle('explorer:downloadToDestination', async (event, sourcePathsJson: string) => {
-    const sourcePaths: string[] = JSON.parse(sourcePathsJson);
+  ipcMain.handle('explorer:downloadToDestination', async (event, sourcePaths: string[]) => {
     const win = BrowserWindow.fromWebContents(event.sender);
-    if (!win) return JSON.stringify({ ok: false });
+    if (!win) return { ok: false };
     console.log('[explorer] downloadToDestination sources:', sourcePaths);
     const result = await dialog.showOpenDialog(win, {
       properties: ['openDirectory'],
@@ -223,25 +230,23 @@ export function registerExplorerHandlers(): void {
     });
     if (result.canceled || !result.filePaths.length) {
       console.log('[explorer] downloadToDestination canceled or no path');
-      return JSON.stringify({ ok: false });
+      return { ok: false };
     }
     const targetDir = result.filePaths[0];
     console.log('[explorer] downloadToDestination target:', targetDir);
     try {
       copyToFolderInternal(sourcePaths, targetDir);
       console.log('[explorer] downloadToDestination done');
-      return JSON.stringify({ ok: true });
+      return { ok: true };
     } catch (err) {
       console.log('[explorer] downloadToDestination error:', err);
-      return JSON.stringify({ ok: false });
+      return { ok: false };
     }
   });
 
-  ipcMain.handle('explorer:downloadFromRemote', async (event, connectionIdJson: string, remotePathsJson: string) => {
-    const connectionId: number = JSON.parse(connectionIdJson);
-    const remotePaths: string[] = JSON.parse(remotePathsJson);
+  ipcMain.handle('explorer:downloadFromRemote', async (event, connectionId: number, remotePaths: string[]) => {
     const win = BrowserWindow.fromWebContents(event.sender);
-    if (!win) return JSON.stringify({ ok: false });
+    if (!win) return { ok: false };
     console.log('[explorer] downloadFromRemote connectionId:', connectionId, 'sources:', remotePaths);
     const result = await dialog.showOpenDialog(win, {
       properties: ['openDirectory'],
@@ -249,23 +254,21 @@ export function registerExplorerHandlers(): void {
     });
     if (result.canceled || !result.filePaths.length) {
       console.log('[explorer] downloadFromRemote canceled');
-      return JSON.stringify({ ok: false });
+      return { ok: false };
     }
     const localDir = result.filePaths[0];
     try {
       await sshConnection.downloadToLocal(connectionId, remotePaths, localDir);
       console.log('[explorer] downloadFromRemote done');
-      return JSON.stringify({ ok: true });
+      return { ok: true };
     } catch (err) {
       console.log('[explorer] downloadFromRemote error:', err);
-      return JSON.stringify({ ok: false });
+      return { ok: false };
     }
   });
 
-  ipcMain.handle('explorer:uploadToRemote', async (_event, connectionIdJson: string, localPathsJson: string, remoteDirJson: string) => {
-    const connectionId: number = JSON.parse(connectionIdJson);
-    const localPaths: string[] = JSON.parse(localPathsJson);
-    const remoteDir: string = JSON.parse(remoteDirJson);
+  ipcMain.handle('explorer:uploadToRemote', async (_event, connectionId: number, localPaths: string[], remoteDirObj: { v: string }) => {
+    const remoteDir = remoteDirObj.v;
     console.log('[explorer] uploadToRemote connectionId:', connectionId, 'sources:', localPaths.length, 'target:', remoteDir);
     try {
       await sshConnection.uploadToRemote(connectionId, localPaths, remoteDir);

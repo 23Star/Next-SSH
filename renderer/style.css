@@ -1896,6 +1896,11 @@ body {
   border-radius: var(--radius-sm);
   background: var(--thinking-bg);
   overflow: hidden;
+  transition: opacity var(--transition-fast);
+}
+
+.chatThinking--hidden {
+  display: none;
 }
 
 .chatThinkingSummary {
@@ -1904,13 +1909,38 @@ body {
   color: var(--thinking-text);
   cursor: pointer;
   user-select: none;
-  font-style: italic;
-  transition: color var(--transition-fast);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: color var(--transition-fast), background var(--transition-fast);
 }
 
 .chatThinkingSummary:hover {
   color: var(--text-secondary);
   background: var(--bg-elevated);
+}
+
+.chatThinkingSpinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--thinking-border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: thinkingSpin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+.chatThinkingSpinner--done {
+  display: none;
+}
+
+@keyframes thinkingSpin {
+  to { transform: rotate(360deg); }
+}
+
+.chatThinkingSummaryText {
+  font-style: italic;
 }
 
 .chatThinkingContent {
@@ -1919,10 +1949,66 @@ body {
   color: var(--thinking-text);
   line-height: 1.5;
   border-top: 1px solid var(--thinking-border);
-  white-space: pre-wrap;
   word-break: break-word;
-  max-height: 300px;
+  max-height: 500px;
   overflow-y: auto;
+}
+
+.chatThinkingContent p { margin: 2px 0; }
+.chatThinkingContent ul,
+.chatThinkingContent ol { margin: 2px 0; padding-left: 18px; }
+.chatThinkingContent li { margin: 1px 0; }
+.chatThinkingContent code {
+  font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+  font-size: 0.9em;
+}
+.chatThinkingContent :not(pre) > code {
+  padding: 1px 4px;
+  background: var(--chat-inline-code-bg);
+  border-radius: 3px;
+  color: var(--chat-inline-code-color);
+}
+.chatThinkingContent pre {
+  margin: 4px 0;
+  padding: 8px 10px;
+  background: var(--chat-code-bg);
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--radius-xs);
+  overflow-x: auto;
+  font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+  font-size: 11px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+}
+.chatThinkingContent blockquote {
+  margin: 4px 0;
+  padding: 3px 10px;
+  border-left: 2px solid var(--border-primary);
+  color: var(--text-tertiary);
+}
+
+/* Streaming indicator (three bouncing dots) */
+.chatStreamingIndicator {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 0 8px;
+}
+
+.chatStreamingDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-tertiary);
+  animation: streamingBounce 1.2s ease-in-out infinite;
+}
+
+.chatStreamingDot:nth-child(2) { animation-delay: 0.15s; }
+.chatStreamingDot:nth-child(3) { animation-delay: 0.3s; }
+
+@keyframes streamingBounce {
+  0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
+  30% { opacity: 1; transform: translateY(-4px); }
 }
 
 /* === Streaming message === */
@@ -2046,11 +2132,6 @@ body {
   text-overflow: ellipsis;
 }
 
-.chatThinkWrap.chatThinkWrap--disabled .chatThinkLabel,
-.chatThinkWrap.chatThinkWrap--disabled .chatThinkModel {
-  opacity: 0.4;
-}
-
 .chatThinkSwitch {
   position: relative;
   display: inline-flex;
@@ -2058,12 +2139,6 @@ body {
   cursor: pointer;
   user-select: none;
   transition: opacity var(--transition-fast);
-}
-
-.chatThinkWrap.chatThinkWrap--disabled .chatThinkSwitch {
-  opacity: 0.4;
-  cursor: not-allowed;
-  pointer-events: none;
 }
 
 .chatThinkSwitch input {

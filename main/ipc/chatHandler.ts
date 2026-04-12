@@ -10,13 +10,15 @@ export interface ChatMessagePayload {
 }
 
 interface StreamChunkPayload {
-  type: 'content' | 'thinking' | 'done' | 'error';
+  type: 'content' | 'thinking' | 'thinking_end' | 'done' | 'error';
   text: string;
+  durationMs?: number;
 }
 
 async function callOpenAiCompatibleApi(
   messages: ChatMessagePayload[],
   stream: boolean = false,
+  enableThinking: boolean = true,
 ): Promise<Response> {
   const settings = aiSettings.getAiSettings();
   if (!settings.apiUrl || !settings.apiKey || !settings.model) {
@@ -31,6 +33,11 @@ async function callOpenAiCompatibleApi(
     messages: messages.map((m) => ({ role: m.role, content: m.content })),
     stream,
   };
+  // Only request thinking when the user explicitly enables it.
+  // Omitting the parameter lets the model use its default behavior (no thinking).
+  if (enableThinking) {
+    body.enable_thinking = true;
+  }
   if (settings.temperature > 0) {
     body.temperature = settings.temperature;
   }
@@ -56,9 +63,8 @@ async function callOpenAiCompatibleApi(
 }
 
 export function registerChatHandlers(): void {
-  // Non-streaming fallback (kept for compatibility)
-  ipcMain.handle('chat:complete', async (_event, messagesJson: string) => {
-    const messages: ChatMessagePayload[] = JSON.parse(messagesJson);
+  // Non-streaming: returns { v: string } to avoid ByteString issues
+  ipcMain.handle('chat:complete', async (_event, messages: ChatMessagePayload[]) => {
     const response = await callOpenAiCompatibleApi(messages, false);
     const data = (await response.json()) as {
       choices?: Array<{ message?: { content?: string } }>;
@@ -71,18 +77,17 @@ export function registerChatHandlers(): void {
     if (typeof content !== 'string' || content.length === 0) {
       throw new Error('API 返回为空。');
     }
-    return JSON.stringify(content);
+    return { v: content };
   });
 
-  // Streaming: renderer sends messages via invoke (avoids ByteString encoding issues)
-  ipcMain.handle('chat:streamStart', async (event, messagesJson: string) => {
-    const messages: ChatMessagePayload[] = JSON.parse(messagesJson);
+  // Streaming: receives raw array (structured clone handles Unicode in objects)
+  ipcMain.handle('chat:streamStart', async (event, messages: ChatMessagePayload[], enableThinking: boolean = true) => {
     const send = (chunk: StreamChunkPayload) => {
-      try { event.sender.send('chat:streamChunk', JSON.stringify(chunk)); } catch { /* window closed */ }
+      try { event.sender.send('chat:streamChunk', chunk); } catch { /* window closed */ }
     };
 
     try {
-      const response = await callOpenAiCompatibleApi(messages, true);
+      const response = await callOpenAiCompatibleApi(messages, true, enableThinking);
       const reader = response.body?.getReader();
       if (!reader) {
         send({ type: 'error', text: '无法获取响应流' });
@@ -91,6 +96,7 @@ export function registerChatHandlers(): void {
 
       const decoder = new TextDecoder();
       let buffer = '';
+      let thinkingStartTime: number | null = null;
 
       while (true) {
         const { done, value } = await reader.read();
@@ -114,8 +120,13 @@ export function registerChatHandlers(): void {
             const json = JSON.parse(trimmed.slice(6));
             const delta = json.choices?.[0]?.delta;
             if (delta?.reasoning_content) {
+              if (thinkingStartTime === null) thinkingStartTime = Date.now();
               send({ type: 'thinking', text: delta.reasoning_content });
             } else if (delta?.content) {
+              if (thinkingStartTime !== null) {
+                send({ type: 'thinking_end', text: '', durationMs: Date.now() - thinkingStartTime });
+                thinkingStartTime = null;
+              }
               send({ type: 'content', text: delta.content });
             }
           } catch {
@@ -132,8 +143,13 @@ export function registerChatHandlers(): void {
             const json = JSON.parse(trimmed.slice(6));
             const delta = json.choices?.[0]?.delta;
             if (delta?.reasoning_content) {
+              if (thinkingStartTime === null) thinkingStartTime = Date.now();
               send({ type: 'thinking', text: delta.reasoning_content });
             } else if (delta?.content) {
+              if (thinkingStartTime !== null) {
+                send({ type: 'thinking_end', text: '', durationMs: Date.now() - thinkingStartTime });
+                thinkingStartTime = null;
+              }
               send({ type: 'content', text: delta.content });
             }
           } catch { /* ignore */ }
@@ -146,47 +162,43 @@ export function registerChatHandlers(): void {
     }
   });
 
-  ipcMain.handle('chatSession:list', async () => JSON.stringify(await chatSessionRepo.listChatSessions()));
-  ipcMain.handle('chatSession:create', async (_event, titleJson: string) =>
-    JSON.stringify(await chatSessionRepo.createChatSession(JSON.parse(titleJson))),
+  ipcMain.handle('chatSession:list', async () => chatSessionRepo.listChatSessions());
+  ipcMain.handle('chatSession:create', async (_event, titleObj: { v: string } | null) =>
+    chatSessionRepo.createChatSession(titleObj?.v ?? null),
   );
-  ipcMain.handle('chatSession:update', async (_event, idJson: string, inputJson: string) =>
-    chatSessionRepo.updateChatSession(JSON.parse(idJson), JSON.parse(inputJson)),
+  ipcMain.handle('chatSession:update', async (_event, id: number, input: { title?: string }) =>
+    chatSessionRepo.updateChatSession(id, input),
   );
-  ipcMain.handle('chatSession:delete', async (_event, idJson: string) =>
-    chatSessionRepo.deleteChatSession(JSON.parse(idJson)),
+  ipcMain.handle('chatSession:delete', async (_event, id: number) =>
+    chatSessionRepo.deleteChatSession(id),
   );
 
-  ipcMain.handle('chatContext:listBySession', async (_event, sessionIdJson: string) =>
-    JSON.stringify(await chatContextRepo.listChatContextBySessionId(JSON.parse(sessionIdJson))),
+  ipcMain.handle('chatContext:listBySession', async (_event, sessionId: number) =>
+    chatContextRepo.listChatContextBySessionId(sessionId),
   );
   ipcMain.handle(
     'chatContext:add',
-    async (_event, sessionIdJson: string, roleJson: string, contentJson: string, suggestedCommandsJson?: string) =>
-      JSON.stringify(await chatContextRepo.addChatContext(
-        JSON.parse(sessionIdJson), JSON.parse(roleJson), JSON.parse(contentJson),
-        suggestedCommandsJson ? JSON.parse(suggestedCommandsJson) : null,
-      )),
+    async (_event, sessionId: number, role: string, contentObj: { v: string }, suggestedCommands?: string[] | null, thinkingObj?: { v: string } | null, thinkingDurationMs?: number | null) =>
+      chatContextRepo.addChatContext(sessionId, role, contentObj.v, suggestedCommands, thinkingObj?.v ?? null, thinkingDurationMs ?? null),
   );
-  ipcMain.handle('chatContext:deleteByIds', async (_event, idsJson: string) =>
-    chatContextRepo.deleteChatContextByIds(JSON.parse(idsJson)),
+  ipcMain.handle('chatContext:deleteByIds', async (_event, ids: number[]) =>
+    chatContextRepo.deleteChatContextByIds(ids),
   );
 
-  ipcMain.handle('serveroutput:get', async (_event, connectionIdJson: string) => {
-    return JSON.stringify(serveroutputContextRepo.getServeroutputContextByConnectionId(JSON.parse(connectionIdJson)));
+  ipcMain.handle('serveroutput:get', async (_event, connectionId: number) => {
+    return serveroutputContextRepo.getServeroutputContextByConnectionId(connectionId);
   });
-  ipcMain.handle('serveroutput:append', async (_event, connectionIdJson: string, dataJson: string) => {
-    serveroutputContextRepo.appendServeroutputContextByConnectionId(JSON.parse(connectionIdJson), JSON.parse(dataJson));
+  ipcMain.handle('serveroutput:append', async (_event, connectionId: number, dataObj: { v: string }) => {
+    serveroutputContextRepo.appendServeroutputContextByConnectionId(connectionId, dataObj.v);
   });
 }
 
 export function registerAiSettingsHandlers(): void {
   ipcMain.handle('aiSettings:get', async () => {
-    return JSON.stringify(aiSettings.getAiSettingsDisplay());
+    return aiSettings.getAiSettingsDisplay();
   });
 
-  ipcMain.handle('aiSettings:set', async (_event, inputJson: string) => {
-    const input: aiSettings.AiSettingsInput = JSON.parse(inputJson);
+  ipcMain.handle('aiSettings:set', async (_event, input: aiSettings.AiSettingsInput) => {
     aiSettings.setAiSettings(input);
   });
 
@@ -194,18 +206,18 @@ export function registerAiSettingsHandlers(): void {
     try {
       const settings = aiSettings.getAiSettings();
       if (!settings.apiUrl || !settings.apiKey || !settings.model) {
-        return JSON.stringify({ ok: false, message: '请填写 API URL、API Key 和 Model。' });
+        return { ok: false, message: '请填写 API URL、API Key 和 Model。' };
       }
       await callOpenAiCompatibleApi(
         [{ role: 'user', content: 'Hi' }],
         false,
       );
-      return JSON.stringify({ ok: true, message: '模型正常' });
+      return { ok: true, message: '模型正常' };
     } catch (err) {
-      return JSON.stringify({
+      return {
         ok: false,
         message: err instanceof Error ? err.message : String(err),
-      });
+      };
     }
   });
 
@@ -216,7 +228,7 @@ export function registerAiSettingsHandlers(): void {
   ipcMain.handle('aiSettings:getModels', async () => {
     const settings = aiSettings.getAiSettings();
     if (!settings.apiUrl || !settings.apiKey) {
-      return JSON.stringify({ ok: false, models: [], error: '请先填写 API URL 和 API Key' });
+      return { ok: false, models: [], error: '请先填写 API URL 和 API Key' };
     }
     try {
       const baseUrl = settings.apiUrl.replace(/\/+$/, '');
@@ -227,7 +239,7 @@ export function registerAiSettingsHandlers(): void {
       });
       if (!response.ok) {
         const text = await response.text().catch(() => '');
-        return JSON.stringify({ ok: false, models: [], error: `HTTP ${response.status}: ${text || response.statusText}` });
+        return { ok: false, models: [], error: `HTTP ${response.status}: ${text || response.statusText}` };
       }
       const data = (await response.json()) as {
         data?: Array<{ id: string; owned_by?: string; object?: string }>;
@@ -236,13 +248,13 @@ export function registerAiSettingsHandlers(): void {
         id: m.id,
         owned_by: m.owned_by ?? '',
       }));
-      return JSON.stringify({ ok: true, models });
+      return { ok: true, models };
     } catch (err) {
-      return JSON.stringify({ ok: false, models: [], error: err instanceof Error ? err.message : String(err) });
+      return { ok: false, models: [], error: err instanceof Error ? err.message : String(err) };
     }
   });
 
   ipcMain.handle('aiSettings:getPresets', async () => {
-    return JSON.stringify(aiSettings.AI_MODEL_PRESETS);
+    return aiSettings.AI_MODEL_PRESETS;
   });
 }

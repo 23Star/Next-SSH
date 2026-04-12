@@ -29,6 +29,8 @@ export interface ChatMessage {
   id?: number;
   role: 'user' | 'assistant';
   content: string;
+  thinking?: string | null;
+  thinkingDurationMs?: number | null;
   suggestedCommands?: string[] | null;
 }
 
@@ -86,8 +88,8 @@ declare global {
       };
       chat?: {
         complete: (messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>) => Promise<string>;
-        streamStart: (messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>) => void;
-        onStreamChunk: (callback: (chunk: { type: 'content' | 'thinking' | 'done' | 'error'; text: string }) => void) => void;
+        streamStart: (messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>, enableThinking?: boolean) => void;
+        onStreamChunk: (callback: (chunk: { type: 'content' | 'thinking' | 'thinking_end' | 'done' | 'error'; text: string; durationMs?: number }) => void) => void;
       };
       chatSession?: {
         list: () => Promise<Array<{ id: number; title: string; createdAt: string; updatedAt: string }>>;
@@ -96,8 +98,8 @@ declare global {
         delete: (id: number) => Promise<boolean>;
       };
       chatContext?: {
-        listBySession: (sessionId: number) => Promise<Array<{ id: number; sessionId: number; role: string; content: string; suggestedCommands: string[] | null; createdAt: string }>>;
-        add: (sessionId: number, role: string, content: string, suggestedCommands?: string[] | null) => Promise<{ id: number; sessionId: number; role: string; content: string; suggestedCommands: string[] | null; createdAt: string }>;
+        listBySession: (sessionId: number) => Promise<Array<{ id: number; sessionId: number; role: string; content: string; thinking: string | null; thinkingDurationMs: number | null; suggestedCommands: string[] | null; createdAt: string }>>;
+        add: (sessionId: number, role: string, content: string, suggestedCommands?: string[] | null, thinking?: string | null, thinkingDurationMs?: number | null) => Promise<{ id: number; sessionId: number; role: string; content: string; thinking: string | null; thinkingDurationMs: number | null; suggestedCommands: string[] | null; createdAt: string }>;
         deleteByIds: (ids: number[]) => Promise<void>;
       };
       serveroutput?: {
