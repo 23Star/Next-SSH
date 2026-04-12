@@ -105,6 +105,10 @@ export function renderLayout(root: HTMLElement): void {
                   <option value="auto">${t('ai.modeAuto')}</option>
                 </select>
               </div>
+              <div class="chatModelWrap" id="chatModelWrap">
+                <select id="chatModelSelect" class="chatModelSelect" title="${t('ai.currentModel')}">
+                </select>
+              </div>
             </div>
             <div class="chatSendRow">
               <button type="submit" id="btnChatSend" data-i18n="chat.send">${t('chat.send')}</button>
@@ -112,6 +116,19 @@ export function renderLayout(root: HTMLElement): void {
             </div>
           </form>
         </aside>
+        <div id="agentConfirmDialog" class="agentConfirmDialog" style="display:none">
+          <div class="agentConfirmBox">
+            <div class="agentConfirmHeader">
+              <span>${t('chat.commandApproval')}</span>
+              <span id="agentConfirmWarning" class="agentConfirmWarning" style="display:none">${t('chat.highRisk')}</span>
+            </div>
+            <pre id="agentConfirmCmd" class="agentConfirmCmd"></pre>
+            <div class="agentConfirmActions">
+              <button type="button" id="agentConfirmSkip" class="agentConfirmSkip">${t('chat.skipCommand')}</button>
+              <button type="button" id="agentConfirmApprove" class="agentConfirmApprove">${t('chat.allowCommand')}</button>
+            </div>
+          </div>
+        </div>
       </div>
       <div id="connectModal" class="connectModal" style="display: none;">
         <div class="connectModalBackdrop" id="connectModalBackdrop"></div>

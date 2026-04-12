@@ -37,13 +37,23 @@ export interface AiModelPreset {
 }
 
 export const AI_MODEL_PRESETS: AiModelPreset[] = [
-  { name: 'DeepSeek', apiUrl: 'https://api.deepseek.com/v1', model: 'deepseek-chat' },
+  { name: 'DeepSeek V3', apiUrl: 'https://api.deepseek.com/v1', model: 'deepseek-chat' },
   { name: 'DeepSeek R1', apiUrl: 'https://api.deepseek.com/v1', model: 'deepseek-reasoner' },
   { name: 'OpenAI GPT-4o', apiUrl: 'https://api.openai.com/v1', model: 'gpt-4o-mini' },
+  { name: 'OpenAI GPT-4.1', apiUrl: 'https://api.openai.com/v1', model: 'gpt-4.1-mini' },
   { name: 'GLM-5 (Z.AI)', apiUrl: 'https://open.bigmodel.cn/api/paas/v4', model: 'glm-5' },
   { name: 'GLM-4.7 (Z.AI)', apiUrl: 'https://open.bigmodel.cn/api/paas/v4', model: 'glm-4.7' },
-  { name: 'Qwen', apiUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1', model: 'qwen-turbo' },
-  { name: 'Ollama', apiUrl: 'http://localhost:11434/v1', model: 'qwen2.5:latest' },
+  { name: 'GLM-Z1 (Z.AI)', apiUrl: 'https://open.bigmodel.cn/api/paas/v4', model: 'glm-z1-airx' },
+  { name: 'Qwen Turbo', apiUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1', model: 'qwen-turbo' },
+  { name: 'Qwen Plus', apiUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1', model: 'qwen-plus' },
+  { name: 'Qwen Max', apiUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1', model: 'qwen-max' },
+  { name: 'QwQ', apiUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1', model: 'qwq-plus' },
+  { name: 'Claude (Anthropic)', apiUrl: 'https://api.anthropic.com/v1', model: 'claude-sonnet-4-20250514' },
+  { name: 'Gemini (Google)', apiUrl: 'https://generativelanguage.googleapis.com/v1beta/openai', model: 'gemini-2.5-flash' },
+  { name: 'Mistral', apiUrl: 'https://api.mistral.ai/v1', model: 'mistral-small-latest' },
+  { name: 'SiliconFlow', apiUrl: 'https://api.siliconflow.cn/v1', model: 'Qwen/Qwen3-8B' },
+  { name: 'Groq', apiUrl: 'https://api.groq.com/openai/v1', model: 'llama-3.3-70b-versatile' },
+  { name: 'Ollama (Local)', apiUrl: 'http://localhost:11434/v1', model: 'qwen3:8b' },
 ];
 
 const FILENAME = 'ai-settings.json';
@@ -119,5 +129,5 @@ export function setAiSettings(input: AiSettingsInput): void {
 
 export function isAiConfigured(): boolean {
   const settings = getAiSettings();
-  return !!(settings.apiUrl && settings.apiKey && settings.model);
+  return !!(settings.apiUrl && settings.apiKey);
 }

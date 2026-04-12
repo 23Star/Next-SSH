@@ -9,24 +9,172 @@ import { showMessage } from './message';
 
 type Api = NonNullable<typeof window.electronAPI>;
 
-const CHAT_SYSTEM_PROMPT_FALLBACK = `You are a Linux server management assistant. Answer user questions and suggest runnable commands when needed.
-When suggesting commands, write them in code block format, one per line.
-\`\`\`bash
-command1
-command2
-\`\`\`
-Write explanations outside the code block.
+const CHAT_SYSTEM_PROMPT_FALLBACK = `# Next-SSH — AI Assistant
 
-[File edits] When the user asks for file changes, respond with one code block. First line ---OLD---, then "before" string (optional), then ---NEW---, then "after" string. For partial changes include enough context. For new files leave OLD empty.
+You are an interactive agent for Next-SSH, a cross-platform SSH client. You help users manage remote Linux servers through an SSH connection. Use the instructions below to assist the user effectively.
+
+IMPORTANT: You must NEVER generate or guess URLs for the user unless you are confident that the URLs are for helping the user with server administration.
+
+# System
+
+All text you output is displayed to the user in a chat panel. You can use Github-flavored markdown for formatting.
+Commands are executed via SSH exec channel (not interactive PTY). The system sends one command at a time and returns structured results containing stdout, stderr, and exit code.
+The user selects one of three permission modes: **Suggest** (commands are only shown, not executed), **Confirm** (each command needs user approval before execution), or **Auto** (commands execute automatically, except dangerous ones).
+If the user skips or rejects a command, do not re-attempt the same command. Instead, think about why and adjust your approach.
+
+# Doing Tasks
+
+- The user will primarily request you to perform server administration tasks: system diagnostics, software installation, configuration editing, service management, log analysis, user management, network troubleshooting, and similar.
+- You are highly capable. Prefer completing tasks end-to-end rather than giving partial instructions the user has to run manually.
+- In general, do not propose changes to files you haven't read. If you need to see a file's content, ask the user to open it in the editor, or suggest a \`cat\` command first.
+- Do not create files or directories unless they are absolutely necessary for achieving your goal.
+- Avoid giving time estimates for how long operations will take. Focus on what needs to be done.
+- If an approach fails, diagnose why before switching tactics — read the error, check your assumptions, try a focused fix. Don't retry the identical action blindly, but don't abandon a viable approach after a single failure either.
+- Be careful not to introduce security vulnerabilities. Prioritize writing safe commands: avoid piping untrusted data into shell eval, be cautious with file permissions, and sanitize inputs at system boundaries.
+
+## Code Style
+
+- Don't add features, refactor configurations, or make "improvements" beyond what was asked. A bug fix doesn't need surrounding config cleaned up. A simple install doesn't need extra hardening.
+- Don't add error handling, fallbacks, or validation for scenarios that can't happen. Trust standard tools. Only validate at boundaries (user input, external APIs).
+- Don't create wrapper scripts, utility functions, or abstractions for one-time operations. The right amount of complexity is what the task actually requires.
+
+# Executing Actions with Care
+
+Carefully consider the reversibility and blast radius of actions. Generally you can freely run read-only commands like \`ls\`, \`cat\`, \`stat\`, \`systemctl status\`, \`df\`, \`free\`, \`ps\`. But for actions that are hard to reverse, affect shared systems, or could be destructive, check with the user before proceeding.
+
+Examples of risky actions that warrant user awareness:
+- **Destructive operations**: \`rm -rf\`, dropping databases, killing processes, overwriting config files
+- **Hard-to-reverse operations**: package removal, service stops, firewall rule changes, partition operations
+- **Actions visible to others**: restarting shared services, modifying crontabs, changing user passwords, altering SSH config
+- **Service disruptions**: \`systemctl restart\` on production services, \`apt upgrade\` on live servers
+
+When you encounter an obstacle, do not use destructive actions as a shortcut. For instance, try to identify root causes and fix underlying issues rather than force-killing processes or deleting lock files without investigation. In short: only take risky actions carefully, and when in doubt, ask before acting. Measure twice, cut once.
+
+# Command Execution
+
+Commands MUST be placed inside \`\`\`bash code blocks. The system extracts and executes them one at a time.
+
+## Rules
+
+- Commands are placed inside \`\`\`bash code blocks, **one command per line**. The system executes them **sequentially** (top to bottom) and returns all results together.
+- **Give multiple commands when they form a logical group.** For example, checking server health can include 5 commands in one block. Installing software can include add-repo + update + install in one block.
+- Use \`&&\` to chain commands that must all succeed (e.g., \`mkdir -p /opt/app && cd /opt/app && pwd\`).
+- Use \`;\` only when you don't care about the success of the first command.
+- If the next command depends on the output of a previous one, **only give the first command** and wait for the result before proceeding.
+- Commands have a **120-second timeout each**. For long-running tasks, suggest using \`nohup\` + \`&\`, or break into smaller steps.
+- Comment lines starting with \`#\` are ignored during execution.
+- Always use absolute paths when the working directory is uncertain.
+- Quote paths that may contain spaces: \`ls "/path/with spaces"\`.
+
+## When to Give Multiple Commands vs Single Command
+
+**Give multiple commands** (in one code block) when:
+- They are **independent** — e.g., \`uname -a\`, \`free -h\`, \`df -h\`, \`uptime\` (checking different aspects of the server)
+- They form a **known pipeline** — e.g., \`apt update && apt install -y nginx\`
+- They are all **read-only** diagnostics — safe to batch together
+
+**Give a single command** (one line in the code block) when:
+- The next step depends on the output — e.g., check OS version first, then decide the install command
+- The command is **destructive or state-changing** — e.g., \`rm\`, \`systemctl restart\`, config file edits
+- You're **debugging** — need to see the result before knowing what to try next
+
+## Before Creating Files or Directories
+
+- Verify the parent directory exists: \`ls -la /opt/\` before \`mkdir /opt/app\`.
+- Check if a file already exists before overwriting: \`ls -la /etc/nginx/sites-available/myapp\`.
+- Don't overwrite user files without warning — suggest backup first.
+
+## Environment Awareness
+
+- Detect the OS early if unknown: \`cat /etc/os-release\`, \`uname -a\`.
+- Check the init system: \`ps -p 1 -o comm=\` (systemd vs sysvinit vs openrc).
+- Note the package manager: apt, yum, dnf, pacman, apk, etc.
+- Check available disk space before large operations: \`df -h\`.
+- Check memory before memory-intensive tasks: \`free -h\`.
+
+# Error Handling
+
+When a command fails (exit code ≠ 0):
+
+- **Analyze the stderr output** carefully — it usually contains the exact error reason.
+- **Permission denied**: Try \`sudo\`. If that fails, check if the user has sudo access: \`sudo -l\`.
+- **Command not found**: Check if the package is installed (\`which <cmd>\`), suggest install command for the detected OS.
+- **Network timeout / connection refused**: Check connectivity (\`ping\`, \`curl -I\`), DNS (\`nslookup\`), firewall rules (\`iptables -L\`), service status (\`systemctl status\`).
+- **Disk full**: Show usage (\`df -h\`, \`du -sh /* | sort -rh | head\`), suggest cleanup (journal vacuum, package cache clean, log rotation).
+- **Port already in use**: Find the process (\`ss -tlnp | grep <port>\`, \`lsof -i :<port>\`), ask user before killing.
+- **Syntax error**: Show the exact error line, provide corrected command.
+- **Dependency conflict**: Suggest resolution strategies specific to the package manager.
+- Always explain what went wrong and why before suggesting a fix.
+
+# Security
+
+The following commands are **automatically blocked** by Next-SSH and will never be executed, regardless of permission mode:
+
+- \`rm -rf /\` and variants — recursive root deletion
+- \`sudo rm -rf /\` — same with privilege escalation
+- \`mkfs\` — disk formatting
+- \`dd if=\` — low-level disk operations
+- Fork bombs (\`:(){ :|:& };:\`)
+- Redirecting output to block devices in \`/dev/sd*\`, \`/dev/nvme*\`, \`/dev/vd*\`
+
+The following commands are **blocked in Auto mode** (require user confirmation):
+
+- \`shutdown\`, \`reboot\`, \`init 0\`, \`init 6\`
+- \`systemctl stop/disable\` for critical services (sshd, nginx, mysql, docker, etc.)
+- \`iptables -F\` — flush all firewall rules
+- \`chmod 777 /\` — world-writable root
+
+If the user requests an operation that needs a blocked command, explain the risk clearly and suggest a safer alternative. Never try to bypass the safety system with creative syntax.
+
+# File Editing
+
+When editing remote files, use this format inside a code block:
+
 \`\`\`
 ---OLD---
-(before; leave empty for full overwrite)
+(original text with enough surrounding context to uniquely locate the position)
 ---NEW---
-(after; multiple lines OK)
+(modified text)
 \`\`\`
 
-[Important] Terminal output may be attached at the end of system messages. Use it as reference. Only ask for terminal output if none is provided.
-Answer in 1-2 sentences first, then add details if needed.`;
+Rules:
+- The OLD section must be long enough to **uniquely match** a location in the file. Include at least 3 surrounding lines of context.
+- For **new files**, leave the OLD section empty.
+- Fuzzy matching is supported — minor whitespace and indentation differences are tolerated.
+- If the file is large, show only the relevant section, not the entire file.
+- For config files, prefer targeted edits over full rewrites.
+- Always verify the edit was applied correctly by reading the file afterward.
+
+# Task Completion
+
+- When the task is complete, provide a **text summary with NO code blocks**.
+- A response WITHOUT bash code blocks signals that the task is done.
+- Your completion summary should include:
+  - What was done
+  - The current state
+  - Any follow-up recommendations or warnings
+- If there are remaining steps, give the next command — don't just say "there's more to do."
+- Never end a response with code blocks if you're truly done. The system uses the presence/absence of code blocks to decide whether to continue.
+
+# Context Awareness
+
+- **Terminal output** from the active SSH session may be attached to messages. Use it as reference. Only ask for terminal output if none has been provided.
+- **Editor content**: If the user has a file open in the editor, its content and path may be included. Use this to understand what they are working on.
+- **Conversation history**: Remember results of previously executed commands. Do not repeat commands that have already succeeded unless the situation has changed.
+- **Server identity**: Note the hostname, OS, and architecture from early commands. Adjust commands accordingly (e.g., use \`apt\` on Debian/Ubuntu, \`yum\` on CentOS/RHEL).
+
+# Tone and Style
+
+- Answer in the **same language** the user is using.
+- **Go straight to the point**. Try the simplest approach first. Do not overdo it.
+- Use Markdown formatting: headings for sections, lists for steps, \`backticks\` for commands and paths, **bold** for emphasis.
+- Wrap file paths in backticks: \`/etc/nginx/nginx.conf\`
+- Wrap command names in backticks: \`systemctl\`, \`apt\`, \`docker\`
+- If you can say it in one sentence, don't use three. Prefer short, direct sentences over long explanations.
+- Lead with the answer or action, not the reasoning. Skip filler words and preamble.
+- Focus output on: decisions that need the user's input, high-level status at milestones, errors or blockers that change the plan.
+- Do not restate what the user said — just do it.
+- Keep your text output brief and direct. This does not apply to code blocks, which should be complete and correct.`;
 
 let cachedCustomSystemPrompt: string | null = null;
 
@@ -45,6 +193,41 @@ function getChatSystemPrompt(): string {
 export function getCurrentChatMessages(): ChatMessage[] {
   if (state.activeChatSessionId === null) return [];
   return state.chatMessagesBySession[state.activeChatSessionId] ?? [];
+}
+
+/** Max total characters for message history sent to AI (context window budget). */
+const MAX_CONTEXT_CHARS = 16000;
+
+/**
+ * Select messages to fit within a character budget.
+ * Always keeps the first user message (original task), then fills from the latest backwards.
+ */
+function selectMessagesForContext(messages: ChatMessage[], maxChars: number): ChatMessage[] {
+  if (messages.length === 0) return [];
+
+  // Always keep the first user message (original task description)
+  const first = messages[0];
+  const firstChars = first.content.length;
+  const budget = maxChars - firstChars;
+
+  if (budget <= 0) return [{ ...first, content: first.content.slice(-maxChars) }];
+
+  const selected: ChatMessage[] = [{ ...first }];
+  let used = firstChars;
+
+  for (let i = messages.length - 1; i >= 1; i--) {
+    const msg = messages[i];
+    // Truncate oversized single messages
+    const content = msg.content.length > 4000
+      ? msg.content.slice(-4000) + '\n...[truncated]'
+      : msg.content;
+
+    if (used + content.length > budget) break;
+    selected.splice(1, 0, { ...msg, content }); // Insert after first
+    used += content.length;
+  }
+
+  return selected;
 }
 
 function extractSuggestedCommands(text: string): string[] {
@@ -89,20 +272,34 @@ function renderMarkdown(text: string): string {
   }
 }
 
-/** Patterns that should never be auto-executed. */
-const DANGEROUS_PATTERNS = [
+/** P0 — Always blocked in every mode (destructive, irreversible). */
+const BLOCKED_PATTERNS = [
   /\brm\s+(-\w*r\w*f\w*\s+|rf\s+)\/(?!tmp\/)/i,
+  /\bsudo\s+.*\brm\s+(-\w*r\w*f\w*\s+|rf\s+)\/(?!tmp\/)/i,
   /\bmkfs\b/i,
   /\bdd\s+if=/i,
   /:\(\)\{.*;\};/,
+  /\b(>|>>)\s*\/dev\/(sd|nvme|vd)/i,
+];
+
+/** P1 — Warning level: auto mode skips, confirm mode shows ⚠️ badge. */
+const WARNING_PATTERNS = [
   /\bshutdown\b/i,
   /\breboot\b/i,
   /\binit\s+[06]\b/i,
-  /\b(>|>>)\s*\/dev\//i,
+  /\bsystemctl\s+(stop|disable)\s+(sshd|nginx|apache2?|httpd|mysql|mysqld|postgres|postgresql|docker|firewalld|ufw)/i,
+  /\biptables\s+-F\b/i,
+  /\bchmod\s+(-R\s+)?0?777\s+\//i,
+  /\bsudo\s+.*\b(shutdown|reboot)\b/i,
+  /\b(>|>>)\s*\/dev\/(?!sd|nvme|vd)/i,
 ];
 
-function isDangerousCommand(cmd: string): boolean {
-  return DANGEROUS_PATTERNS.some((p) => p.test(cmd));
+function isBlockedCommand(cmd: string): boolean {
+  return BLOCKED_PATTERNS.some((p) => p.test(cmd));
+}
+
+function isWarningCommand(cmd: string): boolean {
+  return WARNING_PATTERNS.some((p) => p.test(cmd));
 }
 
 /** Extract bash/sh code blocks from markdown text. Returns individual commands. */
@@ -182,20 +379,10 @@ function displayInTerminal(cmd: string, result: { stdout: string; stderr: string
 
 /** Check if the AI response indicates the task is complete (no more commands to run). */
 function isTaskComplete(aiContent: string): boolean {
-  // If no bash code blocks, the AI is just explaining — task is done
+  // No bash code blocks = AI is giving a text summary → task is done.
+  // This mirrors Claude Code's pattern: no tool_use = stop the loop.
   const commands = extractBashCommands(aiContent);
-  if (commands.length === 0) return true;
-
-  // Check for explicit completion signals in the text
-  const lower = aiContent.toLowerCase();
-  const completionPhrases = [
-    'task complete', 'all done', 'finished', 'no further action',
-    '任务完成', '已完成', '全部完成', '没有更多操作',
-    'задача выполнена', 'готово', 'завершено',
-  ];
-  if (completionPhrases.some((p) => lower.includes(p))) return true;
-
-  return false;
+  return commands.length === 0;
 }
 
 const AGENT_LOG = '[Agent Loop]';
@@ -218,6 +405,36 @@ function agentLog(...args: unknown[]): void {
  * Key design: one command per turn means AI sees each result individually
  * and can react to failures instead of blindly running 8 commands in sequence.
  */
+
+/** Show a command approval dialog for confirm mode. Returns true if user approves. */
+function showConfirmDialog(cmd: string, isWarning: boolean): Promise<boolean> {
+  return new Promise((resolve) => {
+    const dialog = document.getElementById('agentConfirmDialog');
+    const cmdText = document.getElementById('agentConfirmCmd');
+    const approveBtn = document.getElementById('agentConfirmApprove');
+    const skipBtn = document.getElementById('agentConfirmSkip');
+    const warningBadge = document.getElementById('agentConfirmWarning');
+
+    if (!dialog || !cmdText || !approveBtn || !skipBtn) {
+      resolve(false);
+      return;
+    }
+
+    cmdText.textContent = cmd;
+    dialog.style.display = 'flex';
+    if (warningBadge) warningBadge.style.display = isWarning ? 'inline-block' : 'none';
+
+    const cleanup = () => {
+      dialog.style.display = 'none';
+      approveBtn.onclick = null;
+      skipBtn.onclick = null;
+    };
+
+    approveBtn.onclick = () => { cleanup(); resolve(true); };
+    skipBtn.onclick = () => { cleanup(); resolve(false); };
+  });
+}
+
 async function runAgenticLoop(
   sessionId: number,
   initialAiContent: string,
@@ -261,66 +478,98 @@ async function runAgenticLoop(
         break;
       }
 
-      // In confirm mode, don't auto-execute — user clicks "Run" buttons
-      if (state.aiPermissionMode === 'confirm') {
-        agentLog('Confirm mode: not auto-executing');
-        break;
-      }
+      // Execute all commands sequentially (Claude Code pattern)
+      // Stop on first error so AI can react; skip blocked/warning commands but continue
+      const allResults: string[] = [];
+      let stoppedOnError = false;
 
-      // Execute ONLY the first command
-      const cmd = commands[0];
+      for (let ci = 0; ci < commands.length; ci++) {
+        const cmd = commands[ci];
+        if (state.agentLoopAbort) break;
 
-      if (isDangerousCommand(cmd)) {
-        agentLog(`SKIP dangerous: ${cmd}`);
-        // Feed the skip back to AI so it knows and can suggest an alternative
-        turnCount++;
-        const skipMsg = `[Command execution result]\n$ ${cmd}\n[SKIPPED] Dangerous command not executed. Please suggest a safer alternative or explain why this command is needed.`;
-        await api.chatContext!.add(sessionId, 'user', skipMsg);
-        turnContent = await streamAiFollowUp(api, sessionId);
-        if (!turnContent) break;
-        continue;
-      }
-
-      agentLog(`EXEC: ${cmd}`);
-
-      let feedbackMsg: string;
-      try {
-        let result: { stdout: string; stderr: string; exitCode: number | null };
-
-        if (activeTab.kind === 'terminal') {
-          result = await api.terminal.exec(activeTab.connectionId, cmd, 120000);
-        } else {
-          result = await api.terminal.localExec(cmd, 120000);
+        // P0 — Always blocked
+        if (isBlockedCommand(cmd)) {
+          agentLog(`BLOCKED: ${cmd}`);
+          allResults.push(`Command: ${cmd}\nResult: BLOCKED — this command is classified as destructive and will not be executed. Please suggest a safer alternative.`);
+          continue;
         }
 
-        // Display result in terminal (visual only, not sent to bash)
-        displayInTerminal(cmd, result);
-
-        const outputParts: string[] = [];
-        if (result.stdout) {
-          outputParts.push(truncateForAi(result.stdout, state.AGENT_OUTPUT_MAX_CHARS));
-        }
-        if (result.stderr) {
-          outputParts.push(`[stderr]\n${truncateForAi(result.stderr, 2000)}`);
-        }
-        if (result.exitCode !== 0 && result.exitCode !== null) {
-          outputParts.push(`[exit code: ${result.exitCode}]`);
+        // P1 — Warning: auto mode skips
+        if (isWarningCommand(cmd) && state.aiPermissionMode === 'auto') {
+          agentLog(`SKIP warning-level command in auto mode: ${cmd}`);
+          allResults.push(`Command: ${cmd}\nResult: SKIPPED — this command is classified as high-risk and was not auto-executed. If the user confirms it should run, please suggest it again.`);
+          continue;
         }
 
-        const output = outputParts.join('\n') || '(no output)';
-        feedbackMsg = `$ ${cmd}\n${output}`;
-        agentLog(`OUTPUT (${output.length} chars): ${output.slice(0, 200)}`);
-      } catch (err) {
-        const errMsg = err instanceof Error ? err.message : String(err);
-        feedbackMsg = `$ ${cmd}\n[ERROR] ${errMsg}`;
-        agentLog(`EXEC ERROR: ${errMsg}`);
-        displayInTerminal(cmd, null, errMsg);
+        // confirm mode: show approval dialog before executing
+        if (state.aiPermissionMode === 'confirm') {
+          const isWarning = isWarningCommand(cmd);
+          const approved = await showConfirmDialog(cmd, isWarning);
+          if (!approved) {
+            agentLog(`SKIP by user: ${cmd}`);
+            allResults.push(`Command: ${cmd}\nResult: SKIPPED by user`);
+            continue;
+          }
+        }
+
+        agentLog(`EXEC [${ci + 1}/${commands.length}]: ${cmd}`);
+
+        let resultMsg: string;
+        try {
+          let result: { stdout: string; stderr: string; exitCode: number | null };
+
+          if (activeTab.kind === 'terminal') {
+            result = await api.terminal.exec(activeTab.connectionId, cmd, 120000);
+          } else {
+            result = await api.terminal.localExec(cmd, 120000);
+          }
+
+          // Display result in terminal (visual only, not sent to bash)
+          displayInTerminal(cmd, result);
+
+          // Structured feedback format for AI
+          const outputParts: string[] = [];
+          outputParts.push(`Command: ${cmd}`);
+          outputParts.push(`Exit Code: ${result.exitCode ?? 'unknown'}`);
+          if (result.stdout) {
+            outputParts.push(`--- stdout ---`);
+            outputParts.push(truncateForAi(result.stdout, state.AGENT_OUTPUT_MAX_CHARS));
+          }
+          if (result.stderr) {
+            outputParts.push(`--- stderr ---`);
+            outputParts.push(truncateForAi(result.stderr, 2000));
+          }
+          if (!result.stdout && !result.stderr) {
+            outputParts.push(`(no output)`);
+          }
+          outputParts.push(`--- end ---`);
+          resultMsg = outputParts.join('\n');
+          agentLog(`OUTPUT (${resultMsg.length} chars): ${resultMsg.slice(0, 200)}`);
+
+          // Stop on error — let AI decide whether to retry or adjust
+          if (result.exitCode !== 0 && result.exitCode !== null) {
+            stoppedOnError = true;
+          }
+        } catch (err) {
+          const errMsg = err instanceof Error ? err.message : String(err);
+          resultMsg = `Command: ${cmd}\nResult: ERROR — ${errMsg}`;
+          agentLog(`EXEC ERROR: ${errMsg}`);
+          displayInTerminal(cmd, null, errMsg);
+          stoppedOnError = true;
+        }
+
+        allResults.push(resultMsg);
+
+        if (stoppedOnError) break;
       }
 
       if (state.agentLoopAbort) break;
 
       turnCount++;
-      agentLog(`Sending feedback to AI (turn ${turnCount})`);
+      const feedbackMsg = allResults.length > 1
+        ? `[${allResults.length} command(s) executed]\n\n${allResults.join('\n\n')}`
+        : allResults[0];
+      agentLog(`Sending feedback to AI (turn ${turnCount}), ${allResults.length} results, stoppedOnError=${stoppedOnError}`);
 
       // Save command result as user message
       await api.chatContext!.add(sessionId, 'user', `[Command execution result]\n${feedbackMsg}`);
@@ -329,7 +578,7 @@ async function runAgenticLoop(
       turnContent = await streamAiFollowUp(api, sessionId);
       if (!turnContent) break;
 
-      // Small delay before next command
+      // Small delay before next turn
       await new Promise((r) => setTimeout(r, 300));
     }
 
@@ -350,8 +599,8 @@ async function runAgenticLoop(
 async function streamAiFollowUp(api: Api, sessionId: number): Promise<string> {
   const messages = await api.chatContext!.listBySession(sessionId);
   const payload = [
-    { role: 'system' as const, content: getChatSystemPrompt() + '\n\n[Important] You just executed a command. The output is provided below. Analyze the result and decide what to do next. If the task is complete, summarize the result without any code blocks. If there are errors, suggest a fix with ONE command. If more steps are needed, suggest the single most important next command. Always prefer giving just ONE command at a time so you can see the result before deciding the next step.' },
-    ...messages.slice(-10).map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content })),
+    { role: 'system' as const, content: getChatSystemPrompt() + "\n\n[Agentic Loop] You are in an automated command execution loop. The user's original request is being carried out step by step. Analyze the command results above and decide: if the task is complete, give a text-only summary with NO code blocks. If there are errors, give a single fix command. If more steps are needed, give the next command(s). You may give multiple commands in one code block when they are independent or form a known pipeline (e.g., apt update && apt install). Give a single command when the next step depends on the output or when the command is destructive." },
+    ...selectMessagesForContext(messages, MAX_CONTEXT_CHARS).map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content })),
   ];
 
   const { msgDiv, thinkingContentEl, thinkingSummaryEl, contentEl, indicatorEl } = createStreamingMessage();
@@ -361,6 +610,15 @@ async function streamAiFollowUp(api: Api, sessionId: number): Promise<string> {
   let streamDone = false;
 
   return new Promise<string>((resolve) => {
+    // Safety timeout: resolve with empty string if stream never completes (120s)
+    const safetyTimeout = setTimeout(() => {
+      if (streamDone) return;
+      streamDone = true;
+      agentLog('streamAiFollowUp SAFETY TIMEOUT — resolving with empty string');
+      finishStreamingMessage(msgDiv, thinkingText, contentText + '\n\n**Error:** AI 响应超时，请重试。', thinkingDurationMs);
+      resolve('');
+    }, 120_000);
+
     const handler = (chunk: { type: string; text: string; durationMs?: number }) => {
       if (streamDone) return;
 
@@ -381,6 +639,7 @@ async function streamAiFollowUp(api: Api, sessionId: number): Promise<string> {
         contentText += chunk.text;
         contentEl.textContent = contentText;
       } else if (chunk.type === 'done') {
+        clearTimeout(safetyTimeout);
         streamDone = true;
         finishStreamingMessage(msgDiv, thinkingText, contentText, thinkingDurationMs);
         api.chatContext!.add(sessionId, 'assistant', contentText, extractSuggestedCommands(contentText), thinkingText || null, thinkingDurationMs).then((row) => {
@@ -391,10 +650,13 @@ async function streamAiFollowUp(api: Api, sessionId: number): Promise<string> {
           });
           renderChatMessages();
           void tryOpenDiffPreviewForLastMessage(sessionId);
+        }).catch((e) => {
+          agentLog('streamAiFollowUp save error:', e);
         });
         agentLog(`AI follow-up done, ${extractBashCommands(contentText).length} commands in response`);
         resolve(contentText);
       } else if (chunk.type === 'error') {
+        clearTimeout(safetyTimeout);
         streamDone = true;
         contentText += `\n\n**Error:** ${chunk.text}`;
         finishStreamingMessage(msgDiv, thinkingText, contentText, thinkingDurationMs);
@@ -409,7 +671,7 @@ async function streamAiFollowUp(api: Api, sessionId: number): Promise<string> {
     };
 
     api.chat!.onStreamChunk(handler);
-    api.chat!.streamStart(payload, state.showThinking);
+    api.chat!.streamStart(payload, state.showThinking ? { mode: 'adaptive' } : { mode: 'disabled' });
   });
 }
 
@@ -859,6 +1121,15 @@ export async function sendChatMessage(api: Api, userContent: string): Promise<vo
     let thinkingDurationMs: number | null = null;
     let done = false;
 
+    // Safety timeout: stop waiting if stream never completes (120s)
+    const chatTimeout = setTimeout(() => {
+      if (done) return;
+      done = true;
+      contentText += '\n\n**Error:** AI 响应超时，请重试。';
+      finishStreamingMessage(msgDiv, thinkingText, contentText, thinkingDurationMs);
+      agentLog('sendChatMessage SAFETY TIMEOUT');
+    }, 120_000);
+
     api.chat.onStreamChunk((chunk) => {
       if (done) return;
 
@@ -888,6 +1159,7 @@ export async function sendChatMessage(api: Api, userContent: string): Promise<vo
         contentText += chunk.text;
         contentEl.textContent = contentText;
       } else if (chunk.type === 'done') {
+        clearTimeout(chatTimeout);
         done = true;
         finishStreamingMessage(msgDiv, thinkingText, contentText, thinkingDurationMs);
         const suggestedCommands = extractSuggestedCommands(contentText);
@@ -901,13 +1173,18 @@ export async function sendChatMessage(api: Api, userContent: string): Promise<vo
             suggestedCommands: row.suggestedCommands ?? undefined,
           });
           renderChatMessages();
-          // Start agentic loop for auto mode (intelligent execution with feedback)
-          if (state.aiPermissionMode === 'auto') {
-            runAgenticLoop(sessionId, contentText).catch(() => {});
+          // Start agentic loop for auto and confirm modes (intelligent execution with feedback)
+          if (state.aiPermissionMode === 'auto' || state.aiPermissionMode === 'confirm') {
+            runAgenticLoop(sessionId, contentText).catch((e) => {
+              agentLog('runAgenticLoop unhandled error:', e);
+            });
           }
           void tryOpenDiffPreviewForLastMessage(sessionId);
+        }).catch((e) => {
+          agentLog('done handler error:', e);
         });
       } else if (chunk.type === 'error') {
+        clearTimeout(chatTimeout);
         done = true;
         contentText += `\n\n**Error:** ${chunk.text}`;
         finishStreamingMessage(msgDiv, thinkingText, contentText, thinkingDurationMs);
@@ -919,7 +1196,7 @@ export async function sendChatMessage(api: Api, userContent: string): Promise<vo
       }
     });
 
-    api.chat.streamStart(payload, state.showThinking);
+    api.chat.streamStart(payload, state.showThinking ? { mode: 'adaptive' } : { mode: 'disabled' });
   } catch (err) {
     const errContent = `Error: ${err instanceof Error ? err.message : String(err)}`;
     api.chatContext!.add(sessionId, 'assistant', errContent).then((row) => {
@@ -929,7 +1206,7 @@ export async function sendChatMessage(api: Api, userContent: string): Promise<vo
         content: row.content,
       });
       renderChatMessages();
-    });
+    }).catch(() => {});
   } finally {
     state.chatLoading = false;
     // Don't re-enable send button if agent loop is still running
@@ -1136,9 +1413,70 @@ export async function updateChatFormLoginState(): Promise<void> {
   if (input) input.disabled = !configured;
 }
 
+/** Load available models into the chat toolbar model selector. */
+async function loadChatModelSelect(api: Api): Promise<void> {
+  const select = document.getElementById('chatModelSelect') as HTMLSelectElement | null;
+  if (!select) return;
+
+  // Load current settings to get the active model
+  const settings = await api.aiSettings?.get();
+  const currentModel = settings?.model ?? '';
+
+  // Try fetching model list from the API
+  let models: Array<{ id: string }> = [];
+  const result = await api.aiSettings?.getModels();
+  if (result?.ok && result.models.length > 0) {
+    models = result.models;
+  }
+
+  select.innerHTML = '';
+
+  if (models.length > 0) {
+    for (const m of models) {
+      const opt = document.createElement('option');
+      opt.value = m.id;
+      opt.textContent = m.id.length > 30 ? m.id.slice(0, 27) + '...' : m.id;
+      if (m.id === currentModel) opt.selected = true;
+      select.appendChild(opt);
+    }
+    // If current model not in list, add it
+    if (currentModel && !models.some((m) => m.id === currentModel)) {
+      const opt = document.createElement('option');
+      opt.value = currentModel;
+      opt.textContent = currentModel;
+      opt.selected = true;
+      select.insertBefore(opt, select.firstChild);
+    }
+  } else {
+    // No model list available — just show current model
+    const opt = document.createElement('option');
+    opt.value = currentModel;
+    opt.textContent = currentModel || t('ai.noModel');
+    select.appendChild(opt);
+  }
+
+  // On change, save the model selection
+  select.addEventListener('change', async () => {
+    const newModel = select.value;
+    const current = await api.aiSettings?.get();
+    if (current) {
+      await api.aiSettings?.set({
+        apiUrl: current.apiUrl ?? '',
+        apiKey: undefined, // preserve existing key
+        model: newModel,
+        temperature: current.temperature ?? 0.7,
+        maxTokens: current.maxTokens ?? 4096,
+        systemPrompt: current.systemPrompt ?? '',
+      });
+      refreshThinkToggle();
+    }
+  });
+}
+
 export function bindChatEvents(api: Api): void {
   apiRef = api;
   updateChatFormLoginState();
+  loadChatModelSelect(api);
   const form = document.getElementById('chatInputForm');
   const input = document.getElementById('chatInput') as HTMLTextAreaElement;
   if (!form || !input) return;

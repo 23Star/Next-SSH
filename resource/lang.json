@@ -57,6 +57,10 @@
     "chat.runCommand": "Run",
     "chat.autoExecuted": "Auto executed",
     "chat.dangerousSkip": "Dangerous, skipped",
+    "chat.commandApproval": "Command Approval",
+    "chat.highRisk": "⚠ High Risk",
+    "chat.skipCommand": "Skip",
+    "chat.allowCommand": "Allow",
     "common.copy": "Copy",
     "common.copied": "Copied!",
     "ai.modeAsk": "Suggest",
@@ -155,7 +159,8 @@
     "serverInfo.loadError": "Failed to load",
     "serverInfo.serverTime": "Server Time",
     "ai.noThinkSupport": "Model does not support thinking",
-    "ai.noModel": "No model configured"
+    "ai.noModel": "No model configured",
+    "ai.currentModel": "Current model"
   },
   "zn": {
     "sidebar.connectList": "连接列表",
@@ -215,6 +220,10 @@
     "chat.runCommand": "运行",
     "chat.autoExecuted": "已自动执行",
     "chat.dangerousSkip": "危险命令已跳过",
+    "chat.commandApproval": "命令审批",
+    "chat.highRisk": "⚠ 高风险",
+    "chat.skipCommand": "跳过",
+    "chat.allowCommand": "允许",
     "common.copy": "复制",
     "common.copied": "已复制!",
     "ai.modeAsk": "建议",
@@ -313,7 +322,8 @@
     "serverInfo.loadError": "加载失败",
     "serverInfo.serverTime": "服务器时间",
     "ai.noThinkSupport": "当前模型不支持思考",
-    "ai.noModel": "未配置模型"
+    "ai.noModel": "未配置模型",
+    "ai.currentModel": "当前模型"
   },
   "ru": {
     "sidebar.connectList": "Подключения",
@@ -373,6 +383,10 @@
     "chat.runCommand": "Запустить",
     "chat.autoExecuted": "Автозапуск",
     "chat.dangerousSkip": "Опасная, пропущена",
+    "chat.commandApproval": "Подтверждение команды",
+    "chat.highRisk": "⚠ Высокий риск",
+    "chat.skipCommand": "Пропустить",
+    "chat.allowCommand": "Разрешить",
     "common.copy": "Копировать",
     "common.copied": "Скопировано!",
     "ai.modeAsk": "Совет",
@@ -471,6 +485,7 @@
     "serverInfo.loadError": "Ошибка загрузки",
     "serverInfo.serverTime": "Время сервера",
     "ai.noThinkSupport": "Модель не поддерживает размышления",
-    "ai.noModel": "Модель не настроена"
+    "ai.noModel": "Модель не настроена",
+    "ai.currentModel": "Текущая модель"
   }
 }

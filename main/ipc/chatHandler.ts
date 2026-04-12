@@ -15,10 +15,115 @@ interface StreamChunkPayload {
   durationMs?: number;
 }
 
+// ── Thinking Configuration (inspired by Claude Code) ──────────────
+export type ThinkingMode = 'adaptive' | 'enabled' | 'disabled';
+
+export interface ThinkingConfig {
+  mode: ThinkingMode;
+  /** Only used when mode === 'enabled' */
+  budgetTokens?: number;
+}
+
+// ── Model Capability Detection ────────────────────────────────────
+
+/** Patterns for models known to support reasoning/thinking output. */
+const THINKING_CAPABLE_PATTERNS = [
+  /\bo[1-4]\b/i,
+  /\bo1-/i,
+  /deepseek-r/i,
+  /deepseek-reasoner/i,
+  /deepseek.*think/i,
+  /qwq/i,
+  /qwen3/i,
+  /qwen.*think/i,
+  /glm-z1/i,
+  /glm.*think/i,
+  /claude-.*3[.-]5/i,
+  /claude-.*4/i,
+  /claude-opus/i,
+  /claude-sonnet/i,
+  /gemini.*thinking/i,
+  /gemini.*flash.*thinking/i,
+  /grok.*think/i,
+];
+
+/** Check if a model name is known to support thinking/reasoning. */
+function modelSupportsThinking(model: string): boolean {
+  if (!model) return false;
+  return THINKING_CAPABLE_PATTERNS.some((p) => p.test(model));
+}
+
+/** Patterns for models known to support adaptive (budget-less) thinking. */
+const ADAPTIVE_THINKING_PATTERNS = [
+  /deepseek-r/i,
+  /deepseek-reasoner/i,
+  /qwq/i,
+  /qwen3/i,
+  /glm-z1/i,
+  /claude-.*4/i,
+  /claude-opus/i,
+  /claude-sonnet/i,
+];
+
+function modelSupportsAdaptiveThinking(model: string): boolean {
+  if (!model) return false;
+  return ADAPTIVE_THINKING_PATTERNS.some((p) => p.test(model));
+}
+
+// ── Auto max_tokens per model ─────────────────────────────────────
+
+/** Default max_tokens for known model families. */
+const MODEL_MAX_TOKENS: Array<{ pattern: RegExp; tokens: number }> = [
+  { pattern: /gpt-4o/i, tokens: 16384 },
+  { pattern: /gpt-4\.?1/i, tokens: 32768 },
+  { pattern: /gpt-4/i, tokens: 8192 },
+  { pattern: /o[1-4]/i, tokens: 32768 },
+  { pattern: /deepseek-chat/i, tokens: 8192 },
+  { pattern: /deepseek-reasoner/i, tokens: 8192 },
+  { pattern: /deepseek-r/i, tokens: 8192 },
+  { pattern: /qwen.*turbo/i, tokens: 8192 },
+  { pattern: /qwen.*plus/i, tokens: 8192 },
+  { pattern: /qwen.*max/i, tokens: 32768 },
+  { pattern: /qwq/i, tokens: 32768 },
+  { pattern: /qwen3/i, tokens: 32768 },
+  { pattern: /glm-5/i, tokens: 8192 },
+  { pattern: /glm-4/i, tokens: 8192 },
+  { pattern: /glm-z1/i, tokens: 8192 },
+  { pattern: /claude/i, tokens: 8192 },
+  { pattern: /gemini/i, tokens: 8192 },
+  { pattern: /llama/i, tokens: 4096 },
+  { pattern: /mistral/i, tokens: 8192 },
+];
+
+function getAutoMaxTokens(model: string, userSetting: number): number {
+  // If user explicitly set a non-default value, respect it
+  if (userSetting > 0 && userSetting !== 4096) return userSetting;
+  // Auto-detect from model name
+  for (const entry of MODEL_MAX_TOKENS) {
+    if (entry.pattern.test(model)) return entry.tokens;
+  }
+  return userSetting > 0 ? userSetting : 4096;
+}
+
+// ── Temperature auto-adjustment ───────────────────────────────────
+
+/** Some models require temperature=1 when thinking is enabled. */
+function shouldForceTemperatureOne(model: string, thinkingEnabled: boolean): boolean {
+  if (!thinkingEnabled) return false;
+  // DeepSeek reasoner requires temperature=1 for thinking
+  if (/deepseek-reasoner/i.test(model)) return true;
+  if (/deepseek-r/i.test(model)) return true;
+  // Claude models with thinking
+  if (/claude/i.test(model)) return true;
+  return false;
+}
+
+// ── Core API call ─────────────────────────────────────────────────
+
 async function callOpenAiCompatibleApi(
   messages: ChatMessagePayload[],
   stream: boolean = false,
-  enableThinking: boolean = true,
+  thinkingConfig: ThinkingConfig = { mode: 'adaptive' },
 ): Promise<Response> {
   const settings = aiSettings.getAiSettings();
   if (!settings.apiUrl || !settings.apiKey || !settings.model) {
@@ -28,36 +133,81 @@ async function callOpenAiCompatibleApi(
   const baseUrl = settings.apiUrl.replace(/\/+$/, '');
   const url = `${baseUrl}/chat/completions`;
 
+  const modelSupportsThink = modelSupportsThinking(settings.model);
+  const shouldEnableThinking = thinkingConfig.mode !== 'disabled' && modelSupportsThink;
+
+  const maxTokens = getAutoMaxTokens(settings.model, settings.maxTokens);
+
   const body: Record<string, unknown> = {
     model: settings.model,
     messages: messages.map((m) => ({ role: m.role, content: m.content })),
     stream,
   };
-  // Only request thinking when the user explicitly enables it.
-  // Omitting the parameter lets the model use its default behavior (no thinking).
-  if (enableThinking) {
-    body.enable_thinking = true;
+
+  // ── Thinking parameters (multi-format for broad compatibility) ──
+  if (shouldEnableThinking) {
+    if (modelSupportsAdaptiveThinking(settings.model) && thinkingConfig.mode === 'adaptive') {
+      // Adaptive thinking: let model decide budget
+      body.thinking = { type: 'enabled' };
+      body.enable_thinking = true;
+    } else if (thinkingConfig.mode === 'enabled' && thinkingConfig.budgetTokens) {
+      // Explicit budget
+      const budget = Math.min(thinkingConfig.budgetTokens, maxTokens - 1);
+      body.thinking = { type: 'enabled', budget_tokens: budget };
+      body.enable_thinking = true;
+    } else {
+      // Basic thinking toggle
+      body.enable_thinking = true;
+    }
+    // vLLM / self-hosted format
+    body.chat_template_kwargs = { thinking: true };
   }
-  if (settings.temperature > 0) {
+
+  // ── Temperature ──
+  if (shouldForceTemperatureOne(settings.model, shouldEnableThinking)) {
+    // Don't set temperature — let the API use its default (1)
+    // Some providers error if temperature != 1 with thinking
+  } else if (settings.temperature > 0) {
     body.temperature = settings.temperature;
   }
-  if (settings.maxTokens > 0) {
-    body.max_tokens = settings.maxTokens;
+
+  // ── Max tokens ──
+  if (maxTokens > 0) {
+    body.max_tokens = maxTokens;
   }
 
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${settings.apiKey}`,
-    },
-    body: JSON.stringify(body),
-  });
+  // Timeout: abort the request if the server doesn't respond within 120 seconds
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 120_000);
+
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${settings.apiKey}`,
+      },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+  } catch (err) {
+    clearTimeout(timeoutId);
+    if (err instanceof DOMException && err.name === 'AbortError') {
+      throw new Error('API 请求超时 (120s)。请检查网络连接或 API 地址。');
+    }
+    throw err;
+  }
 
   if (!response.ok) {
+    clearTimeout(timeoutId);
     const errorText = await response.text().catch(() => '');
     throw new Error(`API 错误 (${response.status}): ${errorText || response.statusText}`);
   }
+
+  // Clear timeout on successful response — the body stream is read separately
+  // with its own timeout in the streaming handler
+  clearTimeout(timeoutId);
 
   return response;
 }
@@ -81,16 +231,27 @@ export function registerChatHandlers(): void {
   });
 
   // Streaming: receives raw array (structured clone handles Unicode in objects)
-  ipcMain.handle('chat:streamStart', async (event, messages: ChatMessagePayload[], enableThinking: boolean = true) => {
+  ipcMain.handle('chat:streamStart', async (event, messages: ChatMessagePayload[], thinkingConfigOrEnable?: ThinkingConfig | boolean) => {
     const send = (chunk: StreamChunkPayload) => {
       try { event.sender.send('chat:streamChunk', chunk); } catch { /* window closed */ }
     };
 
+    // Resolve thinking config from either new ThinkingConfig or legacy boolean
+    let resolvedConfig: ThinkingConfig;
+    if (typeof thinkingConfigOrEnable === 'boolean') {
+      resolvedConfig = thinkingConfigOrEnable ? { mode: 'adaptive' } : { mode: 'disabled' };
+    } else if (thinkingConfigOrEnable && typeof thinkingConfigOrEnable === 'object' && 'mode' in thinkingConfigOrEnable) {
+      resolvedConfig = thinkingConfigOrEnable as ThinkingConfig;
+    } else {
+      resolvedConfig = { mode: 'adaptive' };
+    }
+
     try {
-      const response = await callOpenAiCompatibleApi(messages, true, enableThinking);
+      const response = await callOpenAiCompatibleApi(messages, true, resolvedConfig);
       const reader = response.body?.getReader();
       if (!reader) {
         send({ type: 'error', text: '无法获取响应流' });
+        send({ type: 'done', text: '' });
         return;
       }
 
@@ -98,8 +259,25 @@ export function registerChatHandlers(): void {
       let buffer = '';
       let thinkingStartTime: number | null = null;
 
+      // Stream idle timeout: if no data arrives for 90 seconds, abort
+      let streamTimeoutId: ReturnType<typeof setTimeout> | null = null;
+      let streamDone = false;
+      const resetStreamTimeout = () => {
+        if (streamTimeoutId) clearTimeout(streamTimeoutId);
+        streamTimeoutId = setTimeout(() => {
+          if (streamDone) return;
+          streamDone = true;
+          reader.cancel().catch(() => {});
+          send({ type: 'error', text: 'AI 响应超时 (90s 无数据)，请重试。' });
+          send({ type: 'done', text: '' });
+        }, 90_000);
+      };
+      resetStreamTimeout();
+
+      try {
       while (true) {
         const { done, value } = await reader.read();
+        resetStreamTimeout();
         if (done) break;
 
         buffer += decoder.decode(value, { stream: true });
@@ -156,9 +334,19 @@ export function registerChatHandlers(): void {
         }
       }
 
-      send({ type: 'done', text: '' });
+      if (streamTimeoutId) clearTimeout(streamTimeoutId);
+      if (!streamDone) { streamDone = true; send({ type: 'done', text: '' }); }
+      } catch (err) {
+        if (streamTimeoutId) clearTimeout(streamTimeoutId);
+        if (!streamDone) {
+          streamDone = true;
+          send({ type: 'error', text: err instanceof Error ? err.message : String(err) });
+          send({ type: 'done', text: '' });
+        }
+      }
     } catch (err) {
       send({ type: 'error', text: err instanceof Error ? err.message : String(err) });
+      send({ type: 'done', text: '' });
     }
   });
 
@@ -211,6 +399,7 @@ export function registerAiSettingsHandlers(): void {
       await callOpenAiCompatibleApi(
         [{ role: 'user', content: 'Hi' }],
         false,
+        { mode: 'disabled' },
       );
       return { ok: true, message: '模型正常' };
     } catch (err) {

@@ -402,3 +402,10 @@ async function runApp(): Promise<void> {
 }
 
 void runApp();
+
+// Prevent unhandled promise rejections from crashing the renderer
+window.addEventListener('unhandledrejection', (event) => {
+  console.error('[Next-SSH] Unhandled rejection:', event.reason);
+  window.electronAPI?.logToMain?.('[Next-SSH]', 'Unhandled rejection:', event.reason);
+  event.preventDefault();
+});

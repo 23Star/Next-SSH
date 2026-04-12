@@ -50,8 +50,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   chat: {
     complete: (messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>) =>
       ipcRenderer.invoke('chat:complete', messages).then((r: { v: string }) => r.v),
-    streamStart: (messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>, enableThinking?: boolean) =>
-      ipcRenderer.invoke('chat:streamStart', messages, enableThinking ?? true),
+    streamStart: (messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>, thinkingConfig?: { mode: 'adaptive' | 'enabled' | 'disabled'; budgetTokens?: number } | boolean) =>
+      ipcRenderer.invoke('chat:streamStart', messages, thinkingConfig ?? { mode: 'adaptive' }),
     onStreamChunk: (callback: (chunk: { type: 'content' | 'thinking' | 'done' | 'error'; text: string }) => void) => {
       ipcRenderer.removeAllListeners('chat:streamChunk');
       ipcRenderer.on('chat:streamChunk', (_event, chunk: { type: 'content' | 'thinking' | 'done' | 'error'; text: string }) =>
