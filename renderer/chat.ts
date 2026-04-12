@@ -120,15 +120,285 @@ function extractBashCommands(text: string): string[] {
   return commands;
 }
 
-/** Send a command to the active terminal tab. */
-function runCommandInTerminal(cmd: string): void {
+/** Send a command to the active terminal tab. Returns the tab info or null. */
+function runCommandInTerminal(cmd: string): { kind: string; connectionId?: number; id?: string } | null {
   const activeTab = state.mainPanelTabs.find((t) => t.id === state.activeMainPanelTabId);
   const api = apiRef;
-  if (!api || !activeTab) return;
+  if (!api || !activeTab) return null;
   if (activeTab.kind === 'terminal') {
     api.terminal.write(activeTab.connectionId, cmd + '\n');
+    return { kind: 'terminal', connectionId: activeTab.connectionId };
   } else if (activeTab.kind === 'local-terminal') {
     api.terminal.localWrite(activeTab.id, cmd + '\n');
+    return { kind: 'local-terminal', id: activeTab.id };
+  }
+  return null;
+}
+
+/** Truncate output for AI consumption. */
+function truncateForAi(text: string, maxChars: number): string {
+  if (text.length <= maxChars) return text;
+  return text.slice(-maxChars);
+}
+
+/** Check if the AI response indicates the task is complete (no more commands to run). */
+function isTaskComplete(aiContent: string): boolean {
+  // If no bash code blocks, the AI is just explaining — task is done
+  const commands = extractBashCommands(aiContent);
+  if (commands.length === 0) return true;
+
+  // Check for explicit completion signals in the text
+  const lower = aiContent.toLowerCase();
+  const completionPhrases = [
+    'task complete', 'all done', 'finished', 'no further action',
+    '任务完成', '已完成', '全部完成', '没有更多操作',
+    'задача выполнена', 'готово', 'завершено',
+  ];
+  if (completionPhrases.some((p) => lower.includes(p))) return true;
+
+  return false;
+}
+
+const AGENT_LOG = '[Agent Loop]';
+
+function agentLog(...args: unknown[]): void {
+  console.log(AGENT_LOG, ...args);
+  window.electronAPI?.logToMain?.(AGENT_LOG, ...args);
+}
+
+/**
+ * Agentic loop: execute ONE command per turn, feed result back to AI, let AI decide next step.
+ *
+ * Flow (similar to Claude Code):
+ *   1. AI suggests commands → extract ONLY the first one
+ *   2. Execute it via SSH exec channel (clean stdout/stderr + exit code)
+ *   3. Send result back to AI
+ *   4. AI analyzes and decides: next command, fix error, or done
+ *   5. Repeat
+ *
+ * Key design: one command per turn means AI sees each result individually
+ * and can react to failures instead of blindly running 8 commands in sequence.
+ */
+async function runAgenticLoop(
+  sessionId: number,
+  initialAiContent: string,
+): Promise<void> {
+  agentLog('runAgenticLoop STARTED', { mode: state.aiPermissionMode, sessionId });
+
+  if (state.aiPermissionMode === 'ask') {
+    agentLog('ABORT: mode is ask');
+    return;
+  }
+
+  const api = apiRef;
+  if (!api?.chat || !api.terminal) {
+    agentLog('ABORT: no api.chat or api.terminal');
+    return;
+  }
+
+  const activeTab = state.mainPanelTabs.find((t) => t.id === state.activeMainPanelTabId);
+  if (!activeTab) {
+    agentLog('ABORT: no active tab');
+    return;
+  }
+  if (activeTab.kind !== 'terminal' && activeTab.kind !== 'local-terminal') {
+    agentLog('ABORT: active tab is not terminal', { kind: activeTab.kind });
+    return;
+  }
+
+  state.agentLoopRunning = true;
+  state.agentLoopAbort = false;
+  updateAgentLoopUI();
+
+  let turnContent = initialAiContent;
+  let turnCount = 0;
+
+  try {
+    while (turnCount < state.AGENT_LOOP_MAX_TURNS && !state.agentLoopAbort) {
+      const commands = extractBashCommands(turnContent);
+      agentLog(`Turn ${turnCount}: extracted ${commands.length} commands`, commands);
+      if (commands.length === 0 || isTaskComplete(turnContent)) {
+        agentLog('Breaking: no commands or task complete');
+        break;
+      }
+
+      // In confirm mode, don't auto-execute — user clicks "Run" buttons
+      if (state.aiPermissionMode === 'confirm') {
+        agentLog('Confirm mode: not auto-executing');
+        break;
+      }
+
+      // Execute ONLY the first command
+      const cmd = commands[0];
+
+      if (isDangerousCommand(cmd)) {
+        agentLog(`SKIP dangerous: ${cmd}`);
+        // Feed the skip back to AI so it knows and can suggest an alternative
+        turnCount++;
+        const skipMsg = `[Command execution result]\n$ ${cmd}\n[SKIPPED] Dangerous command not executed. Please suggest a safer alternative or explain why this command is needed.`;
+        await api.chatContext!.add(sessionId, 'user', skipMsg);
+        turnContent = await streamAiFollowUp(api, sessionId);
+        if (!turnContent) break;
+        continue;
+      }
+
+      agentLog(`EXEC: ${cmd}`);
+
+      let feedbackMsg: string;
+      try {
+        let result: { stdout: string; stderr: string; exitCode: number | null };
+
+        if (activeTab.kind === 'terminal') {
+          result = await api.terminal.exec(activeTab.connectionId, cmd, 120000);
+        } else {
+          result = await api.terminal.localExec(cmd, 120000);
+        }
+
+        const outputParts: string[] = [];
+        if (result.stdout) {
+          outputParts.push(truncateForAi(result.stdout, state.AGENT_OUTPUT_MAX_CHARS));
+        }
+        if (result.stderr) {
+          outputParts.push(`[stderr]\n${truncateForAi(result.stderr, 2000)}`);
+        }
+        if (result.exitCode !== 0 && result.exitCode !== null) {
+          outputParts.push(`[exit code: ${result.exitCode}]`);
+        }
+
+        const output = outputParts.join('\n') || '(no output)';
+        feedbackMsg = `$ ${cmd}\n${output}`;
+        agentLog(`OUTPUT (${output.length} chars): ${output.slice(0, 200)}`);
+      } catch (err) {
+        const errMsg = err instanceof Error ? err.message : String(err);
+        feedbackMsg = `$ ${cmd}\n[ERROR] ${errMsg}`;
+        agentLog(`EXEC ERROR: ${errMsg}`);
+      }
+
+      if (state.agentLoopAbort) break;
+
+      turnCount++;
+      agentLog(`Sending feedback to AI (turn ${turnCount})`);
+
+      // Save command result as user message
+      await api.chatContext!.add(sessionId, 'user', `[Command execution result]\n${feedbackMsg}`);
+
+      // Get AI's follow-up response
+      turnContent = await streamAiFollowUp(api, sessionId);
+      if (!turnContent) break;
+
+      // Small delay before next command
+      await new Promise((r) => setTimeout(r, 300));
+    }
+
+    agentLog(`Agentic loop finished after ${turnCount} turns`);
+  } catch (err) {
+    agentLog('Agentic loop ERROR:', err);
+  } finally {
+    state.agentLoopRunning = false;
+    state.agentLoopAbort = false;
+    updateAgentLoopUI();
+  }
+}
+
+/**
+ * Stream an AI follow-up response for the agentic loop.
+ * Returns the AI's content text, or empty string on error.
+ */
+async function streamAiFollowUp(api: Api, sessionId: number): Promise<string> {
+  const messages = await api.chatContext!.listBySession(sessionId);
+  const payload = [
+    { role: 'system' as const, content: getChatSystemPrompt() + '\n\n[Important] You just executed a command. The output is provided below. Analyze the result and decide what to do next. If the task is complete, summarize the result without any code blocks. If there are errors, suggest a fix with ONE command. If more steps are needed, suggest the single most important next command. Always prefer giving just ONE command at a time so you can see the result before deciding the next step.' },
+    ...messages.slice(-10).map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content })),
+  ];
+
+  const { msgDiv, thinkingContentEl, thinkingSummaryEl, contentEl, indicatorEl } = createStreamingMessage();
+  let thinkingText = '';
+  let contentText = '';
+  let thinkingDurationMs: number | null = null;
+  let streamDone = false;
+
+  return new Promise<string>((resolve) => {
+    const handler = (chunk: { type: string; text: string; durationMs?: number }) => {
+      if (streamDone) return;
+
+      if (chunk.type === 'thinking') {
+        thinkingText += chunk.text;
+        if (state.showThinking) {
+          const details = msgDiv.querySelector('.chatThinking');
+          if (details) details.classList.remove('chatThinking--hidden');
+          thinkingContentEl.innerHTML = renderMarkdown(thinkingText);
+        }
+      } else if (chunk.type === 'thinking_end') {
+        thinkingDurationMs = chunk.durationMs ?? null;
+        const spinnerEl = msgDiv.querySelector('.chatThinkingSpinner');
+        if (spinnerEl) spinnerEl.classList.add('chatThinkingSpinner--done');
+        thinkingSummaryEl.textContent = t('ai.thoughtComplete') + (thinkingDurationMs ? ` (${(thinkingDurationMs / 1000).toFixed(1)}s)` : '');
+      } else if (chunk.type === 'content') {
+        if (!contentText && indicatorEl.parentNode) indicatorEl.remove();
+        contentText += chunk.text;
+        contentEl.textContent = contentText;
+      } else if (chunk.type === 'done') {
+        streamDone = true;
+        finishStreamingMessage(msgDiv, thinkingText, contentText, thinkingDurationMs);
+        api.chatContext!.add(sessionId, 'assistant', contentText, extractSuggestedCommands(contentText), thinkingText || null, thinkingDurationMs).then((row) => {
+          state.chatMessagesBySession[sessionId].push({
+            id: row.id, role: 'assistant', content: row.content,
+            thinking: row.thinking ?? undefined, thinkingDurationMs: row.thinkingDurationMs ?? undefined,
+            suggestedCommands: row.suggestedCommands ?? undefined,
+          });
+          renderChatMessages();
+          void tryOpenDiffPreviewForLastMessage(sessionId);
+        });
+        agentLog(`AI follow-up done, ${extractBashCommands(contentText).length} commands in response`);
+        resolve(contentText);
+      } else if (chunk.type === 'error') {
+        streamDone = true;
+        contentText += `\n\n**Error:** ${chunk.text}`;
+        finishStreamingMessage(msgDiv, thinkingText, contentText, thinkingDurationMs);
+        agentLog('AI follow-up error:', chunk.text);
+        resolve('');
+      }
+
+      if (!streamDone) {
+        const chatEl = document.getElementById('chatMessages');
+        if (chatEl) chatEl.scrollTop = chatEl.scrollHeight;
+      }
+    };
+
+    api.chat!.onStreamChunk(handler);
+    api.chat!.streamStart(payload, state.showThinking);
+  });
+}
+
+/** Update UI elements to show agent loop status. */
+function updateAgentLoopUI(): void {
+  const sendBtn = document.getElementById('btnChatSend') as HTMLButtonElement | null;
+  const abortBtn = document.getElementById('btnAbortAgent') as HTMLButtonElement | null;
+  const input = document.getElementById('chatInput') as HTMLTextAreaElement | null;
+  if (sendBtn) sendBtn.disabled = state.agentLoopRunning;
+  if (input) input.disabled = state.agentLoopRunning;
+
+  // Toggle abort button visibility
+  if (abortBtn) {
+    abortBtn.style.display = state.agentLoopRunning ? 'inline-block' : 'none';
+  }
+
+  // Update send button text during agent loop
+  if (sendBtn) {
+    if (state.agentLoopRunning) {
+      sendBtn.textContent = t('ai.thinking');
+      sendBtn.style.background = 'var(--border-hover)';
+    } else {
+      sendBtn.textContent = t('chat.send');
+      sendBtn.style.background = '';
+    }
+  }
+}
+
+/** Abort the running agent loop. */
+export function abortAgentLoop(): void {
+  if (state.agentLoopRunning) {
+    state.agentLoopAbort = true;
   }
 }
 
@@ -588,18 +858,9 @@ export async function sendChatMessage(api: Api, userContent: string): Promise<vo
             suggestedCommands: row.suggestedCommands ?? undefined,
           });
           renderChatMessages();
-          // Auto-execute commands in auto mode
+          // Start agentic loop for auto mode (intelligent execution with feedback)
           if (state.aiPermissionMode === 'auto') {
-            const commands = extractBashCommands(contentText);
-            if (commands.length > 0) {
-              let delay = 300;
-              for (const cmd of commands) {
-                if (isDangerousCommand(cmd)) continue;
-                const capturedCmd = cmd;
-                setTimeout(() => runCommandInTerminal(capturedCmd), delay);
-                delay += 600;
-              }
-            }
+            runAgenticLoop(sessionId, contentText).catch(() => {});
           }
           void tryOpenDiffPreviewForLastMessage(sessionId);
         });
@@ -628,7 +889,8 @@ export async function sendChatMessage(api: Api, userContent: string): Promise<vo
     });
   } finally {
     state.chatLoading = false;
-    if (sendBtn) (sendBtn as HTMLButtonElement).disabled = false;
+    // Don't re-enable send button if agent loop is still running
+    if (!state.agentLoopRunning && sendBtn) (sendBtn as HTMLButtonElement).disabled = false;
   }
 }
 
@@ -847,8 +1109,17 @@ export function bindChatEvents(api: Api): void {
     });
   }
 
+  // Bind abort button for agent loop
+  const abortBtn = document.getElementById('btnAbortAgent') as HTMLButtonElement | null;
+  if (abortBtn) {
+    abortBtn.addEventListener('click', () => {
+      abortAgentLoop();
+    });
+  }
+
   form.addEventListener('submit', (e) => {
     e.preventDefault();
+    if (state.agentLoopRunning) return;
     const text = input.value;
     input.value = '';
     sendChatMessage(api, text);
@@ -856,6 +1127,7 @@ export function bindChatEvents(api: Api): void {
   input.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
       e.preventDefault();
+      if (state.agentLoopRunning) return;
       const text = input.value;
       input.value = '';
       sendChatMessage(api, text);

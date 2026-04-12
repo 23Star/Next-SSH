@@ -35,6 +35,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
         callback(payload),
       );
     },
+    exec: (connectionId: number, command: string, timeoutMs?: number) =>
+      ipcRenderer.invoke('terminal:exec', connectionId, { v: command }, timeoutMs) as Promise<{ stdout: string; stderr: string; exitCode: number | null }>,
+    localExec: (command: string, timeoutMs?: number) =>
+      ipcRenderer.invoke('terminal:localExec', { v: command }, timeoutMs) as Promise<{ stdout: string; stderr: string; exitCode: number | null }>,
   },
   environment: {
     list: () => ipcRenderer.invoke('environment:list'),

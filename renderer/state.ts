@@ -48,6 +48,15 @@ export const state = {
   showThinking: true,
   aiPermissionMode: 'ask' as 'ask' | 'confirm' | 'auto',
 
+  /** Agentic loop: true while auto/confirm command execution loop is running. */
+  agentLoopRunning: false,
+  /** Set to true to abort the running agent loop. */
+  agentLoopAbort: false,
+  /** Max turns for agent loop to prevent infinite loops. */
+  AGENT_LOOP_MAX_TURNS: 10,
+  /** Max terminal output chars to feed back to AI per command. */
+  AGENT_OUTPUT_MAX_CHARS: 4000,
+
   /** Explorer で今表示しているターゲット。'local' または connectionId。ターミナルの activeTab とは独立。 */
   activeExplorerTarget: 'local' as 'local' | number,
   /** ターゲットごとの Explorer 状態。key は 'local' または String(connectionId)。 */

@@ -480,6 +480,76 @@ function execCommand(connectionId: number, command: string): Promise<string> {
   });
 }
 
+/** Result of an exec channel command execution. */
+export interface ExecResult {
+  stdout: string;
+  stderr: string;
+  exitCode: number | null;
+}
+
+/**
+ * Execute a command via SSH exec channel (separate from the interactive PTY shell).
+ * Returns clean stdout, stderr, and exit code — no ANSI codes, no echo.
+ * Timeout defaults to 30s. Retries once on channel open failure.
+ */
+export async function execCommandFull(connectionId: number, command: string, timeoutMs: number = 30000): Promise<ExecResult> {
+  const maxRetries = 2;
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await execCommandOnce(connectionId, command, timeoutMs);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      // Retry on channel open failure (concurrent channel limit)
+      if (msg.includes('Channel open failure') || msg.includes('open failed')) {
+        if (attempt < maxRetries - 1) {
+          console.log(`[execCommandFull] Retry ${attempt + 1} after channel failure: ${command.slice(0, 60)}`);
+          await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
+          continue;
+        }
+      }
+      throw err;
+    }
+  }
+  throw new Error('Unreachable');
+}
+
+function execCommandOnce(connectionId: number, command: string, timeoutMs: number): Promise<ExecResult> {
+  const c = connections.get(connectionId);
+  if (!c) return Promise.reject(new Error('Not connected'));
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const settle = (fn: () => void) => { if (settled) return; settled = true; fn(); };
+
+    const timer = setTimeout(() => {
+      settle(() => reject(new Error(`Command timed out after ${timeoutMs}ms: ${command.slice(0, 80)}`)));
+    }, timeoutMs);
+
+    c.client.exec(command, (err: Error | undefined, stream: NodeJS.ReadableStream | undefined) => {
+      if (err) { clearTimeout(timer); return settle(() => reject(err)); }
+      if (!stream) { clearTimeout(timer); return settle(() => reject(new Error('No exec stream'))); }
+
+      let stdout = '';
+      let stderr = '';
+      let exitCode: number | null = null;
+
+      stream.on('data', (chunk: Buffer) => { stdout += chunk.toString(); });
+      const stderrStream = (stream as { stderr?: NodeJS.ReadableStream }).stderr;
+      if (stderrStream) stderrStream.on('data', (chunk: Buffer) => { stderr += chunk.toString(); });
+
+      stream.on('close', (code?: number) => {
+        clearTimeout(timer);
+        exitCode = code ?? null;
+        settle(() => resolve({ stdout: stdout.trimEnd(), stderr: stderr.trimEnd(), exitCode }));
+      });
+
+      stream.on('error', (e: Error) => {
+        clearTimeout(timer);
+        settle(() => reject(e));
+      });
+    });
+  });
+}
+
 export interface ServerInfo {
   hostname: string;
   os: string;

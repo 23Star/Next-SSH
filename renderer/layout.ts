@@ -89,22 +89,27 @@ export function renderLayout(root: HTMLElement): void {
           <form class="chatInputForm" id="chatInputForm">
             <div class="chatInputResizer" id="chatInputResizer" data-i18n-title="resizer.horizontal" title="${t('resizer.horizontal')}"></div>
             <textarea id="chatInput" data-i18n-placeholder="chat.placeholder" placeholder="${t('chat.placeholder')}" autocomplete="off"></textarea>
-            <div class="chatThinkWrap" id="thinkSwitchWrap">
-              <span class="chatThinkLabel" id="thinkSwitchLabel">${t('ai.thinkMode')}</span>
-              <label class="chatThinkSwitch" id="thinkSwitchControl" title="${t('ai.thinkMode')}">
-                <input type="checkbox" id="thinkSwitchInput" />
-                <span class="chatThinkSlider"></span>
-              </label>
-              <span class="chatThinkModel" id="thinkSwitchModel"></span>
+            <div class="chatToolbar" id="chatToolbar">
+              <div class="chatThinkWrap" id="thinkSwitchWrap">
+                <label class="chatThinkSwitch" id="thinkSwitchControl" title="${t('ai.thinkMode')}">
+                  <input type="checkbox" id="thinkSwitchInput" />
+                  <span class="chatThinkSlider"></span>
+                </label>
+                <span class="chatThinkLabel" id="thinkSwitchLabel">Think</span>
+                <span class="chatThinkModel" id="thinkSwitchModel"></span>
+              </div>
+              <div class="chatModeWrap" id="chatModeWrap">
+                <select id="chatModeSelect" class="chatModeSelect">
+                  <option value="ask">${t('ai.modeAsk')}</option>
+                  <option value="confirm">${t('ai.modeConfirm')}</option>
+                  <option value="auto">${t('ai.modeAuto')}</option>
+                </select>
+              </div>
             </div>
-            <div class="chatModeWrap" id="chatModeWrap">
-              <select id="chatModeSelect" class="chatModeSelect" title="${t('ai.modeAsk')}">
-                <option value="ask">${t('ai.modeAsk')}</option>
-                <option value="confirm">${t('ai.modeConfirm')}</option>
-                <option value="auto">${t('ai.modeAuto')}</option>
-              </select>
+            <div class="chatSendRow">
+              <button type="submit" id="btnChatSend" data-i18n="chat.send">${t('chat.send')}</button>
+              <button type="button" id="btnAbortAgent" class="btnAbortAgent" style="display:none;">${t('button.stop')}</button>
             </div>
-            <button type="submit" id="btnChatSend" data-i18n="chat.send">${t('chat.send')}</button>
           </form>
         </aside>
       </div>

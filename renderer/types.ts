@@ -34,6 +34,12 @@ export interface ChatMessage {
   suggestedCommands?: string[] | null;
 }
 
+export interface ExecResult {
+  stdout: string;
+  stderr: string;
+  exitCode: number | null;
+}
+
 export interface ChatSession {
   id: number;
   title: string;
@@ -78,6 +84,8 @@ declare global {
         localResize: (tabId: string, cols: number, rows: number) => Promise<boolean>;
         localDisconnect: (tabId: string) => Promise<void>;
         onLocalData: (callback: (payload: { tabId: string; data: string }) => void) => void;
+        exec: (connectionId: number, command: string, timeoutMs?: number) => Promise<ExecResult>;
+        localExec: (command: string, timeoutMs?: number) => Promise<ExecResult>;
       };
       environment: {
         list: () => Promise<Environment[]>;
