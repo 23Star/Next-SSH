@@ -52,31 +52,19 @@ When you encounter an obstacle, do not use destructive actions as a shortcut. Fo
 
 # Command Execution
 
-Commands MUST be placed inside \`\`\`bash code blocks. The system extracts and executes them one at a time.
+Commands MUST be placed inside \`\`\`bash code blocks. Give **exactly one bash code block per response** — the system executes it, returns the result, and then you decide the next step.
 
 ## Rules
 
-- Commands are placed inside \`\`\`bash code blocks, **one command per line**. The system executes them **sequentially** (top to bottom) and returns all results together.
-- **Give multiple commands when they form a logical group.** For example, checking server health can include 5 commands in one block. Installing software can include add-repo + update + install in one block.
-- Use \`&&\` to chain commands that must all succeed (e.g., \`mkdir -p /opt/app && cd /opt/app && pwd\`).
-- Use \`;\` only when you don't care about the success of the first command.
-- If the next command depends on the output of a previous one, **only give the first command** and wait for the result before proceeding.
-- Commands have a **120-second timeout each**. For long-running tasks, suggest using \`nohup\` + \`&\`, or break into smaller steps.
-- Comment lines starting with \`#\` are ignored during execution.
+- Place all commands for the current step inside a **single** \`\`\`bash code block.
+- **One code block per response.** After receiving the result, give your next bash block (or a final text summary if done).
+- Each line in the block is executed sequentially; execution stops on the first non-zero exit code and the result is reported back to you.
+- Use \`&&\` to chain commands that must all succeed (e.g., \`apt update && apt install -y nginx\`).
+- Use \`;\` only when you want all commands to run regardless of the previous outcome.
+- Commands have a **120-second timeout each**. For long-running tasks use \`nohup cmd &\` or split into smaller steps.
+- Comment lines starting with \`#\` are ignored.
 - Always use absolute paths when the working directory is uncertain.
-- Quote paths that may contain spaces: \`ls "/path/with spaces"\`.
-
-## When to Give Multiple Commands vs Single Command
-
-**Give multiple commands** (in one code block) when:
-- They are **independent** — e.g., \`uname -a\`, \`free -h\`, \`df -h\`, \`uptime\` (checking different aspects of the server)
-- They form a **known pipeline** — e.g., \`apt update && apt install -y nginx\`
-- They are all **read-only** diagnostics — safe to batch together
-
-**Give a single command** (one line in the code block) when:
-- The next step depends on the output — e.g., check OS version first, then decide the install command
-- The command is **destructive or state-changing** — e.g., \`rm\`, \`systemctl restart\`, config file edits
-- You're **debugging** — need to see the result before knowing what to try next
+- Quote paths that may contain spaces.
 
 ## Before Creating Files or Directories
 
@@ -195,8 +183,13 @@ export function getCurrentChatMessages(): ChatMessage[] {
   return state.chatMessagesBySession[state.activeChatSessionId] ?? [];
 }
 
-/** Max total characters for message history sent to AI (context window budget). */
-const MAX_CONTEXT_CHARS = 16000;
+/**
+ * Max total characters of message history sent to the AI per request.
+ * At ~4 chars/token this is ≈ 8 000 tokens — well within every modern model's context.
+ * Larger values keep more intermediate command results visible to the AI,
+ * which is important for multi-step tasks.
+ */
+const MAX_CONTEXT_CHARS = 32000;
 
 /**
  * Select messages to fit within a character budget.
@@ -302,7 +295,7 @@ function isWarningCommand(cmd: string): boolean {
   return WARNING_PATTERNS.some((p) => p.test(cmd));
 }
 
-/** Extract bash/sh code blocks from markdown text. Returns individual commands. */
+/** Extract bash/sh code blocks from markdown text. Returns individual commands (all blocks). */
 function extractBashCommands(text: string): string[] {
   const commands: string[] = [];
   const regex = /```(?:bash|sh)\s*\n?([\s\S]*?)```/g;
@@ -314,6 +307,30 @@ function extractBashCommands(text: string): string[] {
       if (l && !l.startsWith('#') && !l.startsWith('//')) commands.push(l);
     });
   }
+  return commands;
+}
+
+/**
+ * Extract commands from ONLY THE FIRST bash/sh code block.
+ *
+ * This implements the Claude Code "one tool per turn" pattern:
+ *   - AI gives exactly ONE bash block per response
+ *   - System executes it and returns the result
+ *   - AI sees the result and decides the next step
+ *   - A response with NO bash block signals task completion
+ *
+ * If the AI happens to give multiple code blocks, only the first is
+ * executed. The AI will naturally provide the rest in subsequent turns.
+ */
+function extractFirstBashBlockCommands(text: string): string[] {
+  const match = text.match(/```(?:bash|sh)\s*\n?([\s\S]*?)```/);
+  if (!match) return [];
+  const block = match[1].trim();
+  const commands: string[] = [];
+  block.split('\n').forEach((line) => {
+    const l = line.trim();
+    if (l && !l.startsWith('#') && !l.startsWith('//')) commands.push(l);
+  });
   return commands;
 }
 
@@ -393,17 +410,19 @@ function agentLog(...args: unknown[]): void {
 }
 
 /**
- * Agentic loop: execute ONE command per turn, feed result back to AI, let AI decide next step.
+ * Agentic loop — Claude Code "one tool per turn" pattern adapted for SSH.
  *
- * Flow (similar to Claude Code):
- *   1. AI suggests commands → extract ONLY the first one
- *   2. Execute it via SSH exec channel (clean stdout/stderr + exit code)
- *   3. Send result back to AI
- *   4. AI analyzes and decides: next command, fix error, or done
- *   5. Repeat
+ * Each turn:
+ *   1. Extract the FIRST bash code block from the AI response
+ *   2. Execute each line in that block sequentially (stop on first error)
+ *   3. Send the combined result back to AI as a structured feedback message
+ *   4. AI streams its next response: another bash block → another turn, or text only → done
+ *   5. Repeat until: no bash block in response | max turns | user abort
  *
- * Key design: one command per turn means AI sees each result individually
- * and can react to failures instead of blindly running 8 commands in sequence.
+ * "One block per turn" mirrors Claude Code's one tool_use per response:
+ *   AI sees the result of each step before deciding what to do next.
+ *   Multiple commands inside ONE block are fine (they're like a single shell script).
+ *   A second block in the same response is intentionally ignored — the AI will give it next turn.
  */
 
 /** Show a command approval dialog for confirm mode. Returns true if user approves. */
@@ -464,22 +483,26 @@ async function runAgenticLoop(
 
   state.agentLoopRunning = true;
   state.agentLoopAbort = false;
-  updateAgentLoopUI();
+  updateAgentLoopUI(0);
 
   let turnContent = initialAiContent;
   let turnCount = 0;
 
   try {
     while (turnCount < state.AGENT_LOOP_MAX_TURNS && !state.agentLoopAbort) {
-      const commands = extractBashCommands(turnContent);
-      agentLog(`Turn ${turnCount}: extracted ${commands.length} commands`, commands);
-      if (commands.length === 0 || isTaskComplete(turnContent)) {
-        agentLog('Breaking: no commands or task complete');
+      // ── Claude Code "one tool per turn": take ONLY the first bash block ──
+      const commands = extractFirstBashBlockCommands(turnContent);
+      agentLog(`Turn ${turnCount}: first bash block has ${commands.length} command line(s)`, commands);
+
+      if (commands.length === 0) {
+        // No bash block → AI gave a text-only response → task is complete
+        agentLog('Task complete: no bash block in response');
         break;
       }
 
-      // Execute all commands sequentially (Claude Code pattern)
-      // Stop on first error so AI can react; skip blocked/warning commands but continue
+      updateAgentLoopUI(turnCount + 1);
+
+      // ── Execute each line in the block sequentially, stop on first error ──
       const allResults: string[] = [];
       let stoppedOnError = false;
 
@@ -487,28 +510,31 @@ async function runAgenticLoop(
         const cmd = commands[ci];
         if (state.agentLoopAbort) break;
 
-        // P0 — Always blocked
+        // P0 — Always blocked (destructive / irreversible)
         if (isBlockedCommand(cmd)) {
-          agentLog(`BLOCKED: ${cmd}`);
-          allResults.push(`Command: ${cmd}\nResult: BLOCKED — this command is classified as destructive and will not be executed. Please suggest a safer alternative.`);
-          continue;
+          agentLog(`BLOCKED (P0): ${cmd}`);
+          allResults.push(`Command: ${cmd}\nResult: BLOCKED — this command is classified as destructive and will not be executed. Suggest a safer alternative.`);
+          stoppedOnError = true;
+          break;
         }
 
-        // P1 — Warning: auto mode skips
+        // P1 — High-risk: auto mode skips, confirm mode shows ⚠️
         if (isWarningCommand(cmd) && state.aiPermissionMode === 'auto') {
           agentLog(`SKIP warning-level command in auto mode: ${cmd}`);
-          allResults.push(`Command: ${cmd}\nResult: SKIPPED — this command is classified as high-risk and was not auto-executed. If the user confirms it should run, please suggest it again.`);
-          continue;
+          allResults.push(`Command: ${cmd}\nResult: SKIPPED — high-risk command not auto-executed. If the user explicitly approves, suggest it again.`);
+          stoppedOnError = true;
+          break;
         }
 
-        // confirm mode: show approval dialog before executing
+        // Confirm mode: require user approval before each command
         if (state.aiPermissionMode === 'confirm') {
           const isWarning = isWarningCommand(cmd);
           const approved = await showConfirmDialog(cmd, isWarning);
           if (!approved) {
             agentLog(`SKIP by user: ${cmd}`);
-            allResults.push(`Command: ${cmd}\nResult: SKIPPED by user`);
-            continue;
+            allResults.push(`Command: ${cmd}\nResult: SKIPPED by user — do not retry this command.`);
+            stoppedOnError = true;
+            break;
           }
         }
 
@@ -524,10 +550,10 @@ async function runAgenticLoop(
             result = await api.terminal.localExec(cmd, 120000);
           }
 
-          // Display result in terminal (visual only, not sent to bash)
+          // Show command + output in the terminal panel (visual only, not sent to the shell)
           displayInTerminal(cmd, result);
 
-          // Structured feedback format for AI
+          // Build structured feedback for the AI (mirrors Claude Code's tool_result format)
           const outputParts: string[] = [];
           outputParts.push(`Command: ${cmd}`);
           outputParts.push(`Exit Code: ${result.exitCode ?? 'unknown'}`);
@@ -546,7 +572,7 @@ async function runAgenticLoop(
           resultMsg = outputParts.join('\n');
           agentLog(`OUTPUT (${resultMsg.length} chars): ${resultMsg.slice(0, 200)}`);
 
-          // Stop on error — let AI decide whether to retry or adjust
+          // Non-zero exit code: stop here so AI can react to the error
           if (result.exitCode !== 0 && result.exitCode !== null) {
             stoppedOnError = true;
           }
@@ -565,24 +591,25 @@ async function runAgenticLoop(
 
       if (state.agentLoopAbort) break;
 
+      // ── Feed results back to AI (one turn = one bash block executed) ──
       turnCount++;
       const feedbackMsg = allResults.length > 1
-        ? `[${allResults.length} command(s) executed]\n\n${allResults.join('\n\n')}`
-        : allResults[0];
-      agentLog(`Sending feedback to AI (turn ${turnCount}), ${allResults.length} results, stoppedOnError=${stoppedOnError}`);
+        ? `[Step ${turnCount}: ${allResults.length} command(s) executed]\n\n${allResults.join('\n\n')}`
+        : `[Step ${turnCount}]\n${allResults[0] ?? '(no output)'}`;
 
-      // Save command result as user message
+      agentLog(`Sending step ${turnCount} feedback to AI, ${allResults.length} result(s), stoppedOnError=${stoppedOnError}`);
+
       await api.chatContext!.add(sessionId, 'user', `[Command execution result]\n${feedbackMsg}`);
 
-      // Get AI's follow-up response
-      turnContent = await streamAiFollowUp(api, sessionId);
+      // Stream the next AI response
+      turnContent = await streamAiFollowUp(api, sessionId, turnCount);
       if (!turnContent) break;
 
-      // Small delay before next turn
-      await new Promise((r) => setTimeout(r, 300));
+      // Brief pause between turns to avoid hammering the API
+      await new Promise((r) => setTimeout(r, 200));
     }
 
-    agentLog(`Agentic loop finished after ${turnCount} turns`);
+    agentLog(`Agentic loop finished after ${turnCount} turn(s)`);
   } catch (err) {
     agentLog('Agentic loop ERROR:', err);
   } finally {
@@ -595,11 +622,24 @@ async function runAgenticLoop(
 /**
  * Stream an AI follow-up response for the agentic loop.
  * Returns the AI's content text, or empty string on error.
+ *
+ * This is the "tool_result → next response" step of the Claude Code loop.
  */
-async function streamAiFollowUp(api: Api, sessionId: number): Promise<string> {
+async function streamAiFollowUp(api: Api, sessionId: number, turnCount?: number): Promise<string> {
   const messages = await api.chatContext!.listBySession(sessionId);
+  const loopHint = [
+    `\n\n[Agentic Loop — Step ${turnCount ?? '?'}]`,
+    `You are executing the user's request step-by-step via SSH.`,
+    `Examine the command result above and decide:`,
+    `  • Task complete → respond with a text-only summary (NO bash code blocks). This ends the loop.`,
+    `  • Error → give ONE bash code block with the fix or diagnosis command.`,
+    `  • More steps needed → give ONE bash code block with the next command(s).`,
+    `Do NOT give multiple bash code blocks. Give exactly one, then wait for the result.`,
+    `Do NOT repeat a command that already succeeded. Do NOT explain what you are about to do — just give the command.`,
+  ].join('\n');
+
   const payload = [
-    { role: 'system' as const, content: getChatSystemPrompt() + "\n\n[Agentic Loop] You are in an automated command execution loop. The user's original request is being carried out step by step. Analyze the command results above and decide: if the task is complete, give a text-only summary with NO code blocks. If there are errors, give a single fix command. If more steps are needed, give the next command(s). You may give multiple commands in one code block when they are independent or form a known pipeline (e.g., apt update && apt install). Give a single command when the next step depends on the output or when the command is destructive." },
+    { role: 'system' as const, content: getChatSystemPrompt() + loopHint },
     ...selectMessagesForContext(messages, MAX_CONTEXT_CHARS).map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content })),
   ];
 
@@ -675,8 +715,8 @@ async function streamAiFollowUp(api: Api, sessionId: number): Promise<string> {
   });
 }
 
-/** Update UI elements to show agent loop status. */
-function updateAgentLoopUI(): void {
+/** Update UI elements to show agent loop status and current step number. */
+function updateAgentLoopUI(step?: number): void {
   const sendBtn = document.getElementById('btnChatSend') as HTMLButtonElement | null;
   const abortBtn = document.getElementById('btnAbortAgent') as HTMLButtonElement | null;
   const input = document.getElementById('chatInput') as HTMLTextAreaElement | null;
@@ -688,10 +728,13 @@ function updateAgentLoopUI(): void {
     abortBtn.style.display = state.agentLoopRunning ? 'inline-block' : 'none';
   }
 
-  // Update send button text during agent loop
+  // Show step counter in send button while the loop is active
   if (sendBtn) {
     if (state.agentLoopRunning) {
-      sendBtn.textContent = t('ai.thinking');
+      const stepLabel = step !== undefined && step > 0
+        ? `${t('ai.thinking')} · Step ${step}/${state.AGENT_LOOP_MAX_TURNS}`
+        : t('ai.thinking');
+      sendBtn.textContent = stepLabel;
       sendBtn.style.background = 'var(--border-hover)';
     } else {
       sendBtn.textContent = t('chat.send');
@@ -1111,7 +1154,7 @@ export async function sendChatMessage(api: Api, userContent: string): Promise<vo
 
     const payload = [
       { role: 'system' as const, content: getChatSystemPrompt() + terminalContext + fileContext },
-      ...messages.map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content })),
+      ...selectMessagesForContext(messages, MAX_CONTEXT_CHARS).map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content })),
     ];
 
     // Streaming mode

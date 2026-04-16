@@ -52,10 +52,10 @@ export const state = {
   agentLoopRunning: false,
   /** Set to true to abort the running agent loop. */
   agentLoopAbort: false,
-  /** Max turns for agent loop to prevent infinite loops. */
-  AGENT_LOOP_MAX_TURNS: 10,
-  /** Max terminal output chars to feed back to AI per command. */
-  AGENT_OUTPUT_MAX_CHARS: 4000,
+  /** Max turns for agent loop to prevent infinite loops. 30 covers complex multi-step tasks. */
+  AGENT_LOOP_MAX_TURNS: 30,
+  /** Max terminal output chars to feed back to AI per command. 8 000 chars ≈ 200 lines. */
+  AGENT_OUTPUT_MAX_CHARS: 8000,
 
   /** Explorer で今表示しているターゲット。'local' または connectionId。ターミナルの activeTab とは独立。 */
   activeExplorerTarget: 'local' as 'local' | number,
