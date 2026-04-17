@@ -40,3 +40,10 @@ logs/
 # Temporary files
 tmp/
 temp/
+
+# MCP / workflow tools (not part of the project)
+.spec-workflow/
+.playwright-mcp/
+
+# Claude Code session data
+.claude/
