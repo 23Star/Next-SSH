@@ -1,0 +1,139 @@
+/*
+ * Design tokens — Next-SSH v2.
+ *
+ * Palette leans into Claude's warm off-white + terracotta; surface treatment,
+ * corner radii, and motion borrow from iOS (rounded, soft shadows, cubic
+ * easing). Every color is a CSS variable so dark mode is a single class flip
+ * on <html> (see `.theme-dark` below).
+ */
+
+:root {
+  /* ——— Color primitives (light) ——— */
+  --bg:              #faf9f5;   /* app background (Claude warm off-white) */
+  --bg-elevated:    #f4f2ec;
+  --surface:        #ffffff;
+  --surface-2:     rgba(255, 255, 255, 0.72);  /* translucent for sidebar/overlay */
+  --surface-hover:  rgba(0, 0, 0, 0.035);
+  --surface-active: rgba(0, 0, 0, 0.06);
+  --border:        rgba(40, 30, 20, 0.08);
+  --border-strong: rgba(40, 30, 20, 0.14);
+
+  --text:           #1a1a1a;
+  --text-muted:    #6b6860;
+  --text-subtle:   #95918a;
+  --text-inverse:   #ffffff;
+
+  --accent:         #c96e4b;   /* Claude terracotta */
+  --accent-hover:   #b5593a;
+  --accent-soft:   rgba(201, 110, 75, 0.12);
+  --accent-text:   #ffffff;
+
+  --success:        #4f8a52;
+  --success-soft:  rgba(79, 138, 82, 0.14);
+  --warn:           #c9903f;
+  --warn-soft:     rgba(201, 144, 63, 0.14);
+  --danger:         #c15050;
+  --danger-soft:   rgba(193, 80, 80, 0.14);
+  --info:           #4a7aa8;
+  --info-soft:     rgba(74, 122, 168, 0.14);
+
+  /* ——— Typography ——— */
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
+    "Inter", "Segoe UI", "Helvetica Neue", Arial, sans-serif,
+    "Apple Color Emoji", "Segoe UI Emoji";
+  --font-mono:
+    "SF Mono", ui-monospace, "Menlo", "Consolas", "DejaVu Sans Mono", monospace;
+
+  --fs-xs: 11px;
+  --fs-sm: 12px;
+  --fs-base: 13.5px;
+  --fs-md: 15px;
+  --fs-lg: 17px;
+  --fs-xl: 22px;
+  --fs-2xl: 28px;
+
+  --lh-tight: 1.25;
+  --lh-normal: 1.5;
+  --lh-loose: 1.7;
+
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+  --fw-bold: 700;
+
+  /* ——— Spacing scale (4pt grid) ——— */
+  --s-0: 0px;
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 20px;
+  --s-6: 24px;
+  --s-8: 32px;
+  --s-10: 40px;
+  --s-12: 48px;
+  --s-16: 64px;
+
+  /* ——— Radii ——— */
+  --r-xs: 4px;
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 14px;
+  --r-xl: 20px;
+  --r-pill: 999px;
+
+  /* ——— Shadows (soft, iOS-like) ——— */
+  --shadow-hairline: 0 0 0 1px var(--border);
+  --shadow-card: 0 1px 2px rgba(20, 15, 10, 0.04), 0 0 0 1px var(--border);
+  --shadow-elev: 0 6px 16px rgba(20, 15, 10, 0.07), 0 0 0 1px var(--border);
+  --shadow-pop: 0 12px 32px rgba(20, 15, 10, 0.14), 0 0 0 1px var(--border);
+
+  /* ——— Motion ——— */
+  --ease-ios: cubic-bezier(0.2, 0, 0, 1);
+  --ease-spring: cubic-bezier(0.5, 1.6, 0.3, 1);
+  --dur-fast: 140ms;
+  --dur-base: 220ms;
+  --dur-slow: 340ms;
+
+  /* ——— Layout ——— */
+  --sidebar-w: 240px;
+  --sidebar-w-collapsed: 64px;
+  --topbar-h: 52px;
+  --drawer-w: 420px;
+}
+
+html.theme-dark {
+  --bg:              #1c1b19;
+  --bg-elevated:    #242320;
+  --surface:        #2a2926;
+  --surface-2:     rgba(42, 41, 38, 0.72);
+  --surface-hover: rgba(255, 255, 255, 0.045);
+  --surface-active: rgba(255, 255, 255, 0.08);
+  --border:        rgba(255, 240, 220, 0.08);
+  --border-strong: rgba(255, 240, 220, 0.14);
+
+  --text:           #f0ede6;
+  --text-muted:    #a39f96;
+  --text-subtle:   #706c64;
+  --text-inverse:   #1c1b19;
+
+  --accent:         #e08b6b;
+  --accent-hover:   #f0a286;
+  --accent-soft:   rgba(224, 139, 107, 0.18);
+  --accent-text:   #1c1b19;
+
+  --success:        #6fa872;
+  --success-soft:  rgba(111, 168, 114, 0.18);
+  --warn:           #dcac5e;
+  --warn-soft:     rgba(220, 172, 94, 0.18);
+  --danger:         #db7070;
+  --danger-soft:   rgba(219, 112, 112, 0.18);
+  --info:           #79a3cf;
+  --info-soft:     rgba(121, 163, 207, 0.18);
+
+  --shadow-hairline: 0 0 0 1px var(--border);
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.35), 0 0 0 1px var(--border);
+  --shadow-elev: 0 6px 16px rgba(0, 0, 0, 0.40), 0 0 0 1px var(--border);
+  --shadow-pop: 0 12px 32px rgba(0, 0, 0, 0.55), 0 0 0 1px var(--border);
+}

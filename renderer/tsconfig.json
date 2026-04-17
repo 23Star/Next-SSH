@@ -4,7 +4,9 @@
     "lib": ["ES2020", "DOM"],
     "noEmit": true,
     "module": "ESNext",
-    "moduleResolution": "bundler"
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "types": ["node"]
   },
   "include": ["./**/*"],
   "exclude": ["node_modules"]
