@@ -65,6 +65,33 @@ function bindEvents(): void {
   sidebar.setConnectHandler(() => terminal.doConnect(api));
   document.getElementById('btnSidebarConnect')?.addEventListener('click', () => sidebar.openConnectModal(api));
   document.getElementById('btnAdd')?.addEventListener('click', () => sidebar.openForm(api));
+
+  // Welcome screen buttons
+  document.getElementById('btnWelcomeAdd')?.addEventListener('click', () => sidebar.openForm(api));
+  document.getElementById('btnWelcomeConnect')?.addEventListener('click', () => sidebar.openConnectModal(api));
+  document.getElementById('btnWelcomeLocal')?.addEventListener('click', () => terminal.openLocalTerminalTab(api));
+
+  // Quick action buttons — prefill chat with a relevant command prompt
+  document.querySelectorAll('.welcomeQuickBtn[data-quick]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const quick = (btn as HTMLElement).dataset.quick ?? '';
+      const prompts: Record<string, string> = {
+        status:    'Show system status: CPU, memory, disk, load average, and top processes.',
+        logs:      'Show the last 50 lines of system logs (journalctl or /var/log/syslog).',
+        services:  'List all running systemd services and their status.',
+        disk:      'Show disk usage sorted by size. Find the largest directories.',
+        processes: 'Show top 20 processes by CPU and memory usage.',
+        network:   'Show network interface stats, open ports, and active connections.',
+      };
+      const prompt = prompts[quick];
+      if (!prompt) return;
+      const textarea = document.getElementById('chatInput') as HTMLTextAreaElement | null;
+      if (textarea) {
+        textarea.value = prompt;
+        textarea.focus();
+      }
+    });
+  });
   document.getElementById('btnCancel')?.addEventListener('click', () => {
     state.editingId = null;
     sidebar.closeAddEditServerModal();

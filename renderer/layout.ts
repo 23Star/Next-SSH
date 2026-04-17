@@ -48,8 +48,40 @@ export function renderLayout(root: HTMLElement): void {
       <div class="contentArea">
         <main class="mainArea">
           <div id="welcomeArea">
+            <div class="welcomeIcon">⚡</div>
             <h1 data-i18n="app.title">${t('app.title')}</h1>
-            <p class="mainAreaPlaceholder" id="mainPlaceholder" data-i18n="main.placeholder">${t('main.placeholder')}</p>
+            <p class="welcomeSubtitle" data-i18n="main.placeholder">${t('main.placeholder')}</p>
+            <div class="welcomeActions">
+              <button type="button" id="btnWelcomeAdd" class="welcomeBtn welcomeBtn--primary">+ ${t('sidebar.add')}</button>
+              <button type="button" id="btnWelcomeConnect" class="welcomeBtn welcomeBtn--secondary">${t('button.connect')}</button>
+              <button type="button" id="btnWelcomeLocal" class="welcomeBtn welcomeBtn--secondary">⬛ ${t('button.local')}</button>
+            </div>
+            <div class="welcomeQuickActions">
+              <button type="button" class="welcomeQuickBtn" data-quick="status">
+                <span class="welcomeQuickBtnIcon">📊</span>
+                <span>System Status</span>
+              </button>
+              <button type="button" class="welcomeQuickBtn" data-quick="logs">
+                <span class="welcomeQuickBtnIcon">📋</span>
+                <span>View Logs</span>
+              </button>
+              <button type="button" class="welcomeQuickBtn" data-quick="services">
+                <span class="welcomeQuickBtnIcon">⚙️</span>
+                <span>Services</span>
+              </button>
+              <button type="button" class="welcomeQuickBtn" data-quick="disk">
+                <span class="welcomeQuickBtnIcon">💾</span>
+                <span>Disk Usage</span>
+              </button>
+              <button type="button" class="welcomeQuickBtn" data-quick="processes">
+                <span class="welcomeQuickBtnIcon">📈</span>
+                <span>Processes</span>
+              </button>
+              <button type="button" class="welcomeQuickBtn" data-quick="network">
+                <span class="welcomeQuickBtnIcon">🌐</span>
+                <span>Network</span>
+              </button>
+            </div>
           </div>
           <div class="mainPanel" id="mainPanel" tabindex="0">
             <div class="terminalTabBar" id="terminalTabBar"></div>
