@@ -9,18 +9,29 @@ let lastLoadedInfo: ServerInfo | null = null;
 let lastConnectionId: number | null = null;
 let autoRefreshTimer: ReturnType<typeof setInterval> | null = null;
 
+function parsePercent(s: string): number | null {
+  const m = s.match(/(\d+(?:\.\d+)?)%/);
+  return m ? Math.min(100, Math.max(0, parseFloat(m[1]))) : null;
+}
+
+function progressBar(pct: number): string {
+  const cls = pct >= 90 ? 'danger' : pct >= 70 ? 'warn' : 'ok';
+  return `<div class="serverInfoProgress"><div class="serverInfoProgressFill serverInfoProgressFill--${cls}" style="width:${pct.toFixed(0)}%"></div></div>`;
+}
+
 function renderServerInfo(info: ServerInfo): string {
-  const rows: Array<{ label: string; value: string }> = [
+  const textRows: Array<{ label: string; value: string }> = [
     { label: t('serverInfo.hostname'), value: info.hostname },
     { label: t('serverInfo.os'), value: info.os },
     { label: t('serverInfo.kernel'), value: info.kernel },
-    { label: t('serverInfo.cpu'), value: `${info.cpuModel} (${info.cpuCores})` },
-    { label: t('serverInfo.memory'), value: `${info.memoryUsed} / ${info.memoryTotal}` },
-    { label: t('serverInfo.disk'), value: `${info.diskUsed} / ${info.diskTotal} (${info.diskPercent})` },
     { label: t('serverInfo.uptime'), value: info.uptime },
     { label: t('serverInfo.serverTime'), value: info.serverTime },
   ];
-  return `<div class="serverInfoTable">${rows
+
+  const memPct = parsePercent(info.memoryUsed + '/' + info.memoryTotal);
+  const diskPct = parsePercent(info.diskPercent);
+
+  const textHtml = textRows
     .map(
       (r) =>
         `<div class="serverInfoRow">
@@ -28,7 +39,44 @@ function renderServerInfo(info: ServerInfo): string {
           <span class="serverInfoValue">${escapeHtml(r.value)}</span>
         </div>`,
     )
-    .join('')}</div>`;
+    .join('');
+
+  const cpuHtml = `<div class="serverInfoCard">
+    <div class="serverInfoCardHeader">
+      <span class="serverInfoCardTitle">${escapeHtml(t('serverInfo.cpu'))}</span>
+      <span class="serverInfoValue">${escapeHtml(info.cpuCores)} cores</span>
+    </div>
+    <div class="serverInfoCardSub">${escapeHtml(info.cpuModel)}</div>
+  </div>`;
+
+  const memUsedNum = (() => {
+    const nums = (info.memoryUsed + ' ' + info.memoryTotal).match(/[\d.]+/g);
+    if (nums && nums.length >= 2) {
+      const used = parseFloat(nums[0]);
+      const total = parseFloat(nums[1]);
+      if (total > 0) return Math.round((used / total) * 100);
+    }
+    return null;
+  })();
+
+  const memHtml = `<div class="serverInfoCard">
+    <div class="serverInfoCardHeader">
+      <span class="serverInfoCardTitle">${escapeHtml(t('serverInfo.memory'))}</span>
+      <span class="serverInfoValue">${escapeHtml(info.memoryUsed)} / ${escapeHtml(info.memoryTotal)}</span>
+    </div>
+    ${memUsedNum !== null ? progressBar(memUsedNum) : ''}
+  </div>`;
+
+  const diskHtml = `<div class="serverInfoCard">
+    <div class="serverInfoCardHeader">
+      <span class="serverInfoCardTitle">${escapeHtml(t('serverInfo.disk'))}</span>
+      <span class="serverInfoValue">${escapeHtml(info.diskUsed)} / ${escapeHtml(info.diskTotal)}</span>
+    </div>
+    ${diskPct !== null ? progressBar(diskPct) : ''}
+    ${diskPct !== null ? `<div class="serverInfoCardSub">${diskPct.toFixed(0)}% used</div>` : ''}
+  </div>`;
+
+  return `<div class="serverInfoTable">${textHtml}</div>${cpuHtml}${memHtml}${diskHtml}`;
 }
 
 function renderPlaceholder(): string {

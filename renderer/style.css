@@ -1254,13 +1254,7 @@ body {
   color: var(--text-primary);
 }
 
-#welcomeArea h1 {
-  margin: 0;
-  padding: 16px 0 0 16px;
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: var(--text-tertiary);
-}
+/* #welcomeArea h1 overridden by modernization section below */
 
 /* === Settings Modal === */
 .settingsModalTitle {
@@ -2409,4 +2403,746 @@ body {
 }
 .chatModelSelect:focus-visible {
   box-shadow: 0 0 0 2px var(--focus-ring);
+}
+
+/* ============================================================
+   MODERNIZATION: Panel-style UI (BaoTa / 1Panel inspired)
+   ============================================================ */
+
+/* === Sidebar branding strip === */
+.sidebar {
+  border-top: 3px solid var(--accent);
+}
+
+/* === Sidebar header with icon-style === */
+.sidebarHeader {
+  padding: 10px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border-secondary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  user-select: none;
+}
+
+/* === Server list: card-style items === */
+.serverItem {
+  padding: 8px 12px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border-secondary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: background var(--transition-fast);
+  min-height: 40px;
+}
+
+.serverItem:hover {
+  background: var(--bg-elevated);
+}
+
+.serverItem.selected {
+  background: var(--accent-muted);
+  border-left: 2px solid var(--accent);
+  padding-left: 10px;
+}
+
+.serverItem--local {
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+
+.serverItemName {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+/* Status dot: green for connected, accent-spin for connecting */
+.connectDot {
+  flex-shrink: 0;
+  font-size: 8px;
+  line-height: 1;
+  color: #4ec94e;
+  filter: drop-shadow(0 0 3px #4ec94e88);
+}
+
+/* === Sidebar footer buttons === */
+.sidebarFooter {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 8px 10px;
+  border-top: 1px solid var(--border-secondary);
+  background: var(--bg-tertiary);
+}
+
+.sidebarFooter button {
+  flex: 1;
+  padding: 5px 8px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.sidebarFooter button:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+/* === Panel header consistent style === */
+.panelHeader {
+  padding: 8px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: var(--bg-tertiary);
+  color: var(--text-tertiary);
+  border-bottom: 1px solid var(--border-secondary);
+  user-select: none;
+}
+
+/* === Server Info: Card Layout with Progress Bars === */
+.serverInfoCard {
+  margin: 6px 10px;
+  padding: 8px 10px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--radius-sm);
+}
+
+.serverInfoCardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 4px;
+  gap: 8px;
+}
+
+.serverInfoCardTitle {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  flex-shrink: 0;
+}
+
+.serverInfoCardSub {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-top: 2px;
+  opacity: 0.7;
+}
+
+.serverInfoProgress {
+  height: 5px;
+  background: var(--border-secondary);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.serverInfoProgressFill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width var(--transition-normal);
+}
+
+.serverInfoProgressFill--ok {
+  background: linear-gradient(90deg, #4ec94e, #3db53d);
+}
+
+.serverInfoProgressFill--warn {
+  background: linear-gradient(90deg, #f59e0b, #e08900);
+}
+
+.serverInfoProgressFill--danger {
+  background: linear-gradient(90deg, #f44747, #d43232);
+}
+
+/* === Welcome / Dashboard Screen === */
+#welcomeArea {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+  text-align: center;
+  gap: 16px;
+}
+
+#welcomeArea h1 {
+  margin: 0;
+  padding: 0;
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+}
+
+.welcomeSubtitle {
+  font-size: 13px;
+  color: var(--text-tertiary);
+  max-width: 360px;
+  line-height: 1.6;
+}
+
+.welcomeActions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 8px;
+}
+
+.welcomeBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: background var(--transition-fast), box-shadow var(--transition-fast);
+  border: none;
+}
+
+.welcomeBtn--primary {
+  background: var(--accent);
+  color: #fff;
+}
+
+.welcomeBtn--primary:hover {
+  background: var(--accent-hover);
+  box-shadow: 0 4px 12px rgba(217, 119, 87, 0.35);
+}
+
+.welcomeBtn--secondary {
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-primary);
+}
+
+.welcomeBtn--secondary:hover {
+  background: var(--border-hover);
+  color: var(--text-primary);
+}
+
+.welcomeIcon {
+  font-size: 48px;
+  line-height: 1;
+  opacity: 0.25;
+  margin-bottom: 4px;
+}
+
+.welcomeQuickActions {
+  margin-top: 24px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.welcomeQuickBtn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 14px 18px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-tertiary);
+  transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+  min-width: 90px;
+  font-weight: 500;
+}
+
+.welcomeQuickBtn:hover {
+  background: var(--bg-elevated);
+  border-color: var(--accent);
+  color: var(--text-primary);
+}
+
+.welcomeQuickBtnIcon {
+  font-size: 20px;
+  line-height: 1;
+}
+
+/* === Improved Chat Messages === */
+.chatMessage {
+  padding: 0;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  position: relative;
+}
+
+.chatMessage--user {
+  background: var(--chat-user-bg);
+  border: 1px solid rgba(217, 119, 87, 0.2);
+  border-left: 3px solid var(--accent);
+  padding: 8px 10px;
+  margin-left: 8px;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
+.chatMessage--assistant {
+  background: var(--chat-ai-bg);
+  border: 1px solid var(--border-secondary);
+  border-left: 3px solid var(--border-primary);
+  padding: 8px 10px;
+  margin-right: 8px;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
+.chatMessageRole {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: 5px;
+  color: var(--text-tertiary);
+}
+
+.chatMessageRole--user {
+  color: var(--accent);
+}
+
+.chatMessageRole--assistant {
+  color: var(--text-tertiary);
+}
+
+/* Command result display blocks */
+.cmdResultBlock {
+  margin: 6px 0;
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  font-size: 12px;
+}
+
+.cmdResultHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 10px;
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border-secondary);
+}
+
+.cmdResultExit {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-weight: 600;
+}
+
+.cmdResultExit--ok {
+  background: var(--success-bg);
+  color: var(--success-text);
+  border: 1px solid var(--success-border);
+}
+
+.cmdResultExit--err {
+  background: var(--error-bg);
+  color: var(--error-text);
+  border: 1px solid var(--error-border);
+}
+
+.cmdResultOutput {
+  padding: 6px 10px;
+  background: var(--chat-code-bg);
+  font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+  font-size: 11px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 200px;
+  overflow-y: auto;
+  color: var(--text-secondary);
+}
+
+/* === Chat Panel improvements === */
+.chatPanel {
+  border-top: 3px solid var(--border-secondary);
+}
+
+/* Chat panel header with AI indicator */
+.chatPanelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border-secondary);
+  flex-shrink: 0;
+}
+
+.chatPanelHeaderTitle {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+/* === Improved terminal tab bar === */
+.terminalTabBar {
+  background: var(--bg-secondary);
+  border-bottom: 2px solid var(--border-secondary);
+  min-height: 34px;
+  padding: 4px 8px 0;
+  gap: 3px;
+}
+
+.terminalTab {
+  font-size: 12px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: var(--radius-xs) var(--radius-xs) 0 0;
+  border: 1px solid var(--border-secondary);
+  border-bottom: none;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.terminalTab.active {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  border-color: var(--accent);
+  border-bottom: 2px solid var(--bg-primary);
+  margin-bottom: -2px;
+}
+
+/* === Terminal toolbar clean === */
+.terminalToolbar {
+  padding: 5px 12px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-secondary);
+  min-height: 30px;
+}
+
+/* === Chat input area modernization === */
+.chatInputForm {
+  padding: 10px 12px;
+  padding-top: 2px;
+  border-top: 2px solid var(--border-secondary);
+  gap: 6px;
+}
+
+.chatInputForm textarea {
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-primary);
+  background: var(--bg-input);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.chatInputForm textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--focus-ring);
+}
+
+.chatInputForm button[type="submit"] {
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  font-size: 13px;
+  transition: background var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.chatInputForm button[type="submit"]:hover:not(:disabled) {
+  background: var(--accent-hover);
+  box-shadow: 0 2px 8px rgba(217, 119, 87, 0.3);
+}
+
+/* === Server item: action buttons more visible === */
+.serverItemActions button {
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-xs);
+  background: var(--bg-tertiary);
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.serverItemActions button:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+/* === Explorer panel header cleanup === */
+.explorerPanelHeader {
+  background: var(--bg-tertiary);
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border-secondary);
+  gap: 6px;
+}
+
+.explorerPanelHeader .panelHeader {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+/* === Explorer up/reload buttons === */
+.explorerUpBtn {
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-xs);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  font-size: 13px;
+  transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.explorerUpBtn:hover:not(:disabled) {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+/* === Agentic loop step indicator === */
+.agentStepBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  background: var(--accent-muted);
+  color: var(--accent);
+  border: 1px solid rgba(217, 119, 87, 0.3);
+  border-radius: 10px;
+  padding: 1px 8px;
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+
+/* === AI preset badge in chat toolbar === */
+.chatThinkModel {
+  max-width: 100px;
+  font-size: 10px;
+  color: var(--text-tertiary);
+  background: var(--bg-elevated);
+  padding: 1px 5px;
+  border-radius: 3px;
+  border: 1px solid var(--border-secondary);
+}
+
+/* === Status bar strip === */
+.statusBar {
+  flex-shrink: 0;
+  height: 22px;
+  background: var(--accent);
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  gap: 16px;
+  user-select: none;
+}
+
+.statusBarItem {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  opacity: 0.85;
+}
+
+/* === Code block improvements === */
+.chatCodeBlock {
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  margin: 6px 0;
+}
+
+.chatCodeBlockHeader {
+  background: linear-gradient(180deg, var(--bg-elevated) 0%, var(--bg-tertiary) 100%);
+  padding: 3px 10px;
+  border-bottom: 1px solid var(--border-secondary);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.chatCodeBlockLang {
+  font-size: 10px;
+  color: var(--accent);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.chatCodeBlock pre {
+  background: var(--chat-code-bg);
+  padding: 10px 12px;
+  margin: 0;
+  border-radius: 0;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* === Collapse buttons polish === */
+.sidebarCollapseBtn {
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  font-size: 8px;
+  transition: transform var(--transition-fast), color var(--transition-fast);
+  flex-shrink: 0;
+  border-radius: 3px;
+}
+
+.sidebarCollapseBtn:hover {
+  color: var(--text-primary);
+  background: var(--bg-elevated);
+}
+
+.sidebarCollapseBtn.collapsed {
+  transform: rotate(-90deg);
+}
+
+/* === Command result "tool call" block === */
+.chatToolCall {
+  margin: 4px 0;
+  border: 1px solid var(--border-secondary);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 var(--radius-xs) var(--radius-xs) 0;
+  overflow: hidden;
+  background: var(--bg-tertiary);
+  font-size: 12px;
+}
+
+.chatToolCallHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 10px;
+  background: var(--bg-elevated);
+  cursor: pointer;
+  user-select: none;
+  gap: 8px;
+}
+
+.chatToolCallLabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chatToolCallExit {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.chatToolCallExit--ok {
+  background: var(--success-bg);
+  color: var(--success-text);
+}
+
+.chatToolCallExit--err {
+  background: var(--error-bg);
+  color: var(--error-text);
+}
+
+.chatToolCallBody {
+  border-top: 1px solid var(--border-secondary);
+  padding: 6px 10px;
+  font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+  font-size: 11px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 160px;
+  overflow-y: auto;
+  background: var(--chat-code-bg);
+  color: var(--text-secondary);
+}
+
+/* === Welcome area placeholder buttons === */
+#welcomeArea .mainAreaPlaceholder button {
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  transition: all var(--transition-fast);
+}
+
+#welcomeArea .mainAreaPlaceholder button:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+/* Agent confirm dialog: more visible warning highlight */
+.agentConfirmWarning {
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.18);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* Improve rename / passphrase dialog input */
+.passphraseDialogBox input {
+  border-radius: var(--radius-sm);
+}
+
+/* === Main area when no tab selected === */
+#welcomeArea {
+  flex: 1;
 }

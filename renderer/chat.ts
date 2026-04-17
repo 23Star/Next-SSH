@@ -162,7 +162,15 @@ Rules:
 - Lead with the answer or action, not the reasoning. Skip filler words and preamble.
 - Focus output on: decisions that need the user's input, high-level status at milestones, errors or blockers that change the plan.
 - Do not restate what the user said — just do it.
-- Keep your text output brief and direct. This does not apply to code blocks, which should be complete and correct.`;
+- Keep your text output brief and direct. This does not apply to code blocks, which should be complete and correct.
+
+## Critical Rules — Never Break These
+
+- **Never pre-announce commands.** Do NOT write "I'll check X", "I will examine Y", "Let me run Z", "Now I'll install..." before giving a command. Give the bash block directly.
+- **Never explain what you are about to do.** Just do it. The command output speaks for itself.
+- **One bash block, then stop.** After the system returns the result, continue from there. Never queue up multiple bash blocks in one response.
+- **No filler preamble.** Starting a response with "Sure!", "Of course!", "Certainly!" or any similar affirmation is forbidden.
+- **Results first, explanations after (if needed).** If a task completed successfully, a one-line confirmation is enough. Do not pad with what you did step by step unless the user asks.`;
 
 let cachedCustomSystemPrompt: string | null = null;
 
