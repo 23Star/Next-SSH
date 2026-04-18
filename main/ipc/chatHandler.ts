@@ -386,6 +386,12 @@ export function registerAiSettingsHandlers(): void {
     return aiSettings.getAiSettingsDisplay();
   });
 
+  // Returns the unmasked AI settings to the renderer. v2's agent runs in the
+  // renderer (tool IPC lives there) and needs the raw key to call the API.
+  ipcMain.handle('aiSettings:getRaw', async () => {
+    return aiSettings.getAiSettings();
+  });
+
   ipcMain.handle('aiSettings:set', async (_event, input: aiSettings.AiSettingsInput) => {
     aiSettings.setAiSettings(input);
   });

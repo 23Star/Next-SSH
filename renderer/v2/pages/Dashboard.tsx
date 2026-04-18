@@ -8,23 +8,25 @@
 // page header so the layout doesn't collapse when SSH is briefly flaky.
 
 import React from 'react';
-import { useSystemSnapshot } from '../lib/useSystemSnapshot';
 import { Card } from '../components/Card';
 import { Gauge } from '../components/Gauge';
 import { ProgressBar } from '../components/ProgressBar';
 import { EmptyState } from '../components/EmptyState';
 import { Icon } from '../components/Icon';
 import { formatBytes, formatCount, formatPercent, percentToTone } from '../lib/format';
+import type { SystemSnapshot } from '../../agent/tools/SystemInfo';
 
 export interface DashboardProps {
   connectionId: number | null;
   connStatus: string;
   connError: string | null;
-  refreshTick: number;
+  snapshot: SystemSnapshot | null;
+  loading: boolean;
+  snapshotError: string | null;
 }
 
-export function Dashboard({ connectionId, connStatus, connError, refreshTick }: DashboardProps): React.ReactElement {
-  const { snapshot, loading, error } = useSystemSnapshot(connectionId, refreshTick);
+export function Dashboard({ connectionId, connStatus, connError, snapshot, loading, snapshotError }: DashboardProps): React.ReactElement {
+  const error = snapshotError;
 
   if (connectionId == null) {
     return (

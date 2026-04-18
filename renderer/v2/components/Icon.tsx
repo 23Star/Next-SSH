@@ -78,6 +78,32 @@ const paths: Record<string, React.ReactElement> = {
   ),
   close: <path d="M18 6 6 18M6 6l12 12" />,
   menu: <path d="M4 7h16M4 12h16M4 17h16" />,
+  send: (
+    <>
+      <path d="M12 19V5" />
+      <path d="m5 12 7-7 7 7" />
+    </>
+  ),
+  stop: <rect x="6" y="6" width="12" height="12" rx="2" />,
+  wrench: (
+    <path d="M14.7 6.3a4 4 0 0 1-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 1 5.4-5.4L15 12l-3-3 2.7-2.7z" />
+  ),
+  check: <path d="m5 13 4 4 10-10" />,
+  warning: (
+    <>
+      <path d="M12 2 1.6 20h20.8L12 2z" />
+      <path d="M12 10v4M12 18h.01" />
+    </>
+  ),
+  user: (
+    <>
+      <circle cx="12" cy="7" r="4" />
+      <path d="M4 21a8 8 0 0 1 16 0" />
+    </>
+  ),
+  brain: (
+    <path d="M9.5 2a3 3 0 0 0-2.9 2.3A3 3 0 0 0 4 7.1v9.8A3 3 0 0 0 6.6 20a3 3 0 0 0 2.9 2h5a3 3 0 0 0 2.9-2 3 3 0 0 0 2.6-3V7.1a3 3 0 0 0-2.6-2.9A3 3 0 0 0 14.5 2h-5z" />
+  ),
 };
 
 export interface IconProps {

@@ -1,4 +1,5 @@
 import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
 import path from 'path';
 
 // Two renderer entries coexist during the Phase 2+ refactor:
@@ -7,6 +8,7 @@ import path from 'path';
 // The main process picks which one to load via the NEXT_SSH_V2 env flag.
 export default defineConfig({
   base: './', // パッケージ版で file:// から読むため相対パスにする（省略時は / で真っ白になる）
+  plugins: [react()],
   root: path.resolve(__dirname, '../renderer'),
   build: {
     outDir: path.resolve(__dirname, '../dist/renderer'),

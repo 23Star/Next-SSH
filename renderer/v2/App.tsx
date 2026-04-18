@@ -1,18 +1,25 @@
 // Root component for the v2 shell.
 //
-// Owns the three pieces of global shell state — the currently selected route,
-// the active host connection, and whether the AI drawer is open — and wires
-// them into Sidebar / Topbar / page content / AIDrawer. Everything else flows
-// down as props so individual pages stay independent and easy to unit-test.
+// Owns the four pieces of global shell state — route, active host connection,
+// sidebar collapse, and AI drawer — and wires them into Sidebar / Topbar /
+// page content / AIDrawer. Everything else flows down as props so individual
+// pages stay independent and easy to unit-test.
+//
+// Dashboard and the AI drawer both consume a live SystemInfo snapshot via
+// useSystemSnapshot. Hoisting the hook here means the panel and the assistant
+// share one fetch — no duplicate SSH round-trips.
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Sidebar } from './shell/Sidebar';
 import { Topbar } from './shell/Topbar';
 import { AIDrawer } from './shell/AIDrawer';
 import { useEnvironments } from './lib/useEnvironments';
 import { useConnection } from './lib/useConnection';
+import { useSystemSnapshot } from './lib/useSystemSnapshot';
 import { Dashboard } from './pages/Dashboard';
 import { ComingSoon } from './pages/ComingSoon';
+import type { ExecutionTarget } from '../agent/types';
+import type { Environment } from './lib/electron';
 
 export type RouteId =
   | 'dashboard'
@@ -24,16 +31,31 @@ export type RouteId =
   | 'cron'
   | 'settings';
 
+function hostLabelFor(env: Environment | null | undefined): string | null {
+  if (!env) return null;
+  return env.name?.trim() || `${env.username}@${env.host}`;
+}
+
 export function App(): React.ReactElement {
   const [route, setRoute] = useState<RouteId>('dashboard');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  // Refresh tick lets the topbar refresh button re-trigger the active page's
-  // data hook without the page having to expose its own imperative API.
   const [refreshTick, setRefreshTick] = useState(0);
 
   const { hosts, refresh: refreshHosts } = useEnvironments();
   const connection = useConnection();
+
+  // Dashboard and the AI drawer both want the SystemInfo snapshot; fetching
+  // here and threading it down keeps the request to one per refresh.
+  const snapshotState = useSystemSnapshot(connection.connectionId, refreshTick);
+
+  const target: ExecutionTarget | null = useMemo(() => {
+    if (connection.connectionId == null) return null;
+    return { kind: 'remote', connectionId: connection.connectionId };
+  }, [connection.connectionId]);
+
+  const activeHost = hosts.find((h) => h.id === connection.hostId) ?? null;
+  const hostLabel = hostLabelFor(activeHost);
 
   const handleSelectHost = (id: number | null): void => {
     void connection.select(id);
@@ -67,10 +89,18 @@ export function App(): React.ReactElement {
           connectionId={connection.connectionId}
           connStatus={connection.status}
           connError={connection.error}
-          refreshTick={refreshTick}
+          snapshot={snapshotState.snapshot}
+          snapshotLoading={snapshotState.loading}
+          snapshotError={snapshotState.error}
         />
       </main>
-      <AIDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
+      <AIDrawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        target={target}
+        hostLabel={hostLabel}
+        snapshot={snapshotState.snapshot}
+      />
     </div>
   );
 }
@@ -80,10 +110,20 @@ interface RouteContentProps {
   connectionId: number | null;
   connStatus: string;
   connError: string | null;
-  refreshTick: number;
+  snapshot: ReturnType<typeof useSystemSnapshot>['snapshot'];
+  snapshotLoading: boolean;
+  snapshotError: string | null;
 }
 
-function RouteContent({ route, connectionId, connStatus, connError, refreshTick }: RouteContentProps): React.ReactElement {
+function RouteContent({
+  route,
+  connectionId,
+  connStatus,
+  connError,
+  snapshot,
+  snapshotLoading,
+  snapshotError,
+}: RouteContentProps): React.ReactElement {
   switch (route) {
     case 'dashboard':
       return (
@@ -91,7 +131,9 @@ function RouteContent({ route, connectionId, connStatus, connError, refreshTick 
           connectionId={connectionId}
           connStatus={connStatus}
           connError={connError}
-          refreshTick={refreshTick}
+          snapshot={snapshot}
+          loading={snapshotLoading}
+          snapshotError={snapshotError}
         />
       );
     case 'files':

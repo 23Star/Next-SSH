@@ -137,6 +137,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   aiSettings: {
     get: () => ipcRenderer.invoke('aiSettings:get'),
+    getRaw: () => ipcRenderer.invoke('aiSettings:getRaw') as Promise<{ apiUrl: string; apiKey: string; model: string; temperature: number; maxTokens: number; systemPrompt: string }>,
     set: (input: { apiUrl: string; apiKey: string; model: string; temperature: number; maxTokens: number; systemPrompt: string }) =>
       ipcRenderer.invoke('aiSettings:set', input),
     test: () => ipcRenderer.invoke('aiSettings:test') as Promise<{ ok: boolean; message: string }>,
