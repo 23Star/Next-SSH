@@ -44,7 +44,7 @@ function renderServerInfo(info: ServerInfo): string {
   const cpuHtml = `<div class="serverInfoCard">
     <div class="serverInfoCardHeader">
       <span class="serverInfoCardTitle">${escapeHtml(t('serverInfo.cpu'))}</span>
-      <span class="serverInfoValue">${escapeHtml(info.cpuCores)} cores</span>
+      <span class="serverInfoValue">${escapeHtml(String(info.cpuCores))} cores</span>
     </div>
     <div class="serverInfoCardSub">${escapeHtml(info.cpuModel)}</div>
   </div>`;

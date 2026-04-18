@@ -375,7 +375,6 @@ export async function applyThemeToAllEditors(): Promise<void> {
   monaco.editor.setTheme(getMonacoThemeId());
 }
 
-/**
 export function saveEditorTab(api: Api, tabId: string): void {
   const tab = state.mainPanelTabs.find((t) => t.id === tabId);
   if (!tab || tab.kind !== 'editor' || !api.explorer) return;

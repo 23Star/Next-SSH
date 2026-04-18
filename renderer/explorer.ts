@@ -107,8 +107,10 @@ export async function loadExplorerRootForTarget(api: Api, target: 'local' | numb
     es.home = null;
     if (state.activeExplorerTarget === target) {
       const el = document.getElementById('explorerTreeContainer');
-      if (el) el.classList.remove('explorerTreeContainer--loading');
-      el.innerHTML = `<p class="panelPlaceholder">${t('serverInfo.loadError')}: ${escapeHtml(err instanceof Error ? err.message : String(err))}</p>`;
+      if (el) {
+        el.classList.remove('explorerTreeContainer--loading');
+        el.innerHTML = `<p class="panelPlaceholder">${t('serverInfo.loadError')}: ${escapeHtml(err instanceof Error ? err.message : String(err))}</p>`;
+      }
     }
   }
 }

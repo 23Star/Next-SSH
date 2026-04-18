@@ -1,16 +1,16 @@
 // Root component for the v2 shell.
 //
-// Owns the four pieces of global shell state — route, active host connection,
-// sidebar collapse, and AI drawer — and wires them into Sidebar / Topbar /
-// page content / AIDrawer. Everything else flows down as props so individual
-// pages stay independent and easy to unit-test.
+// Owns the three pieces of global shell state — route, active host
+// connection, and AI drawer — and wires them into Topbar / page content /
+// AIDrawer. Module nav used to live in a left rail; in Phase 4 it was
+// promoted into the top bar as pill tabs (1Panel-style), so the shell is
+// now a single row + main + optional right drawer.
 //
 // Dashboard and the AI drawer both consume a live SystemInfo snapshot via
 // useSystemSnapshot. Hoisting the hook here means the panel and the assistant
 // share one fetch — no duplicate SSH round-trips.
 
 import React, { useMemo, useState } from 'react';
-import { Sidebar } from './shell/Sidebar';
 import { Topbar } from './shell/Topbar';
 import { AIDrawer } from './shell/AIDrawer';
 import { useEnvironments } from './lib/useEnvironments';
@@ -38,7 +38,6 @@ function hostLabelFor(env: Environment | null | undefined): string | null {
 
 export function App(): React.ReactElement {
   const [route, setRoute] = useState<RouteId>('dashboard');
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [refreshTick, setRefreshTick] = useState(0);
 
@@ -68,17 +67,13 @@ export function App(): React.ReactElement {
 
   return (
     <div className="ns-shell">
-      <Sidebar
-        active={route}
-        onNavigate={setRoute}
-        collapsed={sidebarCollapsed}
-        onToggleCollapsed={() => setSidebarCollapsed((v) => !v)}
-      />
       <Topbar
         hosts={hosts}
         activeHostId={connection.hostId}
         connStatus={connection.status}
         aiDrawerOpen={drawerOpen}
+        route={route}
+        onNavigate={setRoute}
         onSelectHost={handleSelectHost}
         onToggleAI={() => setDrawerOpen((v) => !v)}
         onRefresh={handleRefresh}

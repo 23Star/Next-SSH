@@ -96,7 +96,10 @@ declare global {
       };
       chat?: {
         complete: (messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>) => Promise<string>;
-        streamStart: (messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>, enableThinking?: boolean) => void;
+        streamStart: (
+          messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>,
+          thinking?: boolean | { mode: 'adaptive' | 'enabled' | 'disabled'; budgetTokens?: number },
+        ) => void;
         onStreamChunk: (callback: (chunk: { type: 'content' | 'thinking' | 'thinking_end' | 'done' | 'error'; text: string; durationMs?: number }) => void) => void;
       };
       chatSession?: {
@@ -157,7 +160,7 @@ declare global {
       aiSettings?: {
         get: () => Promise<{ apiUrl: string; apiKeyMasked: string; model: string; temperature: number; maxTokens: number; systemPrompt: string }>;
         getRaw: () => Promise<{ apiUrl: string; apiKey: string; model: string; temperature: number; maxTokens: number; systemPrompt: string }>;
-        set: (input: { apiUrl: string; apiKey: string; model: string; temperature: number; maxTokens: number; systemPrompt: string }) => Promise<void>;
+        set: (input: { apiUrl: string; apiKey?: string; model: string; temperature: number; maxTokens: number; systemPrompt: string }) => Promise<void>;
         test: () => Promise<{ ok: boolean; message: string }>;
         isConfigured: () => Promise<boolean>;
         getModels: () => Promise<{ ok: boolean; models: Array<{ id: string; owned_by: string }>; error: string }>;

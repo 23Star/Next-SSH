@@ -8,128 +8,20 @@
 
 .ns-shell {
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: 1fr auto;
   grid-template-rows: var(--topbar-h) 1fr;
   grid-template-areas:
-    "sidebar topbar   drawer"
-    "sidebar main     drawer";
+    "topbar drawer"
+    "main   drawer";
   height: 100vh;
   width: 100vw;
   background: var(--bg);
   color: var(--text);
 }
 
-.ns-sidebar { grid-area: sidebar; }
 .ns-topbar  { grid-area: topbar;  }
 .ns-main    { grid-area: main;   overflow-y: auto; }
 .ns-drawer  { grid-area: drawer;  }
-
-/* ——————— Sidebar ——————— */
-
-.ns-sidebar {
-  width: var(--sidebar-w);
-  background: var(--surface-2);
-  backdrop-filter: saturate(180%) blur(16px);
-  -webkit-backdrop-filter: saturate(180%) blur(16px);
-  border-right: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  transition: width var(--dur-base) var(--ease-ios);
-}
-
-.ns-sidebar[data-collapsed="true"] {
-  width: var(--sidebar-w-collapsed);
-}
-
-.ns-sidebar__brand {
-  height: var(--topbar-h);
-  display: flex;
-  align-items: center;
-  gap: var(--s-2);
-  padding: 0 var(--s-4);
-  font-weight: var(--fw-semibold);
-  font-size: var(--fs-md);
-  letter-spacing: -0.01em;
-  border-bottom: 1px solid var(--border);
-  color: var(--text);
-}
-.ns-sidebar__brand-mark {
-  width: 26px;
-  height: 26px;
-  border-radius: var(--r-md);
-  background: linear-gradient(135deg, var(--accent), #d89973);
-  box-shadow: inset 0 -2px 4px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.08);
-}
-
-.ns-sidebar__nav {
-  flex: 1 1 auto;
-  overflow-y: auto;
-  padding: var(--s-3) var(--s-2);
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.ns-sidebar__section {
-  font-size: var(--fs-xs);
-  font-weight: var(--fw-medium);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-subtle);
-  padding: var(--s-3) var(--s-3) var(--s-1);
-}
-
-.ns-sidebar[data-collapsed="true"] .ns-sidebar__section {
-  display: none;
-}
-
-.ns-nav-item {
-  display: flex;
-  align-items: center;
-  gap: var(--s-3);
-  padding: var(--s-2) var(--s-3);
-  height: 34px;
-  border-radius: var(--r-md);
-  color: var(--text-muted);
-  font-size: var(--fs-base);
-  font-weight: var(--fw-medium);
-  transition: background-color var(--dur-fast) var(--ease-ios),
-              color var(--dur-fast) var(--ease-ios);
-  white-space: nowrap;
-  overflow: hidden;
-  cursor: pointer;
-}
-.ns-nav-item:hover {
-  background: var(--surface-hover);
-  color: var(--text);
-}
-.ns-nav-item[data-active="true"] {
-  background: var(--accent-soft);
-  color: var(--accent);
-}
-.ns-nav-item__icon {
-  width: 20px;
-  height: 20px;
-  flex: 0 0 20px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.ns-sidebar[data-collapsed="true"] .ns-nav-item {
-  justify-content: center;
-  padding: var(--s-2);
-}
-.ns-sidebar[data-collapsed="true"] .ns-nav-item__label {
-  display: none;
-}
-
-.ns-sidebar__footer {
-  padding: var(--s-2);
-  border-top: 1px solid var(--border);
-  display: flex;
-  gap: var(--s-1);
-}
 
 /* ——————— Topbar ——————— */
 
@@ -145,6 +37,67 @@
 }
 
 .ns-topbar__spacer { flex: 1 1 auto; }
+
+.ns-topbar__brand {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding-right: var(--s-3);
+  margin-right: var(--s-2);
+  border-right: 1px solid var(--border);
+  font-weight: var(--fw-semibold);
+  font-size: var(--fs-md);
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+.ns-topbar__brand-mark {
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  background: linear-gradient(135deg, var(--accent), #d89973);
+  box-shadow: inset 0 -2px 4px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.08);
+}
+
+.ns-topbar__nav {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: 0 1 auto;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.ns-topbar__nav::-webkit-scrollbar { display: none; }
+
+.ns-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: 0 var(--s-3);
+  height: 32px;
+  border-radius: var(--r-md);
+  color: var(--text-muted);
+  font-size: var(--fs-base);
+  font-weight: var(--fw-medium);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-ios),
+              color var(--dur-fast) var(--ease-ios);
+}
+.ns-tab:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+.ns-tab[data-active="true"] {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.ns-tab__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+}
 
 /* ——————— Host picker ——————— */
 

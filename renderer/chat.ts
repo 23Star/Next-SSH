@@ -346,7 +346,7 @@ function extractFirstBashBlockCommands(text: string): string[] {
 function runCommandInTerminal(cmd: string): { kind: string; connectionId?: number; id?: string } | null {
   const activeTab = state.mainPanelTabs.find((t) => t.id === state.activeMainPanelTabId);
   const api = apiRef;
-  if (!api || !activeTab) return null;
+  if (!api || !activeTab || !api.terminal) return null;
   if (activeTab.kind === 'terminal') {
     api.terminal.write(activeTab.connectionId, cmd + '\n');
     return { kind: 'terminal', connectionId: activeTab.connectionId };
@@ -634,7 +634,15 @@ async function runAgenticLoop(
  * This is the "tool_result → next response" step of the Claude Code loop.
  */
 async function streamAiFollowUp(api: Api, sessionId: number, turnCount?: number): Promise<string> {
-  const messages = await api.chatContext!.listBySession(sessionId);
+  const rawMessages = await api.chatContext!.listBySession(sessionId);
+  const messages: ChatMessage[] = rawMessages.map((m) => ({
+    id: m.id,
+    role: (m.role === 'assistant' ? 'assistant' : 'user') as 'user' | 'assistant',
+    content: m.content,
+    thinking: m.thinking,
+    thinkingDurationMs: m.thinkingDurationMs,
+    suggestedCommands: m.suggestedCommands,
+  }));
   const loopHint = [
     `\n\n[Agentic Loop — Step ${turnCount ?? '?'}]`,
     `You are executing the user's request step-by-step via SSH.`,
@@ -1509,11 +1517,11 @@ async function loadChatModelSelect(api: Api): Promise<void> {
   // On change, save the model selection
   select.addEventListener('change', async () => {
     const newModel = select.value;
-    const current = await api.aiSettings?.get();
+    const current = await api.aiSettings?.getRaw();
     if (current) {
       await api.aiSettings?.set({
         apiUrl: current.apiUrl ?? '',
-        apiKey: undefined, // preserve existing key
+        apiKey: current.apiKey ?? '',
         model: newModel,
         temperature: current.temperature ?? 0.7,
         maxTokens: current.maxTokens ?? 4096,

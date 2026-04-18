@@ -321,7 +321,8 @@ function closeMainPanelTab(api: Api, tabId: string): void {
   const remainingTerminal = state.mainPanelTabs.find((t) => t.kind === 'terminal');
   const hasLocal = state.mainPanelTabs.some((t) => t.kind === 'local-terminal');
   const hasAnyConnection = remainingTerminal || hasLocal;
-  if (state.activeExplorerTarget === tab.connectionId) {
+  const closedTarget = tab.kind === 'terminal' ? tab.connectionId : tab.kind === 'local-terminal' ? 'local' : null;
+  if (closedTarget !== null && state.activeExplorerTarget === closedTarget) {
     if (!hasAnyConnection) {
       // No tabs left: clear explorer to empty
       explorer.clearExplorerStateForTarget(api, 'local');
