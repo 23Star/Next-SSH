@@ -18,6 +18,8 @@ import { useConnection } from './lib/useConnection';
 import { useSystemSnapshot } from './lib/useSystemSnapshot';
 import { Dashboard } from './pages/Dashboard';
 import { ComingSoon } from './pages/ComingSoon';
+import { Files } from './pages/Files';
+import { Firewall } from './pages/Firewall';
 import type { ExecutionTarget } from '../agent/types';
 import type { Environment } from './lib/electron';
 
@@ -87,6 +89,7 @@ export function App(): React.ReactElement {
           snapshot={snapshotState.snapshot}
           snapshotLoading={snapshotState.loading}
           snapshotError={snapshotState.error}
+          refreshTick={refreshTick}
         />
       </main>
       <AIDrawer
@@ -108,6 +111,7 @@ interface RouteContentProps {
   snapshot: ReturnType<typeof useSystemSnapshot>['snapshot'];
   snapshotLoading: boolean;
   snapshotError: string | null;
+  refreshTick: number;
 }
 
 function RouteContent({
@@ -118,6 +122,7 @@ function RouteContent({
   snapshot,
   snapshotLoading,
   snapshotError,
+  refreshTick,
 }: RouteContentProps): React.ReactElement {
   switch (route) {
     case 'dashboard':
@@ -132,7 +137,7 @@ function RouteContent({
         />
       );
     case 'files':
-      return <ComingSoon title="Files" hint="SFTP browser, multi-tab transfers, preview, and permission tools." />;
+      return <Files connectionId={connectionId} connStatus={connStatus} refreshTick={refreshTick} />;
     case 'terminal':
       return <ComingSoon title="Terminal" hint="xterm.js with tabs, split panes, and reconnect — wiring to the existing shell handlers." />;
     case 'services':
@@ -140,7 +145,7 @@ function RouteContent({
     case 'processes':
       return <ComingSoon title="Processes" hint="Live ps + top-style sortable table, per-process cgroup & limits." />;
     case 'firewall':
-      return <ComingSoon title="Firewall" hint="UFW / firewalld / nftables rules, port quick-open, diff before apply." />;
+      return <Firewall connectionId={connectionId} connStatus={connStatus} refreshTick={refreshTick} />;
     case 'cron':
       return <ComingSoon title="Scheduled tasks" hint="Crontab editor with schedule preview and run history." />;
     case 'settings':

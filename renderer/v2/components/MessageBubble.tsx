@@ -25,13 +25,14 @@ export interface AssistantTextProps {
 }
 
 export function AssistantText({ text, streaming }: AssistantTextProps): React.ReactElement {
+  const visibleText = text.trim().length > 0 ? text : (streaming ? 'Processing…' : '');
   return (
     <div className="ns-msg ns-msg--assistant">
       <div className="ns-msg__avatar" aria-hidden>
         <Icon name="sparkle" size={14} />
       </div>
       <div className="ns-msg__text">
-        {text}
+        {visibleText}
         {streaming && <span className="ns-msg__cursor" aria-hidden>▍</span>}
       </div>
     </div>
