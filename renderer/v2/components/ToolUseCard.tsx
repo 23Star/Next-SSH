@@ -22,6 +22,7 @@ function oneLineSummary(name: string, input: Record<string, unknown>, partialArg
     // Show live partial JSON while it streams in, truncated.
     return partialArgs.length > 80 ? partialArgs.slice(0, 80) + '…' : partialArgs;
   }
+  if (Object.keys(input).length === 0) return '(waiting arguments)';
   switch (name) {
     case 'bash':
       return typeof input.command === 'string' ? input.command : JSON.stringify(input);

@@ -2,10 +2,7 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 
-// Two renderer entries coexist during the Phase 2+ refactor:
-//   renderer/index.html     — legacy app (unchanged while we migrate)
-//   renderer/v2/index.html  — new iOS+Claude panel UI (WIP)
-// The main process picks which one to load via the NEXT_SSH_V2 env flag.
+// v2 is now the only maintained renderer entry.
 export default defineConfig({
   base: './', // パッケージ版で file:// から読むため相対パスにする（省略時は / で真っ白になる）
   plugins: [react()],
@@ -15,8 +12,7 @@ export default defineConfig({
     emptyOutDir: true,
     rollupOptions: {
       input: {
-        main: path.resolve(__dirname, '../renderer/index.html'),
-        v2: path.resolve(__dirname, '../renderer/v2/index.html'),
+        main: path.resolve(__dirname, '../renderer/v2/index.html'),
       },
     },
   },
@@ -28,4 +24,3 @@ export default defineConfig({
     strictPort: true,
   },
 });
-

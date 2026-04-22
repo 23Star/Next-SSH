@@ -77,20 +77,13 @@ function createWindow(rendererUrl: string | null): void {
     title: 'Next-SSH',
   });
 
-  // Phase 2+ dual-entry switch. Set NEXT_SSH_V2=1 to load the new iOS+Claude UI.
-  // Default stays on the legacy UI until the new one is feature-complete.
-  const v2Flag = process.env.NEXT_SSH_V2 === '1';
-  const devPath = v2Flag ? 'v2/' : '';
-  const prodHtml = v2Flag ? '../renderer/v2/index.html' : '../renderer/index.html';
-
   if (isDev) {
-    mainWindow.loadURL(`http://localhost:5173/${devPath}`).catch(() => {});
+    mainWindow.loadURL('http://localhost:5173/v2/').catch(() => {});
     mainWindow.webContents.openDevTools();
   } else if (rendererUrl) {
-    const url = v2Flag ? rendererUrl.replace(/\/?$/, '/v2/') : rendererUrl;
-    mainWindow.loadURL(url).catch(() => {});
+    mainWindow.loadURL(`${rendererUrl.replace(/\/$/, '')}/v2/`).catch(() => {});
   } else {
-    mainWindow.loadFile(path.join(__dirname, prodHtml));
+    mainWindow.loadFile(path.join(__dirname, '../renderer/v2/index.html'));
   }
 
   mainWindow.on('closed', () => {

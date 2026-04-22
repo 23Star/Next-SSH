@@ -278,6 +278,17 @@ export function registerExplorerHandlers(): void {
       throw err;
     }
   });
+
+  ipcMain.handle('explorer:pickLocalFiles', async (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (!win) return [];
+    const result = await dialog.showOpenDialog(win, {
+      title: 'Select files to upload',
+      properties: ['openFile', 'multiSelections'],
+    });
+    if (result.canceled || result.filePaths.length === 0) return [];
+    return result.filePaths;
+  });
 }
 
 function formatLocalSize(bytes: number): string {

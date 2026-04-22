@@ -760,6 +760,75 @@
   letter-spacing: -0.01em;
 }
 
+/* ——————— Files page ——————— */
+
+.ns-files-page { max-width: 1320px; }
+.ns-files-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  margin-bottom: var(--s-4);
+}
+.ns-files-path {
+  margin-left: auto;
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+.ns-files-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: var(--s-4);
+}
+.ns-files-grid > .ns-card:first-child { grid-column: span 5; }
+.ns-files-grid > .ns-card:last-child  { grid-column: span 7; }
+.ns-files-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+.ns-files-item {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s-2);
+  padding: 8px 10px;
+  border-radius: var(--r-sm);
+  background: var(--bg-elevated);
+  color: var(--text);
+  border: 1px solid transparent;
+  text-align: left;
+}
+.ns-files-item:hover { background: var(--surface-hover); }
+.ns-files-item[data-selected="true"] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.ns-files-item__name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ns-files-item__meta {
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+}
+.ns-files-preview {
+  margin: 0;
+  max-height: 70vh;
+  overflow: auto;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-normal);
+  white-space: pre-wrap;
+  color: var(--text);
+  background: var(--bg-elevated);
+  border-radius: var(--r-sm);
+  padding: var(--s-3);
+}
+
 /* ——————— Buttons ——————— */
 
 .ns-btn {

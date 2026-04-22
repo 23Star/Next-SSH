@@ -311,8 +311,10 @@ function applyEvent(event: StreamEvent, ctx: ApplyCtx): void {
       return;
 
     case 'text_delta': {
+      const hasVisible = event.text.trim().length > 0;
       let id = ctx.getAssistantTextId();
       if (!id) {
+        if (!hasVisible) return;
         id = genId('a');
         ctx.setAssistantTextId(id);
         const newId = id;
