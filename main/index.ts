@@ -78,10 +78,10 @@ function createWindow(rendererUrl: string | null): void {
   });
 
   if (isDev) {
-    mainWindow.loadURL('http://localhost:5173/').catch(() => {});
+    mainWindow.loadURL('http://localhost:5173/v2/').catch(() => {});
     mainWindow.webContents.openDevTools();
   } else if (rendererUrl) {
-    mainWindow.loadURL(rendererUrl).catch(() => {});
+    mainWindow.loadURL(`${rendererUrl.replace(/\/$/, '')}/v2/`).catch(() => {});
   } else {
     mainWindow.loadFile(path.join(__dirname, '../renderer/v2/index.html'));
   }
