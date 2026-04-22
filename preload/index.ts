@@ -109,6 +109,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.invoke('explorer:uploadToRemote', connectionId, localPaths, { v: remoteDir }),
     copyOnRemote: (connectionId: number, sourcePaths: string[], targetDir: string) =>
       ipcRenderer.invoke('explorer:copyOnRemote', connectionId, sourcePaths, { v: targetDir }),
+    pickLocalFiles: () => ipcRenderer.invoke('explorer:pickLocalFiles') as Promise<string[]>,
   },
   serverInfo: {
     get: (connectionId: number) => ipcRenderer.invoke('serverInfo:get', connectionId),

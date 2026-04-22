@@ -140,6 +140,7 @@ declare global {
         downloadFromRemote: (connectionId: number, remotePaths: string[]) => Promise<{ ok: boolean }>;
         uploadToRemote: (connectionId: number, localPaths: string[], remoteDir: string) => Promise<void>;
         copyOnRemote: (connectionId: number, sourcePaths: string[], targetDir: string) => Promise<void>;
+        pickLocalFiles: () => Promise<string[]>;
       };
       locale?: {
         get: () => Promise<'en' | 'zn' | 'ru'>;
