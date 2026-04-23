@@ -1,11 +1,11 @@
 /**
- * フォーカス移動ショートカット（Cursor / VS Code に寄せた割当）。
- * Ctrl/Cmd+@, Ctrl+`, Ctrl+1 : メインパネルに移動（ターミナル or エディタ）
- * Ctrl/Cmd+L : チャットパネルに移動
- * Ctrl/Cmd+E : エクスプローラーに移動
- * Ctrl/Cmd+R : コネクトリストに移動
- * Ctrl+Tab : タブ移動・進む（メインパネル／チャットでフォーカス時）
- * Ctrl+Shift+Tab : タブ移動・戻る
+ * 焦点移动快捷键（参照 Cursor / VS Code 的按键分配）。
+ * Ctrl/Cmd+@, Ctrl+`, Ctrl+1 : 切换到主面板（终端或编辑器）
+ * Ctrl/Cmd+L : 切换到聊天面板
+ * Ctrl/Cmd+E : 切换到资源管理器
+ * Ctrl/Cmd+R : 切换到连接列表
+ * Ctrl+Tab : 切换标签页（前进）（在主面板/聊天获得焦点时）
+ * Ctrl+Shift+Tab : 切换标签页（后退）
  */
 import { state } from './state';
 import * as terminal from './terminal';
@@ -16,7 +16,7 @@ type Api = NonNullable<typeof window.electronAPI>;
 
 const isMod = (e: KeyboardEvent): boolean => e.ctrlKey || e.metaKey;
 
-/** メインパネル（中央のタブ領域）にフォーカス。アクティブタブがターミナルならターミナル、エディタならエディタにフォーカス。 */
+/** 聚焦主面板（中央标签区域）。活动标签为终端则聚焦终端，为编辑器则聚焦编辑器。 */
 function focusMainPanel(): void {
   const activeTab = state.mainPanelTabs.find((t) => t.id === state.activeMainPanelTabId);
   if (activeTab?.kind === 'terminal' || activeTab?.kind === 'local-terminal') {
@@ -77,7 +77,7 @@ export function bindFocusShortcuts(api: Api): void {
       const key = e.key.toLowerCase();
       const shift = e.shiftKey;
 
-      // diff 表示中は Ctrl+N / Ctrl+Y or Ctrl+Shift+Y を最優先（Monaco に奪われないよう先に処理）
+      // diff 显示期间优先处理 Ctrl+N / Ctrl+Y 或 Ctrl+Shift+Y（防止被 Monaco 拦截）
       if (state.pendingDiff && (e.ctrlKey || e.metaKey)) {
         window.electronAPI?.logToMain?.('[AISSH shortcuts] diff key', { key: e.key, keyLower: key, shift, ctrl: e.ctrlKey, meta: e.metaKey });
         if (!shift && key === 'n') {
@@ -96,7 +96,7 @@ export function bindFocusShortcuts(api: Api): void {
         }
       }
 
-      // Ctrl+Tab / Ctrl+Shift+Tab : タブ移動（メインパネル or チャット）
+      // Ctrl+Tab / Ctrl+Shift+Tab : 切换标签页（主面板或聊天）
       if (isMod(e) && key === 'tab') {
         const inMain = document.activeElement?.closest('#mainPanel');
         const inChat = document.activeElement?.closest('#chatPanel');
@@ -116,28 +116,28 @@ export function bindFocusShortcuts(api: Api): void {
 
       if (!isMod(e)) return;
 
-      // Ctrl+@ / Ctrl+` / Ctrl+1 : メインパネルに移動（VS Code の Ctrl+1 = エディタフォーカスに合わせた）
+      // Ctrl+@ / Ctrl+` / Ctrl+1 : 切换到主面板（与 VS Code 的 Ctrl+1 = 编辑器聚焦一致）
       if (!shift && (e.key === '`' || e.key === '@' || e.key === '1')) {
         e.preventDefault();
         e.stopPropagation();
         focusMainPanel();
         return;
       }
-      // Ctrl+L : チャットパネルに移動
+      // Ctrl+L : 切换到聊天面板
       if (!shift && key === 'l') {
         e.preventDefault();
         e.stopPropagation();
         focusChat();
         return;
       }
-      // Ctrl+E : エクスプローラーに移動
+      // Ctrl+E : 切换到资源管理器
       if (!shift && key === 'e') {
         e.preventDefault();
         e.stopPropagation();
         focusExplorer();
         return;
       }
-      // Ctrl+R : コネクトリストに移動
+      // Ctrl+R : 切换到连接列表
       if (!shift && key === 'r') {
         e.preventDefault();
         e.stopPropagation();

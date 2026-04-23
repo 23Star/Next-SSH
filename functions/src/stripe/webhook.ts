@@ -7,7 +7,7 @@ import type { Request, Response } from 'express';
 const stripeWebhookSecret = defineSecret('STRIPE_WEBHOOK_SECRET');
 const stripeSecretKey = defineSecret('STRIPE_SECRET_KEY');
 
-/** Stripe Price ID → Firestore に保存するプラン名 */
+/** Stripe Price ID → 保存到 Firestore 的套餐名 */
 const PRICE_ID_TO_PLAN: Record<string, string> = {
   price_1T34XdD9OOkJwoyh2PfaQdP3: 'standard',
   price_1T34YQD9OOkJwoyhHJvXz1fE: 'pro',
@@ -15,9 +15,9 @@ const PRICE_ID_TO_PLAN: Record<string, string> = {
 };
 
 /**
- * Stripe が叩く Webhook 用 HTTP エンドポイント。
- * 署名検証のため rawBody が必要なため、POST のみ受け付ける。
- * デプロイ後の URL を Stripe ダッシュボードの「Webhook」に登録する。
+ * Stripe 调用的 Webhook HTTP 端点。
+ * 签名验证需要 rawBody，因此仅接受 POST 请求。
+ * 部署后将 URL 注册到 Stripe 控制台的「Webhook」中。
  */
 export const stripeWebhook = onRequest(
   { secrets: [stripeWebhookSecret, stripeSecretKey] },

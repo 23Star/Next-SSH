@@ -33,7 +33,7 @@ export function createTerminalForTab(api: Api, connectionId: number, name: strin
     if (api.terminal) api.terminal.write(connectionId, data);
   });
 
-  // マウスドラッグで選択 → マウスアップ時にクリップボードへコピー
+  // 鼠标拖拽选择 → 鼠标释放时复制到剪贴板
   container.addEventListener('mouseup', () => {
     if (term.hasSelection()) {
       const text = term.getSelection();
@@ -41,7 +41,7 @@ export function createTerminalForTab(api: Api, connectionId: number, name: strin
     }
   });
 
-  // 右クリックでペースト（キー入力と同じ経路で SSH に送る＝一文字ずつ api.terminal.write）
+  // 右键粘贴（通过键盘输入相同路径发送到 SSH = 逐字符 api.terminal.write）
   container.addEventListener('contextmenu', (e) => {
     e.preventDefault();
     navigator.clipboard.readText().then((text) => {
@@ -107,7 +107,7 @@ export async function createLocalTerminalForTab(api: Api, tabId: string): Promis
   }, 100);
 }
 
-/** fit 後に呼び、SSH の PTY に現在の行数・列数を通知する（vim 等の縦幅用） */
+/** fit 后调用，通知 SSH PTY 当前行数和列数（用于 vim 等正确显示高度） */
 export function sendTerminalResize(api: Api, connectionId: number): void {
   const inst = state.terminalInstances.get(connectionId);
   if (!inst || !api.terminal?.resize) return;
@@ -133,7 +133,7 @@ function getLocalTerminalLabel(): string {
   return t('button.local');
 }
 
-/** メインパネルタブのラベル（種別に応じて） */
+/** 主面板标签名称（根据类型） */
 function getMainPanelTabLabel(tab: import('./types').MainPanelTab): string {
   if (tab.kind === 'terminal') return tab.name;
   if (tab.kind === 'local-terminal') return getLocalTerminalLabel();
@@ -245,7 +245,7 @@ export function renderMainPanelTabBar(api: Api): void {
   if (nameEl) nameEl.textContent = activeTab ? getMainPanelTabLabel(activeTab) : '';
 }
 
-/** @deprecated 互換のため残す。中で renderMainPanelTabBar を呼ぶ。 */
+/** @deprecated 保留用于兼容。内部调用 renderMainPanelTabBar。 */
 export function renderTerminalTabBar(api: Api): void {
   renderMainPanelTabBar(api);
 }
@@ -267,7 +267,7 @@ export function switchMainPanelTab(api: Api, tabId: string): void {
   window.dispatchEvent(new Event('main-panel-tabs-changed'));
 }
 
-/** @deprecated 互換のため残す。connectionId で閉じる。 */
+/** @deprecated 保留用于兼容。通过 connectionId 关闭。 */
 export function switchTerminalTab(api: Api, connectionId: number): void {
   const tab = state.mainPanelTabs.find((t) => t.kind === 'terminal' && t.connectionId === connectionId);
   if (tab) switchMainPanelTab(api, tab.id);
@@ -341,7 +341,7 @@ function closeMainPanelTab(api: Api, tabId: string): void {
   window.dispatchEvent(new Event('main-panel-tabs-changed'));
 }
 
-/** @deprecated 互換のため残す。connectionId で閉じる。 */
+/** @deprecated 保留用于兼容。通过 connectionId 关闭。 */
 export function closeTerminalTab(api: Api, connectionId: number): void {
   const tab = state.mainPanelTabs.find((t) => t.kind === 'terminal' && t.connectionId === connectionId);
   if (tab) closeMainPanelTab(api, tab.id);
@@ -356,7 +356,7 @@ export function updateTerminalPanelVisibility(api: Api): void {
   if (show) renderMainPanelTabBar(api);
 }
 
-/** アクティブなターミナルにフォーカス（ショートカット用）。 */
+/** 聚焦活动终端（快捷键用）。 */
 export function focusActiveTerminal(): void {
   const tab = state.mainPanelTabs.find((t) => t.id === state.activeMainPanelTabId);
   if (!tab) return;
@@ -369,7 +369,7 @@ export function focusActiveTerminal(): void {
   }
 }
 
-/** 指定 env のターミナルタブに切り替えてフォーカス。 */
+/** 切换到指定环境的终端标签并聚焦。 */
 export function switchToTabByEnvId(api: Api, envId: number): void {
   const tab = state.mainPanelTabs.find((t) => t.kind === 'terminal' && t.envId === envId);
   if (!tab) return;
@@ -380,7 +380,7 @@ export function switchToTabByEnvId(api: Api, envId: number): void {
   focusActiveTerminal();
 }
 
-/** ローカルターミナルタブに切り替えてフォーカス（なければ新規作成）。 */
+/** 切换到本地终端标签并聚焦（如不存在则新建）。 */
 export function focusOrCreateLocalTerminalTab(api: Api): void {
   const existing = state.mainPanelTabs.find((t) => t.kind === 'local-terminal');
   if (existing) {
@@ -516,7 +516,7 @@ export function doDisconnect(api: Api): void {
   if (state.activeMainPanelTabId) closeMainPanelTab(api, state.activeMainPanelTabId);
 }
 
-/** ローカルターミナルタブを 1 つ追加して開く。 */
+/** 添加并打开一个本地终端标签。 */
 export async function openLocalTerminalTab(api: Api): Promise<void> {
   const tabId = `local-${Date.now()}`;
   state.mainPanelTabs.push({ id: tabId, kind: 'local-terminal' });

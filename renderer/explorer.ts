@@ -59,7 +59,7 @@ export function clearExplorerStateForTarget(api: Api, target: 'local' | number):
   }
 }
 
-/** 旧 API: 現在のターゲットの状態をクリア（タブ閉じ時など）。 */
+/** 旧 API：清除当前目标的状态（关闭标签时等）。 */
 export function clearExplorerState(api: Api): void {
   clearExplorerStateForTarget(api, state.activeExplorerTarget);
 }
@@ -176,7 +176,7 @@ function updateExplorerUpButton(_api: Api): void {
   (btn as HTMLButtonElement).disabled = es.home === '/';
 }
 
-/** 現在表示中のフォルダを再読み込み。 */
+/** 重新加载当前显示的文件夹。 */
 export async function reloadExplorerCurrent(api: Api): Promise<void> {
   const es = getCurrentExplorerState();
   if (!es.home) return;
@@ -186,7 +186,7 @@ export async function reloadExplorerCurrent(api: Api): Promise<void> {
   updateExplorerUpButton(api);
 }
 
-/** 指定フォルダのキャッシュを破棄して再読み込み（削除・リネーム後に呼ぶ）。 */
+/** 丢弃指定文件夹的缓存并重新加载（在删除/重命名后调用）。 */
 export async function refreshExplorerDir(api: Api, parentDir: string): Promise<void> {
   const es = getCurrentExplorerState();
   delete es.loadedPaths[parentDir];
@@ -361,10 +361,10 @@ export function renderExplorerTree(api: Api): void {
 let dropTargetBound = false;
 let contextMenuBound = false;
 let keyboardBound = false;
-/** ドラッグ中にマウスが重なっているフォルダのパス。ドロップ先に使う。 */
+/** 拖拽过程中鼠标悬停的文件夹路径。用作放置目标。 */
 let currentDropTargetPath: string | null = null;
 
-/** リネーム用のアプリ内モーダル（window.prompt は Electron で背面に隠れるため）。 */
+/** 用于重命名的应用内模态框（因为 window.prompt 在 Electron 中会被遮挡到后台）。 */
 function showRenameDialog(defaultName: string): Promise<string | null> {
   return new Promise((resolve) => {
     const id = 'explorerRenameDialog';
@@ -420,7 +420,7 @@ function showRenameDialog(defaultName: string): Promise<string | null> {
   });
 }
 
-/** 選択項目で F2 → リネーム、Enter → ファイルならエディタで開く／フォルダなら展開。一度だけバインド。 */
+/** 选中项按 F2 重命名，回车键打开文件或展开文件夹。仅绑定一次。 */
 export function setupExplorerKeyboard(api: Api): void {
   if (keyboardBound) return;
   const el = document.getElementById('explorerTreeContainer');
@@ -481,7 +481,7 @@ export function setupExplorerKeyboard(api: Api): void {
   );
 }
 
-/** 右クリックで「ダウンロード」メニューを表示。ローカル（PC）タブのみ。一度だけバインド。 */
+/** 右键显示"下载"菜单。仅限本地（PC）标签。仅绑定一次。 */
 export function setupExplorerContextMenu(api: Api): void {
   if (contextMenuBound) return;
   const el = document.getElementById('explorerTreeContainer');
@@ -515,7 +515,7 @@ function findFolderPathUnderPoint(clientX: number, clientY: number): string | nu
   return item?.dataset.path ?? null;
 }
 
-/** Phase1: Windows Explorer などからドロップを受け付ける。一度だけバインド。ドロップ先＝マウスが重なっているフォルダ、またはパネル背景なら表示ルート（PC ルート以外）。 */
+/** 第一阶段：接受来自 Windows 资源管理器等的外部拖放。仅绑定一次。放置目标=鼠标悬停的文件夹，或面板背景则为显示根目录（PC 根目录除外）。 */
 export function bindExplorerDropTarget(api: Api): void {
   if (dropTargetBound) return;
   const el = document.getElementById('explorerTreeContainer');

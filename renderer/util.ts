@@ -14,7 +14,7 @@ export function pathJoin(parent: string, name: string): string {
   return p + sep + name;
 }
 
-/** パスから親ディレクトリを取得（/ と \ 両対応）。 */
+/** 从路径获取父目录（同时支持 / 和 \）。 */
 export function getParentDir(pathStr: string): string {
   const i = Math.max(pathStr.lastIndexOf('/'), pathStr.lastIndexOf('\\'));
   return i <= 0 ? pathStr : pathStr.slice(0, i);

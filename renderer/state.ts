@@ -9,30 +9,30 @@ export const state = {
   connectingId: null as number | null,
   envList: [] as Environment[],
 
-  /** メインパネルのタブ一覧（ターミナル／エディタ／DB などを同列で並べる）。 */
+  /** 主面板标签列表（终端/编辑器/DB 等同级排列）。 */
   mainPanelTabs: [] as MainPanelTab[],
-  /** 現在アクティブなメインパネルタブの id。 */
+  /** 当前活动的主面板标签 id。 */
   activeMainPanelTabId: null as string | null,
 
   terminalTabs: [] as TerminalTab[],
   activeTabConnectionId: null as number | null,
   nextConnectionId: 1,
   terminalInstances: new Map<number, { term: Terminal; fitAddon: FitAddon; container: HTMLElement }>(),
-  /** ローカルターミナルタブの xterm インスタンス。key は mainPanel の tab id。 */
+  /** 本地终端标签的 xterm 实例。key 为主面板的 tab id。 */
   localTerminalInstances: new Map<string, { term: Terminal; fitAddon: FitAddon; container: HTMLElement }>(),
   terminalBufferByConnection: {} as Record<number, string>,
-  /** ローカルターミナルタブごとの直近出力（チャットコンテキスト用）。key は mainPanel の tab id。 */
+  /** 每个本地终端标签的最近输出（用于聊天上下文）。key 为主面板的 tab id。 */
   localTerminalBufferByTabId: {} as Record<string, string>,
   TERMINAL_BUFFER_MAX: 40000,
 
-  /** エディタタブの Monaco インスタンス。key は mainPanel の tab id。 */
+  /** 编辑器标签的 Monaco 实例。key 为主面板的 tab id。 */
   editorInstances: new Map<string, { editor: { getValue(): string; setValue(s: string): void; focus(): void; dispose(): void }; container: HTMLElement }>(),
-  /** 未保存のエディタタブ。key は mainPanel の tab id。 */
+  /** 未保存的编辑器标签。key 为主面板的 tab id。 */
   editorDirtyByTabId: {} as Record<string, boolean>,
-  /** 最後に保存した内容（Ctrl+Z で戻ったときに ● を消す用）。key は mainPanel の tab id。 */
+  /** 最后保存的内容（用于 Ctrl+Z 回退时取消脏标记）。key 为主面板的 tab id。 */
   editorLastSavedContentByTabId: {} as Record<string, string>,
 
-  /** 適用前の diff プレビュー。null でないとき Ctrl+N / Ctrl+Shift+Y でハンク移動。 */
+  /** 应用前的 diff 预览。非 null 时 Ctrl+N / Ctrl+Shift+Y 移动差异块。 */
   pendingDiff: null as {
     tabId: string;
     currentContent: string;
@@ -57,19 +57,19 @@ export const state = {
   /** Max terminal output chars to feed back to AI per command. 8 000 chars ≈ 200 lines. */
   AGENT_OUTPUT_MAX_CHARS: 8000,
 
-  /** Explorer で今表示しているターゲット。'local' または connectionId。ターミナルの activeTab とは独立。 */
+  /** Explorer 当前显示的目标。'local' 或 connectionId。与终端的 activeTab 独立。 */
   activeExplorerTarget: 'local' as 'local' | number,
-  /** ターゲットごとの Explorer 状態。key は 'local' または String(connectionId)。 */
+  /** 每个目标的 Explorer 状态。key 为 'local' 或 String(connectionId)。 */
   explorerByTarget: {} as Record<string, { home: string | null; loadedPaths: Record<string, ExplorerEntry[]>; expanded: Set<string> }>,
-  /** Explorer で現在選択している項目のパス（シングルクリックで設定。ダブルクリック／Enter で開く）。 */
+  /** Explorer 中当前选中项的路径（单击设置，双击/回车打开）。 */
   selectedExplorerPath: null as string | null,
-  /** 選択項目がディレクトリか（Enter 時の挙動に使用）。 */
+  /** 选中项是否为目录（用于决定回车时的行为）。 */
   selectedExplorerIsDir: null as boolean | null,
-  /** ローカルルート（getLocalHome の結果）。「上へ」の無効判定に使用。 */
+  /** 本地根目录（getLocalHome 的结果）。用于判断是否禁用"上级"按钮。 */
   localHomeDir: null as string | null,
-  /** 右クリック「コピー」で保持したパス（貼り付け用）。ローカルのみ対応。 */
+  /** 右键"复制"保留的路径（用于粘贴）。仅支持本地。 */
   copiedFilePaths: [] as string[],
-  /** コピー元がローカルか connectionId。 */
+  /** 复制来源是本地还是 connectionId。 */
   copyTarget: null as 'local' | number | null,
 
   EXPLORER_HEIGHT_MIN: 80,
@@ -97,21 +97,21 @@ export function getNextConnectionId(): number {
   return id;
 }
 
-/** mainPanelTabs から terminal だけを取り出し TerminalTab[] に（既存コード互換用）。 */
+/** 从 mainPanelTabs 中提取终端标签为 TerminalTab[]（用于兼容已有代码）。 */
 export function getTerminalTabsFromMainPanel(): TerminalTab[] {
   return state.mainPanelTabs
     .filter((t): t is MainPanelTab & { kind: 'terminal' } => t.kind === 'terminal')
     .map((t) => ({ connectionId: t.connectionId, envId: t.envId, name: t.name }));
 }
 
-/** アクティブなタブがターミナルなら connectionId を返す（既存コード互換用）。 */
+/** 如果活动标签是终端则返回 connectionId（用于兼容已有代码）。 */
 export function getActiveConnectionId(): number | null {
   if (!state.activeMainPanelTabId) return null;
   const tab = state.mainPanelTabs.find((t) => t.id === state.activeMainPanelTabId);
   return tab?.kind === 'terminal' ? tab.connectionId : null;
 }
 
-/** mainPanelTabs 変更後に terminalTabs / activeTabConnectionId を同期する。 */
+/** mainPanelTabs 变更后同步 terminalTabs / activeTabConnectionId。 */
 export function syncTerminalStateFromMainPanel(): void {
   state.terminalTabs = getTerminalTabsFromMainPanel();
   const active = state.mainPanelTabs.find((t) => t.id === state.activeMainPanelTabId);

@@ -1,6 +1,6 @@
 /**
- * メインパネル内のファイルエディタ（Monaco）。ローカル／リモート（SSH）ファイルの開く・編集・保存。
- * monaco-editor は動的 import で読み込む（起動時の Vite 解決エラーを避ける）。
+ * 主面板内的文件编辑器（Monaco）。支持本地/远程（SSH）文件的打开、编辑、保存。
+ * monaco-editor 使用动态 import 加载（避免启动时 Vite 解析错误）。
  */
 import { state } from './state';
 import { t } from './i18n';
@@ -68,7 +68,7 @@ function getLanguageFromPath(filePath: string): string {
 }
 
 /**
- * 既に同じ filePath + target のエディタタブがあればその tabId を返す。
+ * 如果已存在相同 filePath + target 的编辑器标签，则返回其 tabId。
  */
 export function findEditorTabByPath(filePath: string, target: EditorTarget): string | null {
   const normalized = normalizePath(filePath);
@@ -86,7 +86,7 @@ function normalizePath(p: string): string {
 }
 
 /**
- * エディタタブ用の Monaco を作成し、state に登録する。
+ * 为编辑器标签创建 Monaco 实例并注册到 state。
  */
 export async function createEditorForTab(api: Api, tabId: string, filePath: string, initialContent: string): Promise<void> {
   if (state.editorInstances.has(tabId)) return;
@@ -131,7 +131,7 @@ export async function createEditorForTab(api: Api, tabId: string, filePath: stri
   state.editorInstances.set(tabId, { editor, container });
 }
 
-/** 行単位の diff からハンク一覧を返す（1-based 行番号）。 */
+/** 按行计算 diff 并返回差异块列表（1-based 行号）。 */
 function computeHunks(oldText: string, newText: string): Array<{ oldStart: number; oldEnd: number; newStart: number; newEnd: number }> {
   const oldLines = oldText.split(/\n/);
   const newLines = newText.split(/\n/);
@@ -182,7 +182,7 @@ let diffOriginalModel: unknown = null;
 let diffModifiedModel: unknown = null;
 
 /**
- * 適用前の diff プレビューを開く。Ctrl+N / Ctrl+Shift+Y でハンク移動、「適用する」で確定（undo 対応）。
+ * 打开应用前的 diff 预览。Ctrl+N / Ctrl+Shift+Y 移动差异块，点击"应用"确认（支持撤销）。
  */
 export async function setPendingDiff(tabId: string, proposedContent: string): Promise<boolean> {
   logToStdout('setPendingDiff', tabId, 'proposedLen', proposedContent.length);
@@ -334,8 +334,8 @@ function logToStdout(...args: unknown[]): void {
 }
 
 /**
- * 指定タブのエディタで search_replace を実行する（ファイル修正の適用）。
- * oldStr が空のときはファイル全体を newStr で上書き。それ以外は先頭の一致箇所を 1 回だけ置換。該当がなければ false。
+ * 在指定标签的编辑器中执行 search_replace（应用文件修改）。
+ * oldStr 为空时用 newStr 覆写整个文件；否则替换第一个匹配项。未找到匹配则返回 false。
  */
 export function applySearchReplace(tabId: string, oldStr: string, newStr: string): boolean {
   const fullReplace = oldStr === '';
@@ -423,7 +423,7 @@ export function disposeEditorForTab(tabId: string): void {
 }
 
 /**
- * アクティブなタブがエディタならそのエディタにフォーカスする。
+ * 如果活动标签是编辑器，则聚焦该编辑器。
  */
 export function focusActiveEditor(): void {
   const tab = state.mainPanelTabs.find((t) => t.id === state.activeMainPanelTabId);
@@ -453,7 +453,7 @@ function removeLoadingTab(tabId: string, editorContainerEl: HTMLElement | null):
 }
 
 /**
- * ファイルをエディタで開く。ローディング表示、中止ボタン、大ファイル警告付き。
+ * 在编辑器中打开文件。带有加载动画、取消按钮和大文件警告。
  */
 export async function openFileInEditor(api: Api, filePath: string, target: EditorTarget): Promise<string | null> {
   const existingId = findEditorTabByPath(filePath, target);

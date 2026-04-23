@@ -28,7 +28,7 @@ export function showMessage(options: MessageOptions): Promise<void> {
   const titleEl = document.getElementById('messageModalTitle');
   const textEl = document.getElementById('messageModalText');
   if (!modal || !titleEl || !textEl) {
-    // フォールバックとして alert を維持
+    // 保留 alert 作为降级方案
     // eslint-disable-next-line no-alert
     alert(`${options.title}\n\n${options.message}`);
     return Promise.resolve();
