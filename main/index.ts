@@ -82,9 +82,9 @@ function createWindow(rendererUrl: string | null): void {
     mainWindow.loadURL('http://localhost:5173/v2/').catch(() => {});
     mainWindow.webContents.openDevTools();
   } else if (rendererUrl) {
-    mainWindow.loadURL(`${rendererUrl.replace(/\/$/, '')}/v2/`).catch(() => {});
+    mainWindow.loadURL(`${rendererUrl.replace(/\/$/, '')}/`).catch(() => {});
   } else {
-    mainWindow.loadFile(path.join(__dirname, '../renderer/v2/index.html'));
+    mainWindow.loadFile(path.join(__dirname, '../dist/renderer/index.html'));
   }
 
   mainWindow.on('closed', () => {

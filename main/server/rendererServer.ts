@@ -45,11 +45,11 @@ function createRequestHandler(rendererDir: string): (req: http.IncomingMessage, 
     const reqPath = req.url?.split('?')[0] ?? '/';
     const normalized = path.normalize(reqPath).replace(/^(\.\.(\/|\\|$))+/, '');
     const relativePath = normalized.replace(/^[/\\]+/, '');
-    const filePath = path.join(rendererDir, relativePath === '' ? 'v2/index.html' : relativePath);
+    const filePath = path.join(rendererDir, relativePath === '' ? 'index.html' : relativePath);
 
     fs.stat(filePath, (err, stat) => {
       if (err || !stat.isFile()) {
-        const fallback = path.join(rendererDir, 'v2/index.html');
+        const fallback = path.join(rendererDir, 'index.html');
         fs.readFile(fallback, (errFallback, data) => {
           if (errFallback || !data) {
             res.writeHead(404);
