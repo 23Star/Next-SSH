@@ -1,6 +1,10 @@
 <h1 align="center">Next Panel</h1>
 
 <p align="center">
+  <img src="resources/icons/image.png" alt="Next Panel" width="720" />
+</p>
+
+<p align="center">
   <strong>AI 驱动的智能 SSH 服务器管理面板</strong><br>
   <em>用自然语言对话，让 AI 理解你的服务器、诊断问题、执行命令、验证结果。</em>
 </p>
