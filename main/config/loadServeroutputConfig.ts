@@ -15,8 +15,8 @@ const DEFAULTS: ServeroutputConfig = {
 let cached: ServeroutputConfig | null = null;
 
 /**
- * config/prompt.json を読み込む。
- * ファイルが無い場合は DEFAULTS を返す。初回のみ読み込み、以降はキャッシュを返す。
+ * 读取 config/prompt.json。
+ * 文件不存在时返回 DEFAULTS。仅首次读取，之后返回缓存。
  */
 export function loadServeroutputConfig(): ServeroutputConfig {
   if (cached) return cached;
@@ -37,7 +37,7 @@ export function loadServeroutputConfig(): ServeroutputConfig {
         return cached;
       }
     } catch {
-      // ファイルなし or パースエラーは次を試す
+      // 文件不存在或解析错误时尝试下一个
     }
   }
   cached = DEFAULTS;

@@ -104,6 +104,107 @@ const paths: Record<string, React.ReactElement> = {
   brain: (
     <path d="M9.5 2a3 3 0 0 0-2.9 2.3A3 3 0 0 0 4 7.1v9.8A3 3 0 0 0 6.6 20a3 3 0 0 0 2.9 2h5a3 3 0 0 0 2.9-2 3 3 0 0 0 2.6-3V7.1a3 3 0 0 0-2.6-2.9A3 3 0 0 0 14.5 2h-5z" />
   ),
+  plus: (
+    <>
+      <path d="M12 5v14" />
+      <path d="M5 12h14" />
+    </>
+  ),
+  trash: (
+    <>
+      <path d="M3 6h18" />
+      <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+    </>
+  ),
+  play: <path d="M6 3l14 9-14 9V3z" />,
+  pause: (
+    <>
+      <rect x="6" y="4" width="4" height="16" rx="1" />
+      <rect x="14" y="4" width="4" height="16" rx="1" />
+    </>
+  ),
+  restart: (
+    <>
+      <path d="M1 4v6h6" />
+      <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
+    </>
+  ),
+  sortUp: <path d="m6 9 6-6 6 6" />,
+  sortDown: <path d="m6 15 6 6 6-6" />,
+  search: (
+    <>
+      <circle cx="11" cy="11" r="8" />
+      <path d="m21 21-4.35-4.35" />
+    </>
+  ),
+  save: (
+    <>
+      <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+      <path d="M17 21v-8H7v8" />
+      <path d="M7 3v5h8" />
+    </>
+  ),
+  fileText: (
+    <>
+      <path d="M4 5a2 2 0 0 1 2-2h4l2 2h6a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5z" />
+      <path d="M9 10h6M9 14h4" />
+    </>
+  ),
+  image: (
+    <>
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <circle cx="9" cy="9" r="2" />
+      <path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21" />
+    </>
+  ),
+  archive: (
+    <>
+      <path d="M4 5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5z" />
+      <path d="M10 8h4M10 12h4M10 16h4" />
+    </>
+  ),
+  binary: (
+    <>
+      <path d="M4 5a2 2 0 0 1 2-2h4l2 2h6a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5z" />
+      <path d="M8 10h2v4H8zM14 10h2v4h-2z" />
+    </>
+  ),
+  download: (
+    <>
+      <path d="M12 3v12" />
+      <path d="m7 10 5 5 5-5" />
+      <path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" />
+    </>
+  ),
+  video: (
+    <>
+      <rect x="2" y="4" width="15" height="16" rx="2" />
+      <path d="m17 8 5-3v14l-5-3" />
+    </>
+  ),
+  audio: (
+    <>
+      <path d="M9 18V5l12-2v13" />
+      <circle cx="6" cy="18" r="3" />
+      <circle cx="18" cy="16" r="3" />
+    </>
+  ),
+  extract: (
+    <>
+      <path d="M21 8v13H3V8" />
+      <path d="M1 3h22v5H1z" />
+      <path d="M12 12v6" />
+      <path d="m9 15 3-3 3 3" />
+    </>
+  ),
+  docker: (
+    <>
+      <path d="M22 12s-3-2-6-1c-1-2-2-4-2-4s-5 0-7 1c-2 1-4 3-4 3H1v3h2c0 2 1.5 3 3 3s3-1 3-3h5c0 2 1.5 3 3 3s3-1 3-3h2v-2z" />
+      <circle cx="6" cy="15" r="1" />
+      <circle cx="17" cy="15" r="1" />
+    </>
+  ),
 };
 
 export interface IconProps {

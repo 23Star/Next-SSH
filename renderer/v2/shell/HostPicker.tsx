@@ -41,7 +41,7 @@ export function HostPicker({ hosts, activeId, status, onSelect, onOpenSettings }
         aria-expanded={open}
       >
         <span className="ns-hostpicker__dot" data-status={status} />
-        <span className="ns-hostpicker__label">{active ? labelFor(active) : 'No host selected'}</span>
+        <span className="ns-hostpicker__label">{active ? labelFor(active) : '未选择主机'}</span>
         <Icon name="chevronDown" size={14} />
       </button>
       {open && (
@@ -64,7 +64,7 @@ export function HostPicker({ hosts, activeId, status, onSelect, onOpenSettings }
         >
           {hosts.length === 0 && (
             <div style={{ padding: '14px 12px', color: 'var(--text-muted)', fontSize: 'var(--fs-sm)' }}>
-              No saved hosts. Add one in Settings.
+              暂无已保存主机，请在设置中添加
             </div>
           )}
           {hosts.map((h) => (
@@ -100,7 +100,7 @@ export function HostPicker({ hosts, activeId, status, onSelect, onOpenSettings }
               onClick={() => { setOpen(false); onOpenSettings(); }}
             >
               <Icon name="settings" size={14} />
-              <span>Manage Hosts…</span>
+              <span>管理主机…</span>
             </button>
           )}
         </div>

@@ -5,7 +5,7 @@ import os from 'os';
 import path from 'path';
 import * as sshConnection from '../ssh/sshConnection';
 
-/** 「PC」ルート（ドライブ一覧など）を表す特別なパス。 */
+/** 代表 "PC" 根目录（驱动器列表等）的特殊路径。 */
 const PC_ROOT = '\0pc';
 
 function getLocalDrives(): Array<{ name: string; isDirectory: boolean }> {
@@ -164,10 +164,10 @@ export function registerExplorerHandlers(): void {
     return sshConnection.writeRemoteFile(connectionId, remotePathObj.v, contentObj.v);
   });
 
-  /** ドラッグ用の小さなアイコン（1x1 PNG）。icon にファイルパスを渡すとフォルダ等で "Failed to load image" になるため。 */
+  /** 拖拽用的小图标（1x1 PNG）。因为向 icon 传递文件路径时在文件夹等场景会报 "Failed to load image"。 */
   const DRAG_ICON_DATAURL = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
 
-  /** Phase1: AISSH(PC) → 他アプリへドラッグ。Windows では startDrag がクラッシュする既知不具合のため無効化。 */
+  /** Phase1: AISSH(PC) 拖拽到其他应用。Windows 上因 startDrag 已知崩溃问题而禁用。 */
   ipcMain.handle('explorer:startDrag', (event, filePath: string) => {
     if (os.platform() === 'win32') {
       console.log('[explorer] startDrag skipped on Windows (known crash)');
@@ -188,7 +188,7 @@ export function registerExplorerHandlers(): void {
     }
   });
 
-  /** 指定フォルダへファイル/フォルダをコピー（共通処理）。ドロップ・ダウンロード両方で利用。 */
+  /** 复制文件/文件夹到指定目录（通用处理）。拖拽和下载均使用。 */
   function copyToFolderInternal(sourcePaths: string[], targetDir: string): void {
     const target = path.resolve(targetDir);
     if (!fs.existsSync(target) || !fs.statSync(target).isDirectory()) {
@@ -226,7 +226,7 @@ export function registerExplorerHandlers(): void {
     console.log('[explorer] downloadToDestination sources:', sourcePaths);
     const result = await dialog.showOpenDialog(win, {
       properties: ['openDirectory'],
-      title: '保存先を選択',
+      title: '选择保存位置',
     });
     if (result.canceled || !result.filePaths.length) {
       console.log('[explorer] downloadToDestination canceled or no path');
@@ -250,7 +250,7 @@ export function registerExplorerHandlers(): void {
     console.log('[explorer] downloadFromRemote connectionId:', connectionId, 'sources:', remotePaths);
     const result = await dialog.showOpenDialog(win, {
       properties: ['openDirectory'],
-      title: '保存先を選択',
+      title: '选择保存位置',
     });
     if (result.canceled || !result.filePaths.length) {
       console.log('[explorer] downloadFromRemote canceled');

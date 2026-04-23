@@ -33,17 +33,17 @@ export function Dashboard({ connectionId, connStatus, connError, snapshot, loadi
       <div className="ns-page">
         <div className="ns-page__header">
           <div>
-            <h1 className="ns-page__title">Dashboard</h1>
-            <div className="ns-page__subtitle">Pick a host from the top bar to get started.</div>
+            <h1 className="ns-page__title">仪表盘</h1>
+            <div className="ns-page__subtitle">从顶部栏选择一台主机开始使用</div>
           </div>
         </div>
         <EmptyState
           icon="plug"
-          title={connStatus === 'connecting' ? 'Connecting…' : 'No host selected'}
+          title={connStatus === 'connecting' ? '正在连接…' : '未选择主机'}
           description={
             connError
-              ? `Last error: ${connError}`
-              : 'Your saved hosts live in the top bar. Select one and the dashboard will populate with live signals.'
+              ? `上次错误: ${connError}`
+              : '在顶部栏选择一个已保存的主机，仪表盘将自动加载实时数据'
           }
         />
       </div>
@@ -55,8 +55,8 @@ export function Dashboard({ connectionId, connStatus, connError, snapshot, loadi
       <div className="ns-page">
         <div className="ns-page__header">
           <div>
-            <h1 className="ns-page__title">Dashboard</h1>
-            <div className="ns-page__subtitle">Collecting system snapshot…</div>
+            <h1 className="ns-page__title">仪表盘</h1>
+            <div className="ns-page__subtitle">正在采集系统快照…</div>
           </div>
         </div>
         <div className="ns-grid ns-grid--dash" aria-busy>
@@ -75,11 +75,11 @@ export function Dashboard({ connectionId, connStatus, connError, snapshot, loadi
       <div className="ns-page">
         <div className="ns-page__header">
           <div>
-            <h1 className="ns-page__title">Dashboard</h1>
-            <div className="ns-page__subtitle">Couldn't collect a snapshot.</div>
+            <h1 className="ns-page__title">仪表盘</h1>
+            <div className="ns-page__subtitle">无法采集系统快照</div>
           </div>
         </div>
-        <EmptyState icon="close" title="Snapshot failed" description={error} />
+        <EmptyState icon="close" title="快照获取失败" description={error} />
       </div>
     );
   }
@@ -109,43 +109,42 @@ export function Dashboard({ connectionId, connStatus, connError, snapshot, loadi
       </div>
 
       <div className="ns-grid ns-grid--dash">
-        <Card title="CPU load" col={4} caption={snapshot.cpu.modelName ?? undefined}>
+        <Card title="CPU 负载" col={4} caption={snapshot.cpu.modelName ?? undefined}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-            <Gauge percent={cpuPercent} label={`${cpuCores ?? '?'} cores`} />
+            <Gauge percent={cpuPercent} label={`${cpuCores ?? '?'} 核心`} />
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <LoadRow label="1 min"  value={snapshot.loadAvg?.[0]} />
-              <LoadRow label="5 min"  value={snapshot.loadAvg?.[1]} />
-              <LoadRow label="15 min" value={snapshot.loadAvg?.[2]} />
+              <LoadRow label="1 分钟"  value={snapshot.loadAvg?.[0]} />
+              <LoadRow label="5 分钟"  value={snapshot.loadAvg?.[1]} />
+              <LoadRow label="15 分钟" value={snapshot.loadAvg?.[2]} />
             </div>
           </div>
         </Card>
 
-        <Card title="Memory" col={4} caption={mem ? `${formatBytes(mem.total)} total` : undefined}>
+        <Card title="内存" col={4} caption={mem ? `${formatBytes(mem.total)} 总量` : undefined}>
           <div className="ns-card__value">
             {formatPercent(memPercent)}
-            <span className="ns-card__unit">used</span>
+            <span className="ns-card__unit">已使用</span>
           </div>
           <ProgressBar percent={memPercent} />
           <div className="ns-card__caption">
-            {mem ? `${formatBytes(memUsed)} of ${formatBytes(mem.total)}` : '—'}
-            {mem ? ` · ${formatBytes(mem.available)} available` : ''}
+            {mem ? `${formatBytes(memUsed)} / ${formatBytes(mem.total)}` : '—'}
+            {mem ? ` · ${formatBytes(mem.available)} 可用` : ''}
           </div>
         </Card>
 
-        <Card title="Processes" col={4}>
+        <Card title="进程" col={4}>
           <div className="ns-card__value">
             {formatCount(snapshot.processCount ?? 0)}
-            <span className="ns-card__unit">running</span>
+            <span className="ns-card__unit">运行中</span>
           </div>
           <div className="ns-card__caption">
-            {snapshot.listeningPorts.length} listening port
-            {snapshot.listeningPorts.length === 1 ? '' : 's'}
+            {snapshot.listeningPorts.length} 个监听端口
           </div>
         </Card>
 
-        <Card title="Storage" col={8}>
+        <Card title="存储" col={8}>
           {snapshot.disks.length === 0 ? (
-            <div className="ns-card__caption">No filesystems reported.</div>
+            <div className="ns-card__caption">未检测到文件系统</div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               {snapshot.disks.map((d) => (
@@ -155,9 +154,9 @@ export function Dashboard({ connectionId, connStatus, connError, snapshot, loadi
           )}
         </Card>
 
-        <Card title="Listening ports" col={4}>
+        <Card title="监听端口" col={4}>
           {snapshot.listeningPorts.length === 0 ? (
-            <div className="ns-card__caption">Nothing listening.</div>
+            <div className="ns-card__caption">无监听端口</div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 260, overflowY: 'auto' }}>
               {snapshot.listeningPorts.slice(0, 24).map((p, i) => (
@@ -173,7 +172,7 @@ export function Dashboard({ connectionId, connStatus, connError, snapshot, loadi
                 </div>
               ))}
               {snapshot.listeningPorts.length > 24 && (
-                <div className="ns-card__caption">(+{snapshot.listeningPorts.length - 24} more)</div>
+                <div className="ns-card__caption">（还有 {snapshot.listeningPorts.length - 24} 个）</div>
               )}
             </div>
           )}

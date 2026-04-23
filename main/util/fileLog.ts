@@ -1,6 +1,6 @@
 /**
- * 標準出力 + プロジェクト直下 log/ に同じ内容を出す簡易ログ。
- * 開発時のデバッグ用（ssh の readRemoteFile / writeRemoteFile など）。
+ * 简易日志，同时输出到标准输出和项目根目录下的 log/。
+ * 用于开发调试（如 ssh 的 readRemoteFile / writeRemoteFile 等）。
  */
 import fs from 'fs';
 import path from 'path';

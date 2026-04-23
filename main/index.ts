@@ -69,12 +69,13 @@ function createWindow(rendererUrl: string | null): void {
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
+    icon: path.join(__dirname, '../resources/icons/icon.png'),
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
       preload: preloadPath,
     },
-    title: 'Next-SSH',
+    title: 'Next Panel',
   });
 
   if (isDev) {

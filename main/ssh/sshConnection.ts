@@ -14,6 +14,45 @@ type ShellStream = NodeJS.ReadWriteStream & {
 };
 const connections = new Map<number, { client: Client; stream: ShellStream }>();
 
+// Concurrency limiter for SSH exec channels.
+// OpenSSH servers default to MaxSessions=10; keep well below that to
+// avoid "Channel open failure: open failed" (SSH_OPEN_RESOURCE_SHORTAGE).
+const MAX_CONCURRENT_EXEC = 5;
+let activeExecCount = 0;
+const execQueue: Array<() => void> = [];
+
+function acquireExecSlot(): Promise<void> {
+  if (activeExecCount < MAX_CONCURRENT_EXEC) {
+    activeExecCount++;
+    return Promise.resolve();
+  }
+  return new Promise<void>((resolve) => {
+    execQueue.push(resolve);
+  });
+}
+
+function releaseExecSlot(): void {
+  activeExecCount--;
+  if (execQueue.length > 0 && activeExecCount < MAX_CONCURRENT_EXEC) {
+    activeExecCount++;
+    const next = execQueue.shift();
+    if (next) next();
+  }
+}
+
+/**
+ * Run a function that opens an SSH exec channel, guarded by the semaphore.
+ * ALL c.client.exec() calls must go through this to avoid exceeding MaxSessions.
+ */
+async function withExecChannel<T>(fn: () => Promise<T>): Promise<T> {
+  await acquireExecSlot();
+  try {
+    return await fn();
+  } finally {
+    releaseExecSlot();
+  }
+}
+
 export function connect(
   connectionId: number,
   env: EnvironmentRow,
@@ -105,7 +144,7 @@ export function write(connectionId: number, data: string): boolean {
   return true;
 }
 
-/** PTY のウィンドウサイズをサーバーに通知（vim 等の縦幅を正しくする） */
+/** 通知服务器 PTY 窗口大小（用于 vim 等正确显示行高） */
 export function resize(connectionId: number, rows: number, cols: number, height?: number, width?: number): boolean {
   const c = connections.get(connectionId);
   if (!c?.stream.setWindow) return false;
@@ -115,11 +154,11 @@ export function resize(connectionId: number, rows: number, cols: number, height?
   return true;
 }
 
-/** 接続中で echo $HOME を実行してホームディレクトリパスを取得する。 */
+/** 连接中执行 echo $HOME 获取主目录路径。 */
 export function getHome(connectionId: number): Promise<string> {
   const c = connections.get(connectionId);
   if (!c) return Promise.reject(new Error('Not connected'));
-  return new Promise((resolve, reject) => {
+  return withExecChannel(() => new Promise((resolve, reject) => {
     c.client.exec('echo $HOME', (err: Error | undefined, stream: NodeJS.ReadableStream | undefined) => {
       if (err) return reject(err);
       if (!stream) return reject(new Error('No exec stream'));
@@ -135,7 +174,7 @@ export function getHome(connectionId: number): Promise<string> {
         resolve(result);
       });
     });
-  });
+  }));
 }
 
 export interface DirEntry {
@@ -146,18 +185,13 @@ export interface DirEntry {
   permissions?: string;
 }
 
-/** 指定パスのディレクトリ一覧を ls -l で取得（SFTP 不要）。 */
+/** 使用 ls -l 获取指定路径的目录列表（无需 SFTP）。 */
 export function listDirectory(connectionId: number, dirPath: string): Promise<DirEntry[]> {
   const c = connections.get(connectionId);
   if (!c) return Promise.reject(new Error('Not connected'));
   const safePath = dirPath.replace(/'/g, "'\\''");
-  // ls -lA --time-style=long-iso --group-directories-first
-  // -l: long format (perms, links, owner, group, size, date, name)
-  // -A: all except . and ..
-  // --time-style=long-iso: YYYY-MM-DD HH:MM
-  // --group-directories-first: dirs first
   const cmd = `ls -lA --time-style=long-iso --group-directories-first '${safePath}' 2>/dev/null || ls -lA '${safePath}'`;
-  return new Promise((resolve, reject) => {
+  return withExecChannel(() => new Promise((resolve, reject) => {
     c.client.exec(cmd, (err: Error | undefined, stream: NodeJS.ReadableStream | undefined) => {
       if (err) return reject(err);
       if (!stream) return reject(new Error('No exec stream'));
@@ -206,15 +240,13 @@ export function listDirectory(connectionId: number, dirPath: string): Promise<Di
         resolve(result);
       });
     });
-  });
+  }));
 }
-
-/** 指定パスのファイルサイズを取得（exec で stat を使用）。大きいファイル判定に利用。 */
 export function getFileSize(connectionId: number, remotePath: string): Promise<number> {
   const c = connections.get(connectionId);
   if (!c) return Promise.reject(new Error('Not connected'));
   const safePath = remotePath.replace(/'/g, "'\\''");
-  return new Promise((resolve, reject) => {
+  return withExecChannel(() => new Promise((resolve, reject) => {
     c.client.exec(`stat -c '%s' '${safePath}' 2>/dev/null || wc -c < '${safePath}'`, (err: Error | undefined, stream: NodeJS.ReadableStream | undefined) => {
       if (err) return reject(err);
       if (!stream) return reject(new Error('No exec stream'));
@@ -225,7 +257,7 @@ export function getFileSize(connectionId: number, remotePath: string): Promise<n
         resolve(isNaN(size) ? 0 : size);
       });
     });
-  });
+  }));
 }
 
 function formatSize(bytes: number): string {
@@ -239,7 +271,7 @@ function isDirMode(mode: number): boolean {
   return (mode & 0o170000) === 0o040000;
 }
 
-/** リモートのファイル/フォルダをローカルにダウンロード。sftp は呼び出し元で開いたまま。 */
+/** 从远程下载文件/文件夹到本地。sftp 由调用方保持打开。 */
 function downloadOne(
   sftp: SFTPWrapper,
   remotePath: string,
@@ -269,7 +301,7 @@ function downloadOne(
   });
 }
 
-/** リモートから指定パスをローカルフォルダにダウンロード（再帰対応）。 */
+/** 从远程下载指定路径到本地文件夹（支持递归）。 */
 export function downloadToLocal(
   connectionId: number,
   remotePaths: string[],
@@ -294,7 +326,7 @@ export function downloadToLocal(
   });
 }
 
-/** ローカルのファイル/フォルダをリモートにアップロード。remoteDir は末尾 / なし。 */
+/** 上传本地文件/文件夹到远程。remoteDir 不带末尾 /。 */
 function uploadOne(
   sftp: SFTPWrapper,
   localPath: string,
@@ -322,7 +354,7 @@ function uploadOne(
   });
 }
 
-/** ローカルパスをリモートの指定フォルダにアップロード（再帰対応）。 */
+/** 上传本地路径到指定远程文件夹（支持递归）。 */
 export function uploadToRemote(
   connectionId: number,
   localPaths: string[],
@@ -350,12 +382,12 @@ export function uploadToRemote(
   });
 }
 
-/** シェルでパスをエスケープ（単一引用符で囲み、中の ' は '\'' に）。 */
+/** Shell 路径转义（单引号包裹，内部的 ' 转为 '\''）。 */
 function escapePathForShell(remotePath: string): string {
   return "'" + remotePath.replace(/'/g, "'\\''") + "'";
 }
 
-/** リモートのテキストファイルを読み取り（UTF-8）。エディタ用。 */
+/** 读取远程文本文件（UTF-8）。编辑器使用。 */
 export function readRemoteFile(connectionId: number, remotePath: string): Promise<string> {
   fileLog('readRemoteFile', 'start', { connectionId, remotePath });
   const c = connections.get(connectionId);
@@ -363,7 +395,7 @@ export function readRemoteFile(connectionId: number, remotePath: string): Promis
     fileLog('readRemoteFile', 'reject: not connected', { connectionId });
     return Promise.reject(new Error('Not connected'));
   }
-  return new Promise((resolve, reject) => {
+  return withExecChannel(() => new Promise((resolve, reject) => {
     const cmd = `cat -- ${escapePathForShell(remotePath)}`;
     c.client.exec(cmd, (err: Error | undefined, stream: NodeJS.ReadableStream | undefined) => {
       if (err) {
@@ -374,7 +406,6 @@ export function readRemoteFile(connectionId: number, remotePath: string): Promis
         fileLog('readRemoteFile', 'reject: no stream');
         return reject(new Error('No exec stream'));
       }
-      fileLog('readRemoteFile', 'stream received', { hasStdin: 'stdin' in stream && !!stream.stdin });
       let out = '';
       stream.on('data', (chunk: Buffer) => {
         out += chunk.toString();
@@ -391,10 +422,10 @@ export function readRemoteFile(connectionId: number, remotePath: string): Promis
         reject(e);
       });
     });
-  });
+  }));
 }
 
-/** リモートにテキストファイルを書き込み（UTF-8）。エディタ保存用。 */
+/** 写入远程文本文件（UTF-8）。编辑器保存使用。 */
 export function writeRemoteFile(connectionId: number, remotePath: string, content: string): Promise<void> {
   fileLog('writeRemoteFile', 'start', { connectionId, remotePath, contentLen: content.length });
   const c = connections.get(connectionId);
@@ -402,7 +433,7 @@ export function writeRemoteFile(connectionId: number, remotePath: string, conten
     fileLog('writeRemoteFile', 'reject: not connected', { connectionId });
     return Promise.reject(new Error('Not connected'));
   }
-  return new Promise((resolve, reject) => {
+  return withExecChannel(() => new Promise((resolve, reject) => {
     const cmd = `cat > ${escapePathForShell(remotePath)}`;
     let settled = false;
     const settle = (fn: () => void) => {
@@ -432,7 +463,7 @@ export function writeRemoteFile(connectionId: number, remotePath: string, conten
       const writable = (stream as { stdin?: NodeJS.WritableStream }).stdin ?? stream;
       const useStdin = !!((stream as { stdin?: NodeJS.WritableStream }).stdin);
       fileLog('writeRemoteFile', 'stream received', { useStdin });
-      // stdout を読まないとチャネルが close しないことがあるので、必ず消費する
+      // 不读取 stdout 可能导致通道无法关闭，必须始终消费
       if (typeof (stream as NodeJS.ReadableStream).resume === 'function') {
         (stream as NodeJS.ReadableStream).resume();
       }
@@ -459,13 +490,13 @@ export function writeRemoteFile(connectionId: number, remotePath: string, conten
       writable.end();
       fileLog('writeRemoteFile', 'end() done');
     });
-  });
+  }));
 }
 
 function execCommand(connectionId: number, command: string): Promise<string> {
   const c = connections.get(connectionId);
   if (!c) return Promise.reject(new Error('Not connected'));
-  return new Promise((resolve, reject) => {
+  return withExecChannel(() => new Promise((resolve, reject) => {
     c.client.exec(command, (err: Error | undefined, stream: NodeJS.ReadableStream | undefined) => {
       if (err) return reject(err);
       if (!stream) return reject(new Error('No exec stream'));
@@ -477,7 +508,7 @@ function execCommand(connectionId: number, command: string): Promise<string> {
         resolve(out.trim());
       });
     });
-  });
+  }));
 }
 
 /** Result of an exec channel command execution. */
@@ -493,24 +524,28 @@ export interface ExecResult {
  * Timeout defaults to 30s. Retries once on channel open failure.
  */
 export async function execCommandFull(connectionId: number, command: string, timeoutMs: number = 30000): Promise<ExecResult> {
-  const maxRetries = 2;
-  for (let attempt = 0; attempt < maxRetries; attempt++) {
-    try {
-      return await execCommandOnce(connectionId, command, timeoutMs);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      // Retry on channel open failure (concurrent channel limit)
-      if (msg.includes('Channel open failure') || msg.includes('open failed')) {
-        if (attempt < maxRetries - 1) {
-          console.log(`[execCommandFull] Retry ${attempt + 1} after channel failure: ${command.slice(0, 60)}`);
-          await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
-          continue;
+  await acquireExecSlot();
+  try {
+    const maxRetries = 2;
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        return await execCommandOnce(connectionId, command, timeoutMs);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        if (msg.includes('Channel open failure') || msg.includes('open failed')) {
+          if (attempt < maxRetries - 1) {
+            console.log(`[execCommandFull] Retry ${attempt + 1} after channel failure: ${command.slice(0, 60)}`);
+            await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
+            continue;
+          }
         }
+        throw err;
       }
-      throw err;
     }
+    throw new Error('Unreachable');
+  } finally {
+    releaseExecSlot();
   }
-  throw new Error('Unreachable');
 }
 
 function execCommandOnce(connectionId: number, command: string, timeoutMs: number): Promise<ExecResult> {
@@ -567,16 +602,18 @@ export interface ServerInfo {
 
 export async function getServerInfo(connectionId: number): Promise<ServerInfo> {
   console.log(`[serverInfo] Loading server info for connectionId=${connectionId}`);
+  // Use throttled execCommandFull to avoid exceeding MaxSessions
+  const run = (cmd: string) => execCommandFull(connectionId, cmd, 15000).then(r => r.stdout).catch(() => 'N/A');
   const [hostname, osRelease, kernel, cpuCores, cpuModel, memory, disk, uptime, serverTime] = await Promise.all([
-    execCommand(connectionId, 'hostname').catch(() => 'N/A'),
-    execCommand(connectionId, 'cat /etc/os-release 2>/dev/null | head -5').catch(() => 'N/A'),
-    execCommand(connectionId, 'uname -sr').catch(() => 'N/A'),
-    execCommand(connectionId, 'nproc').catch(() => '0'),
-    execCommand(connectionId, "cat /proc/cpuinfo 2>/dev/null | grep 'model name' | head -1").catch(() => 'N/A'),
-    execCommand(connectionId, 'free -m 2>/dev/null | head -2').catch(() => ''),
-    execCommand(connectionId, 'df -h / 2>/dev/null | tail -1').catch(() => ''),
-    execCommand(connectionId, 'uptime -p 2>/dev/null || uptime').catch(() => 'N/A'),
-    execCommand(connectionId, "date '+%Y-%m-%d %H:%M:%S %Z'").catch(() => 'N/A'),
+    run('hostname'),
+    run('cat /etc/os-release 2>/dev/null | head -5'),
+    run('uname -sr'),
+    run('nproc'),
+    run("cat /proc/cpuinfo 2>/dev/null | grep 'model name' | head -1"),
+    run('free -m 2>/dev/null | head -2'),
+    run('df -h / 2>/dev/null | tail -1'),
+    run('uptime -p 2>/dev/null || uptime'),
+    run("date '+%Y-%m-%d %H:%M:%S %Z'"),
   ]);
 
   const osLine = osRelease.split('\n').find((l) => l.startsWith('PRETTY_NAME'));

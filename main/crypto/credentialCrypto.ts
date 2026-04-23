@@ -3,8 +3,8 @@ import { safeStorage } from 'electron';
 const PREFIX = 'aissh:v1:';
 
 /**
- * 認証情報を OS キーチェーン連携の safeStorage で暗号化する。
- * 既存の平文データとの互換のため、復号時にプレフィックスで暗号化済みを判別する。
+ * 使用与 OS 密钥链集成的 safeStorage 加密凭据。
+ * 为了兼容已有的明文数据，解密时通过前缀判断是否已加密。
  */
 export function encryptCredential(plain: string | null): string | null {
   if (plain === null) return null;
@@ -17,7 +17,7 @@ export function encryptCredential(plain: string | null): string | null {
 }
 
 /**
- * DB から読み出した値を復号する。プレフィックスがない場合は平文としてそのまま返す（既存データ互換）。
+ * 解密从数据库读取的值。没有前缀时视为明文直接返回（兼容已有数据）。
  */
 export function decryptCredential(stored: string | null): string | null {
   if (stored === null || stored === '') return stored === null ? null : '';

@@ -61,20 +61,20 @@ export function AIDrawer({ open, onClose, target, hostLabel, snapshot }: AIDrawe
       <div className="ns-drawer__header">
         <div className="ns-drawer__title">
           <Icon name="sparkle" size={16} />
-          <span>Assistant</span>
+          <span>AI 助手</span>
           {hostLabel && <span className="ns-drawer__host">· {hostLabel}</span>}
         </div>
         <div style={{ display: 'flex', gap: 4 }}>
           <button
             className="ns-iconbtn"
             onClick={reset}
-            title="New conversation"
-            aria-label="Clear conversation"
+            title="新对话"
+            aria-label="清空对话"
             disabled={items.length === 0}
           >
             <Icon name="refresh" size={16} />
           </button>
-          <button className="ns-iconbtn" onClick={onClose} aria-label="Close assistant">
+          <button className="ns-iconbtn" onClick={onClose} aria-label="关闭助手">
             <Icon name="close" size={16} />
           </button>
         </div>
@@ -86,11 +86,11 @@ export function AIDrawer({ open, onClose, target, hostLabel, snapshot }: AIDrawe
             <div className="ns-empty__icon">
               <Icon name="sparkle" size={20} />
             </div>
-            <div className="ns-empty__title">Ask anything about this host</div>
+            <div className="ns-empty__title">向 AI 助手提问</div>
             <div style={{ maxWidth: 280, fontSize: 'var(--fs-sm)', lineHeight: 1.55 }}>
               {target
-                ? 'I can inspect, diagnose, and — with your approval — modify the target host. You\'ll see every tool call inline.'
-                : 'Select a host from the top bar first. I run on the same connection.'}
+                ? '我可以检查、诊断目标主机，并在你确认后进行修改。所有工具调用将实时展示。'
+                : '请先从顶部栏选择一台主机，我将使用同一连接运行。'}
             </div>
           </div>
         ) : (
@@ -124,7 +124,7 @@ export function AIDrawer({ open, onClose, target, hostLabel, snapshot }: AIDrawe
           onStop={stop}
           running={running}
           disabled={disabled}
-          placeholder={disabled ? 'Select a host first…' : 'Ask the assistant…'}
+          placeholder={disabled ? '请先选择一台主机…' : '向助手提问…'}
         />
       </div>
 

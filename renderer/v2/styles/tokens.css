@@ -45,13 +45,13 @@
   --font-mono:
     "SF Mono", ui-monospace, "Menlo", "Consolas", "DejaVu Sans Mono", monospace;
 
-  --fs-xs: 11px;
-  --fs-sm: 12px;
-  --fs-base: 13.5px;
-  --fs-md: 15px;
-  --fs-lg: 17px;
-  --fs-xl: 22px;
-  --fs-2xl: 28px;
+  --fs-xs: 10px;
+  --fs-sm: 11px;
+  --fs-base: 12.5px;
+  --fs-md: 14px;
+  --fs-lg: 16px;
+  --fs-xl: 20px;
+  --fs-2xl: 24px;
 
   --lh-tight: 1.25;
   --lh-normal: 1.5;
@@ -64,16 +64,16 @@
 
   /* ——— Spacing scale (4pt grid) ——— */
   --s-0: 0px;
-  --s-1: 4px;
-  --s-2: 8px;
-  --s-3: 12px;
-  --s-4: 16px;
-  --s-5: 20px;
-  --s-6: 24px;
-  --s-8: 32px;
-  --s-10: 40px;
-  --s-12: 48px;
-  --s-16: 64px;
+  --s-1: 3px;
+  --s-2: 6px;
+  --s-3: 10px;
+  --s-4: 14px;
+  --s-5: 18px;
+  --s-6: 22px;
+  --s-8: 28px;
+  --s-10: 36px;
+  --s-12: 44px;
+  --s-16: 56px;
 
   /* ——— Radii ——— */
   --r-xs: 4px;
@@ -99,8 +99,8 @@
   /* ——— Layout ——— */
   --sidebar-w: 240px;
   --sidebar-w-collapsed: 64px;
-  --topbar-h: 52px;
-  --drawer-w: 420px;
+  --topbar-h: 44px;
+  --drawer-w: 380px;
 }
 
 html.theme-dark {

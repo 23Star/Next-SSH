@@ -36,7 +36,7 @@ function runMigration(): void {
     );
     CREATE TABLE IF NOT EXISTS chat_session (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      title TEXT NOT NULL DEFAULT '新規チャット',
+      title TEXT NOT NULL DEFAULT '新聊天',
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     );

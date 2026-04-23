@@ -14,7 +14,7 @@ const MIME: Record<string, string> = {
   '.woff2': 'font/woff2',
 };
 
-/** 使用可能なポート候補（20件）。有効範囲は 0–65535。衝突時は次を試し、前回使ったポートを優先して同じオリジンにしログイン維持。 */
+/** 可用的端口候选列表（20 个）。有效范围为 0–65535。冲突时尝试下一个，优先使用上次端口以保持同源维持登录状态。 */
 const PORT_CANDIDATES = [
   57290, 57291, 57292, 57293, 57294, 57295, 57296, 57297, 57298, 57299,
   58160, 58161, 58162, 58163, 58164, 58165, 58166, 58167, 58168, 58169,
@@ -77,7 +77,7 @@ function createRequestHandler(rendererDir: string): (req: http.IncomingMessage, 
 }
 
 /**
- * 指定ポートで listen を試す。成功で resolve、EADDRINUSE で reject。
+ * 尝试在指定端口监听。成功则 resolve，EADDRINUSE 则 reject。
  */
 function tryListen(server: http.Server, port: number): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -96,9 +96,9 @@ function tryListen(server: http.Server, port: number): Promise<void> {
 }
 
 /**
- * 本番用: レンダラーを localhost で配信する HTTP サーバを起動する。
- * ポート候補を順に試し、前回使ったポートを優先。成功したポートを保存して次回同じオリジンにし Firebase ログインを維持。
- * portFilePath を渡すと候補リスト＋永続化。渡さないと従来どおり listen(0)。
+ * 生产环境: 在 localhost 上启动提供渲染进程服务的 HTTP 服务器。
+ * 按顺序尝试端口候选列表，优先使用上次端口。成功后保存端口以保持同源维持 Firebase 登录。
+ * 传入 portFilePath 时使用候选列表+持久化。不传入则照旧使用 listen(0)。
  */
 export function startRendererServer(
   rendererDir: string,
@@ -127,7 +127,7 @@ export function startRendererServer(
       })
       .catch((err: NodeJS.ErrnoException) => {
         server.close();
-        // どの listen エラーでも次ポートを試す（EADDRINUSE 以外でも FW/AV 等で失敗しうる）
+        // 任何 listen 错误都尝试下一个端口（EADDRINUSE 以外的防火墙/杀毒软件等也可能导致失败）
         if (idx + 1 < order.length) return tryNext(idx + 1);
         return Promise.reject(err);
       });

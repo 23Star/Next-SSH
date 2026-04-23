@@ -10,6 +10,7 @@ import { HostPicker, type ConnStatus } from './HostPicker';
 import { Icon, type IconName } from '../components/Icon';
 import type { Environment } from '../lib/electron';
 import type { RouteId } from '../App';
+import logoUrl from '../assets/logo.png';
 
 interface NavItem {
   id: RouteId;
@@ -18,14 +19,15 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { id: 'dashboard', label: 'Dashboard', icon: 'dashboard' },
-  { id: 'files',     label: 'Files',     icon: 'files' },
-  { id: 'terminal',  label: 'Terminal',  icon: 'terminal' },
-  { id: 'services',  label: 'Services',  icon: 'services' },
-  { id: 'processes', label: 'Processes', icon: 'processes' },
-  { id: 'firewall',  label: 'Firewall',  icon: 'firewall' },
-  { id: 'cron',      label: 'Scheduled', icon: 'cron' },
-  { id: 'settings',  label: 'Settings',  icon: 'settings' },
+  { id: 'dashboard', label: '仪表盘', icon: 'dashboard' },
+  { id: 'files',     label: '文件',   icon: 'files' },
+  { id: 'terminal',  label: '终端',   icon: 'terminal' },
+  { id: 'services',  label: '服务',   icon: 'services' },
+  { id: 'processes', label: '进程',   icon: 'processes' },
+  { id: 'firewall',  label: '防火墙', icon: 'firewall' },
+  { id: 'docker',    label: 'Docker', icon: 'docker' },
+  { id: 'cron',      label: '任务',   icon: 'cron' },
+  { id: 'settings',  label: '设置',   icon: 'settings' },
 ];
 
 export interface TopbarProps {
@@ -54,8 +56,8 @@ export function Topbar({
   return (
     <header className="ns-topbar">
       <div className="ns-topbar__brand">
-        <span className="ns-topbar__brand-mark" aria-hidden="true" />
-        <span>Next-SSH</span>
+        <img className="ns-topbar__brand-mark" src={logoUrl} alt="Next Panel" />
+        <span>Next Panel</span>
       </div>
       <nav className="ns-topbar__nav" aria-label="Modules">
         {NAV_ITEMS.map((item) => (
@@ -79,7 +81,7 @@ export function Topbar({
         onSelect={onSelectHost}
       />
       {onRefresh && (
-        <button className="ns-iconbtn" onClick={onRefresh} title="Refresh current view" aria-label="Refresh">
+        <button className="ns-iconbtn" onClick={onRefresh} title="刷新当前视图" aria-label="刷新">
           <Icon name="refresh" size={16} />
         </button>
       )}
@@ -87,8 +89,8 @@ export function Topbar({
         className="ns-iconbtn"
         onClick={onToggleAI}
         data-active={aiDrawerOpen}
-        title="Toggle AI assistant"
-        aria-label="Toggle AI assistant"
+        title="AI 助手"
+        aria-label="AI 助手"
       >
         <Icon name="sparkle" size={18} />
       </button>

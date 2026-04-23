@@ -10,17 +10,23 @@
 // useSystemSnapshot. Hoisting the hook here means the panel and the assistant
 // share one fetch — no duplicate SSH round-trips.
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Topbar } from './shell/Topbar';
 import { AIDrawer } from './shell/AIDrawer';
 import { useEnvironments } from './lib/useEnvironments';
 import { useConnection } from './lib/useConnection';
 import { useSystemSnapshot } from './lib/useSystemSnapshot';
+import { usePreload, getPreloadState } from './lib/usePreload';
 import { Dashboard } from './pages/Dashboard';
-import { ComingSoon } from './pages/ComingSoon';
 import { Files } from './pages/Files';
+import { Terminal } from './pages/Terminal';
+import { Services } from './pages/Services';
+import { Processes } from './pages/Processes';
 import { Firewall } from './pages/Firewall';
+import { Docker } from './pages/Docker';
+import { Cron } from './pages/Cron';
 import { Settings } from './pages/Settings';
+import { ConnectPage } from './pages/ConnectPage';
 import type { ExecutionTarget } from '../agent/types';
 import type { Environment } from './lib/electron';
 
@@ -31,6 +37,7 @@ export type RouteId =
   | 'services'
   | 'processes'
   | 'firewall'
+  | 'docker'
   | 'cron'
   | 'settings';
 
@@ -50,6 +57,31 @@ export function App(): React.ReactElement {
   // Dashboard and the AI drawer both want the SystemInfo snapshot; fetching
   // here and threading it down keeps the request to one per refresh.
   const snapshotState = useSystemSnapshot(connection.connectionId, refreshTick);
+
+  // Preload page data on connect and cache it for instant tab switching.
+  usePreload(connection.connectionId, connection.status);
+
+  // Track preload progress for the loading indicator
+  const [preloadProgress, setPreloadProgress] = useState({ loading: false, progress: 0, total: 5, step: '' });
+  const progressTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    if (connection.status !== 'connected') {
+      setPreloadProgress({ loading: false, progress: 0, total: 5, step: '' });
+      return;
+    }
+    progressTimerRef.current = setInterval(() => {
+      const s = getPreloadState();
+      setPreloadProgress({ loading: s.loading, progress: s.progress, total: s.totalSteps, step: s.currentStep });
+      if (!s.loading && progressTimerRef.current) {
+        clearInterval(progressTimerRef.current);
+        progressTimerRef.current = null;
+      }
+    }, 400);
+    return () => {
+      if (progressTimerRef.current) clearInterval(progressTimerRef.current);
+    };
+  }, [connection.status]);
 
   const target: ExecutionTarget | null = useMemo(() => {
     if (connection.connectionId == null) return null;
@@ -72,6 +104,10 @@ export function App(): React.ReactElement {
     setRoute('settings');
   };
 
+  // Settings is always accessible; everything else requires a connection.
+  const isConnected = connection.status === 'connected';
+  const showConnectPage = !isConnected && route !== 'settings';
+
   return (
     <div className="ns-shell">
       <Topbar
@@ -87,16 +123,36 @@ export function App(): React.ReactElement {
         onRefresh={handleRefresh}
       />
       <main className="ns-main">
-        <RouteContent
-          route={route}
-          connectionId={connection.connectionId}
-          connStatus={connection.status}
-          connError={connection.error}
-          snapshot={snapshotState.snapshot}
-          snapshotLoading={snapshotState.loading}
-          snapshotError={snapshotState.error}
-          refreshTick={refreshTick}
-        />
+        {preloadProgress.loading && (
+          <div className="ns-preload-bar">
+            <div
+              className="ns-preload-bar__fill"
+              style={{ width: `${(preloadProgress.progress / preloadProgress.total) * 100}%` }}
+            />
+            <span className="ns-preload-bar__text">
+              正在预加载数据… {preloadProgress.step} ({preloadProgress.progress}/{preloadProgress.total})
+            </span>
+          </div>
+        )}
+        {showConnectPage ? (
+          <ConnectPage
+            hosts={hosts}
+            connStatus={connection.status}
+            connError={connection.error}
+            onSelectHost={handleSelectHost}
+          />
+        ) : (
+          <RouteContent
+            route={route}
+            connectionId={connection.connectionId}
+            connStatus={connection.status}
+            connError={connection.error}
+            snapshot={snapshotState.snapshot}
+            snapshotLoading={snapshotState.loading}
+            snapshotError={snapshotState.error}
+            refreshTick={refreshTick}
+          />
+        )}
       </main>
       <AIDrawer
         open={drawerOpen}
@@ -145,15 +201,17 @@ function RouteContent({
     case 'files':
       return <Files connectionId={connectionId} connStatus={connStatus} refreshTick={refreshTick} />;
     case 'terminal':
-      return <ComingSoon title="Terminal" hint="xterm.js with tabs, split panes, and reconnect — wiring to the existing shell handlers." />;
+      return <Terminal connectionId={connectionId} connStatus={connStatus} refreshTick={refreshTick} />;
     case 'services':
-      return <ComingSoon title="Services" hint="systemd unit list — status, start/stop/restart, live journal tail." />;
+      return <Services connectionId={connectionId} connStatus={connStatus} refreshTick={refreshTick} />;
     case 'processes':
-      return <ComingSoon title="Processes" hint="Live ps + top-style sortable table, per-process cgroup & limits." />;
+      return <Processes connectionId={connectionId} connStatus={connStatus} refreshTick={refreshTick} />;
     case 'firewall':
       return <Firewall connectionId={connectionId} connStatus={connStatus} refreshTick={refreshTick} />;
+    case 'docker':
+      return <Docker connectionId={connectionId} connStatus={connStatus} refreshTick={refreshTick} />;
     case 'cron':
-      return <ComingSoon title="Scheduled tasks" hint="Crontab editor with schedule preview and run history." />;
+      return <Cron connectionId={connectionId} connStatus={connStatus} refreshTick={refreshTick} />;
     case 'settings':
       return <Settings />;
   }

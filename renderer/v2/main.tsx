@@ -7,6 +7,7 @@ import { createRoot } from 'react-dom/client';
 import './styles/tokens.css';
 import './styles/base.css';
 import './styles/app.css';
+import 'xterm/css/xterm.css';
 import { App } from './App';
 
 function applyInitialTheme(): void {

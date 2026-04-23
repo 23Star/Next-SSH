@@ -1,7 +1,7 @@
 /**
- * ローカルシェル（PowerShell / bash 等）を node-pty で spawn し、
- * 入出力を Renderer と IPC でやりとりする。
- * node-pty はネイティブモジュールのため未インストール時は遅延 require でエラーにし、起動は通す。
+ * 使用 node-pty 启动本地 Shell（PowerShell / bash 等），
+ * 通过 IPC 与渲染进程进行输入输出交互。
+ * node-pty 是原生模块，未安装时通过延迟 require 报错，但不阻止启动。
  */
 import os from 'os';
 
@@ -17,7 +17,7 @@ function getPty(): { spawn: (shell: string, args: string[], opts: { name: string
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     throw new Error(
-      `node-pty が見つかりません。ローカルターミナルを使うにはプロジェクトで npm install node-pty のあと npx electron-rebuild を実行してください。 (${msg})`,
+      `未找到 node-pty。要使用本地终端，请在项目中执行 npm install node-pty，然后运行 npx electron-rebuild。(${msg})`,
     );
   }
 }

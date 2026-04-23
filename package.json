@@ -1,7 +1,7 @@
 {
     "name": "next-ssh",
     "version": "0.1.0",
-    "description": "Next-SSH - AI × SSH hybrid management tool",
+    "description": "Next Panel - AI 驱动的 SSH 管理面板",
     "private": false,
     "license": "MIT",
     "author": "PANDAAS <pandaas886@gmail.com>",
@@ -51,7 +51,7 @@
     },
     "build": {
         "appId": "com.nextssh.app",
-        "productName": "Next-SSH",
+        "productName": "Next Panel",
         "directories": {
             "output": "release"
         },

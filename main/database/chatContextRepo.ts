@@ -1,7 +1,7 @@
 import { loadChatConfig } from '../config/loadChatConfig';
 import { getDb } from './connection';
 
-/** 指定セッションの会話の総文字数 */
+/** 指定会话的总字符数 */
 function getTotalContentLengthBySessionId(sessionId: number): number {
   const db = getDb();
   const total = db
@@ -11,7 +11,7 @@ function getTotalContentLengthBySessionId(sessionId: number): number {
   return total ?? 0;
 }
 
-/** 指定セッション内で最も古いメッセージ（id 最小）を 1 件削除 */
+/** 删除指定会话中最旧的消息（id 最小）1 条 */
 function deleteOldestChatContextInSession(sessionId: number): void {
   const db = getDb();
   const row = db
@@ -21,7 +21,7 @@ function deleteOldestChatContextInSession(sessionId: number): void {
 }
 
 /**
- * セッションの会話総文字数が上限を超えている場合、古いメッセージから順に削除して上限内に収める。
+ * 当会话总字符数超过上限时，从最旧的消息开始依次删除，使其保持在限制范围内。
  */
 export function trimChatContextToTotalMax(sessionId: number): void {
   const { ChatContextTotalMax } = loadChatConfig();
