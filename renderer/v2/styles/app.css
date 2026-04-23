@@ -900,3 +900,84 @@
   letter-spacing: 0.06em;
   margin-top: 4px;
 }
+
+/* ——————— Settings ——————— */
+
+.ns-settings-tabs {
+  display: flex;
+  gap: 2px;
+  margin-bottom: var(--s-6);
+  border-bottom: 1px solid var(--border);
+  padding-bottom: var(--s-2);
+}
+
+.ns-settings-host-row {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: 10px 12px;
+  border-radius: var(--r-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-hairline);
+  transition: background-color var(--dur-fast) var(--ease-ios);
+}
+.ns-settings-host-row:hover {
+  background: var(--surface-hover);
+}
+
+.ns-settings-host-form {
+  max-width: 520px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+
+.ns-input {
+  width: 100%;
+  padding: 6px 10px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-base);
+  line-height: var(--lh-normal);
+  outline: none;
+  transition: border-color var(--dur-fast) var(--ease-ios),
+              box-shadow var(--dur-fast) var(--ease-ios);
+}
+.ns-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.ns-input::placeholder { color: var(--text-subtle); }
+
+/* ——————— Host picker dropdown items ——————— */
+
+.ns-hostpicker-item {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  border-radius: var(--r-sm);
+  overflow: hidden;
+}
+.ns-hostpicker-item[data-active="true"] {
+  background: var(--accent-soft);
+}
+
+.ns-hostpicker-item__main {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: 7px 10px;
+  font-size: var(--fs-base);
+  color: var(--text);
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  text-align: left;
+  width: 100%;
+}
+.ns-hostpicker-item__main:hover {
+  background: var(--surface-hover);
+}

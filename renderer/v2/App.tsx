@@ -20,6 +20,7 @@ import { Dashboard } from './pages/Dashboard';
 import { ComingSoon } from './pages/ComingSoon';
 import { Files } from './pages/Files';
 import { Firewall } from './pages/Firewall';
+import { Settings } from './pages/Settings';
 import type { ExecutionTarget } from '../agent/types';
 import type { Environment } from './lib/electron';
 
@@ -67,6 +68,10 @@ export function App(): React.ReactElement {
     setRefreshTick((n) => n + 1);
   };
 
+  const handleOpenSettings = (): void => {
+    setRoute('settings');
+  };
+
   return (
     <div className="ns-shell">
       <Topbar
@@ -77,6 +82,7 @@ export function App(): React.ReactElement {
         route={route}
         onNavigate={setRoute}
         onSelectHost={handleSelectHost}
+        onOpenSettings={handleOpenSettings}
         onToggleAI={() => setDrawerOpen((v) => !v)}
         onRefresh={handleRefresh}
       />
@@ -149,6 +155,6 @@ function RouteContent({
     case 'cron':
       return <ComingSoon title="Scheduled tasks" hint="Crontab editor with schedule preview and run history." />;
     case 'settings':
-      return <ComingSoon title="Settings" hint="Saved hosts, keys, AI provider + model, appearance, permission rules." />;
+      return <Settings />;
   }
 }

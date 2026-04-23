@@ -1,8 +1,3 @@
-// Topbar host picker. Shows the active SSH target + connection status, opens
-// a dropdown with the saved environments. Connection management itself stays
-// minimal in Phase 2a — we only display state; actually connecting and
-// reconnecting lives in the ssh handlers as before.
-
 import React from 'react';
 import { Icon } from '../components/Icon';
 import type { Environment } from '../lib/electron';
@@ -14,6 +9,7 @@ export interface HostPickerProps {
   activeId: number | null;
   status: ConnStatus;
   onSelect: (id: number | null) => void;
+  onOpenSettings?: () => void;
 }
 
 function labelFor(env: Environment): string {
@@ -22,12 +18,11 @@ function labelFor(env: Environment): string {
   return `${env.username}@${env.host}`;
 }
 
-export function HostPicker({ hosts, activeId, status, onSelect }: HostPickerProps): React.ReactElement {
+export function HostPicker({ hosts, activeId, status, onSelect, onOpenSettings }: HostPickerProps): React.ReactElement {
   const [open, setOpen] = React.useState(false);
   const ref = React.useRef<HTMLDivElement>(null);
   const active = hosts.find((h) => h.id === activeId) ?? null;
 
-  // Close on outside click.
   React.useEffect(() => {
     if (!open) return;
     const handler = (e: MouseEvent): void => {
@@ -56,12 +51,15 @@ export function HostPicker({ hosts, activeId, status, onSelect }: HostPickerProp
             position: 'absolute',
             top: 'calc(100% + 6px)',
             left: 0,
-            minWidth: 260,
+            minWidth: 280,
             background: 'var(--surface)',
             borderRadius: 'var(--r-lg)',
             boxShadow: 'var(--shadow-pop)',
-            padding: '6px',
+            padding: 6,
             zIndex: 20,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 2,
           }}
         >
           {hosts.length === 0 && (
@@ -70,22 +68,41 @@ export function HostPicker({ hosts, activeId, status, onSelect }: HostPickerProp
             </div>
           )}
           {hosts.map((h) => (
-            <button
+            <div
               key={h.id}
               role="option"
               aria-selected={h.id === activeId}
-              className="ns-nav-item"
+              className="ns-hostpicker-item"
               data-active={h.id === activeId}
-              onClick={() => {
-                onSelect(h.id);
-                setOpen(false);
-              }}
-              style={{ width: '100%', height: 34 }}
             >
-              <span className="ns-hostpicker__dot" data-status={h.id === activeId ? status : 'disconnected'} />
-              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{labelFor(h)}</span>
-            </button>
+              <button
+                className="ns-hostpicker-item__main"
+                onClick={() => { onSelect(h.id); setOpen(false); }}
+                style={{ flex: 1 }}
+              >
+                <span className="ns-hostpicker__dot" data-status={h.id === activeId ? status : 'disconnected'} />
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {labelFor(h)}
+                </span>
+                <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--text-subtle)', marginLeft: 'auto' }}>
+                  {h.username}@{h.host}
+                </span>
+              </button>
+            </div>
           ))}
+
+          {hosts.length > 0 && <hr style={{ border: 'none', borderTop: '1px solid var(--border)', margin: '4px 0' }} />}
+
+          {onOpenSettings && (
+            <button
+              className="ns-hostpicker-item__main"
+              style={{ width: '100%', color: 'var(--accent)' }}
+              onClick={() => { setOpen(false); onOpenSettings(); }}
+            >
+              <Icon name="settings" size={14} />
+              <span>Manage Hosts…</span>
+            </button>
+          )}
         </div>
       )}
     </div>
