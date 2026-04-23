@@ -133,6 +133,12 @@ renderer/v2/
 
 ---
 
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=23Star/Next-SSH&type=Date)](https://star-history.com/#23Star/Next-SSH&Date)
+
+---
+
 ## License
 
 MIT License
